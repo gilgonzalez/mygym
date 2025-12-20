@@ -5,11 +5,14 @@ import { ChevronLeft, Dumbbell, Info, Play, TimerIcon } from 'lucide-react'
 interface WorkoutOverviewProps {
   workout: LocalWorkout
   onStart: () => void
+  onResume?: () => void
   onBack: () => void
+  hasActiveSession?: boolean
+  onExerciseClick: (sectionIndex: number, exerciseIndex: number) => void
 }
 
-export function WorkoutOverview({ workout, onStart, onBack }: WorkoutOverviewProps) {
-  const heroImage = workout.sections[0]?.exercises[0]?.media_url || "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=800&q=80"
+export function WorkoutOverview({ workout, onStart, onResume, onBack, hasActiveSession, onExerciseClick }: WorkoutOverviewProps) {
+  const heroImage = workout.cover
 
   return (
     <div className="min-h-screen bg-background flex flex-col pb-24 relative">
@@ -73,7 +76,8 @@ export function WorkoutOverview({ workout, onStart, onBack }: WorkoutOverviewPro
                  {section.exercises.map((ex, exIdx) => (
                    <div 
                      key={exIdx} 
-                     className="group relative flex items-center gap-4 p-4 rounded-xl bg-card border border-border/50 hover:border-primary/50 hover:shadow-md transition-all duration-300"
+                     className="group relative flex items-center gap-4 p-4 rounded-xl bg-card border border-border/50 hover:border-primary/50 hover:shadow-md transition-all duration-300 cursor-pointer"
+                     onClick={() => onExerciseClick(idx, exIdx)}
                    >
                      <div className="w-16 h-16 rounded-lg bg-muted overflow-hidden shrink-0 border border-border/30">
                        {ex.media_url ? (
@@ -103,13 +107,24 @@ export function WorkoutOverview({ workout, onStart, onBack }: WorkoutOverviewPro
       </div>
 
       <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-background via-background/95 to-transparent z-50 pb-8">
-         <div className="max-w-md mx-auto w-full">
+         <div className="max-w-md mx-auto w-full flex gap-3">
            <Button 
-             className="w-full h-14 text-lg font-bold shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all rounded-2xl" 
+             className="flex-1 h-14 text-lg font-bold shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all rounded-2xl" 
              onClick={onStart}
            >
-             <Play className="w-6 h-6 mr-2 fill-current" /> Start Workout
+             <Play className="w-6 h-6 mr-2 fill-current" /> 
+             {hasActiveSession ? 'Restart Workout' : 'Start Workout'}
            </Button>
+
+           {hasActiveSession && onResume && (
+             <Button 
+               className="flex-1 h-14 text-lg font-bold shadow-xl shadow-orange-500/20 bg-orange-500 hover:bg-orange-600 hover:scale-[1.02] active:scale-[0.98] transition-all rounded-2xl text-white" 
+               onClick={onResume}
+             >
+               <Play className="w-6 h-6 mr-2 fill-current" /> 
+               Resume
+             </Button>
+           )}
          </div>
       </div>
     </div>

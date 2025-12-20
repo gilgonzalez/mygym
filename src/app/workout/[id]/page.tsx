@@ -1,287 +1,364 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { WorkoutOverview } from '@/components/workout/WorkoutOverview'
 import { ActiveSession } from '@/components/workout/ActiveSession'
 import { WorkoutCompleted } from '@/components/workout/WorkoutCompleted'
 import { LocalWorkout } from '@/types/workout/viewTypes'
+import { useWorkoutStore } from '@/store/workOutStore'
 
 export default function WorkoutSessionPage({ params }: { params: { id: string } }) {
   const router = useRouter()
   
-  // State
-  const [hasStarted, setHasStarted] = useState(false)
-  const [currentSectionIndex, setCurrentSectionIndex] = useState(0)
-  const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0)
-  const [isResting, setIsResting] = useState(false)
-  const [isCompleted, setIsCompleted] = useState(false)
+  // Zustand Store
+  const { 
+    activeWorkout, 
+    hasStarted, 
+    isCompleted, 
+    currentSectionIndex, 
+    currentExerciseIndex, 
+    currentSet,
+    isResting,
+    initializeWorkout,
+    startSession,
+    endSession,
+    nextStep,
+    restartWorkout,
+    jumpToStep
+  } = useWorkoutStore()
   
   // Mock Data (Ideally this would come from an API or separate data file)
   const workout: LocalWorkout = {
     id: params.id,
-    title: "Full Body Destruction",
-    description: "A comprehensive full-body workout designed to build strength and endurance. We start with a dynamic warm-up, move into heavy compound lifts, follow up with hypertrophy-focused isolation work, and finish with a core-crushing circuit.",
+    title: "RUTINA DE CALISTENIA – FULL BODY",
+    cover: "https://i.ytimg.com/vi/kuUZYUBHryw/maxresdefault.jpg",
+    audio: [
+      "https://www.youtube.com/watch?v=JYNa_9pYLGw&list=RDJYNa_9pYLGw"
+    ],
+    description: "Duración aproximada: 65–75 minutos. Rutina de volumen ajustado.",  
     sections: [
       {
         id: "s1",
-        name: "Warm Up & Mobility",
+        name: "CALENTAMIENTO - Movilidad General",
+        orderType: 'linear',
         exercises: [
           {
             id: "e1",
-            name: "Arm Circles",
-            type: "time",
-            duration: 30,
+            name: "Movilidad de cuello",
+            type: "reps",
+            reps: "5-6/lado",
+            sets: 1,
             rest: 0,
-            media_url: "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=800&q=80",
-            description: "Rotate your arms in large circles, first forward then backward to loosen up the shoulders."
+            media_url: "https://youtu.be/8tyO0ti6NL0?t=153",
+            description: "Inclina la cabeza hacia un lado, luego mira al pecho y después al techo. Movimiento lento."
           },
           {
             id: "e2",
-            name: "Jumping Jacks",
-            type: "time",
-            duration: 60,
-            rest: 15,
-            media_url: "https://images.unsplash.com/photo-1599058945522-28d584b6f0ff?w=800&q=80",
-            description: "Classic jumping jacks to get the heart rate up and blood flowing."
+            name: "Movilidad de hombros",
+            type: "reps",
+            reps: "20 atrás + 20 delante",
+            sets: 1,
+            rest: 0,
+            media_url: "https://image.jimcdn.com/app/cms/image/transf/dimension=576x10000:format=gif/path/s923ec5ea63585e73/image/icf2c7678ae698924/version/1620061742/image.gif",
+            description: "Brazos relajados a los lados. Haz círculos grandes hacia atrás y luego hacia delante."
           },
           {
             id: "e3",
-            name: "World's Greatest Stretch",
+            name: "Movilidad de columna (gato–vaca)",
+            type: "reps",
+            reps: "10-12",
+            sets: 1,
+            rest: 0,
+            media_url: "https://www.shutterstock.com/image-vector/woman-doing-cat-cow-workout-260nw-1280135659.jpg",
+            description: "A cuatro apoyos. Inhala arqueando la espalda, exhala redondeando."
+          },
+          {
+            id: "e4",
+            name: "Movilidad de cadera",
             type: "time",
             duration: 60,
+            sets: 1,
+            rest: 0,
+            media_url: "https://fitenium.com/wp-content/uploads/2021/03/18471301-Hip-Circles-Stretch_Hips_180.gif",
+            description: "Realiza círculos amplios con la cadera. 30 segundos en cada sentido."
+          },
+          {
+            id: "e5",
+            name: "Movilidad de rodillas y tobillos",
+            type: "reps",
+            reps: "10/dir",
+            sets: 1,
+            rest: 0,
+            media_url: "https://live.staticflickr.com/5185/5569522342_ff7b68c743.jpg",
+            description: "Círculos suaves con rodillas juntas y tobillos elevados."
+          },
+          {
+            id: "e6",
+            name: "Sentadilla profunda dinámica",
+            type: "reps",
+            reps: "8-10",
+            sets: 2,
             rest: 30,
-            media_url: "https://images.unsplash.com/photo-1566241440091-ec10de8db2e1?w=800&q=80",
-            description: "Step forward into a lunge, rotate your torso, and reach for the sky. Alternate sides."
-          },
-          {
-            id: "e13",
-            name: "High Knees",
-            type: "time",
-            duration: 45,
-            rest: 15,
-            media_url: "https://images.unsplash.com/photo-1518611012118-696072aa579a?w=800&q=80",
-            description: "Run in place bringing your knees as high as possible."
-          },
-          {
-            id: "e14",
-            name: "Torso Twists",
-            type: "time",
-            duration: 45,
-            rest: 10,
-            media_url: "https://images.unsplash.com/photo-1538805060512-e2496a177605?w=800&q=80",
-            description: "Standing twist to loosen up the lower back."
+            media_url: "https://i.pinimg.com/originals/47/1f/79/471f7949505154f391540967bd5a4388.gif",
+            description: "Baja a sentadilla profunda, mantén 2 segundos y sube."
           }
         ]
       },
       {
         id: "s2",
-        name: "Compound Power",
+        name: "CALENTAMIENTO - Activación",
+        orderType: 'single',
         exercises: [
           {
-            id: "e4",
-            name: "Barbell Squats",
+            id: "e7",
+            name: "Band pull-aparts",
             type: "reps",
-            reps: "5-8",
-            sets: 4,
-            rest: 120,
-            media_url: "https://images.unsplash.com/photo-1574680096141-1cddd32e0340?w=800&q=80",
-            description: "Feet shoulder-width apart. Keep chest up and core tight. Go deep."
+            reps: "12-15",
+            sets: 2,
+            rest: 45,
+            media_url: "https://www.strengthlog.com/wp-content/uploads/2020/04/Band-Pull-Apart.gif",
+            description: "Brazos estirados, abre la banda separando las manos."
           },
           {
-            id: "e5",
-            name: "Bench Press",
+            id: "e8",
+            name: "Puente de glúteo",
             type: "reps",
-            reps: "8-10",
-            sets: 3,
-            rest: 90,
-            media_url: "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=800&q=80",
-            description: "Control the bar on the way down. Explode up. Keep elbows at 45 degrees."
+            reps: "10-12",
+            sets: 2,
+            rest: 45,
+            media_url: "https://static.wixstatic.com/media/c94d75_0c29504633494d29a610ccc979695020~mv2.gif",
+            description: "Eleva la cadera apretando glúteos."
           },
           {
-            id: "e6",
-            name: "Deadlifts",
-            type: "reps",
-            reps: "5",
-            sets: 3,
-            rest: 180,
-            media_url: "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=800&q=80",
-            description: "Hinge at the hips. Keep the bar close to your shins. Neutral spine."
-          },
-          {
-            id: "e15",
-            name: "Overhead Press",
+            id: "e9",
+            name: "Flexiones inclinadas en banco",
             type: "reps",
             reps: "8",
-            sets: 3,
-            rest: 90,
-            media_url: "https://images.unsplash.com/photo-1583454110551-21f2fa2afe61?w=800&q=80",
-            description: "Strict press. Core engaged, don't arch your back."
+            sets: 2,
+            rest: 45,
+            media_url: "https://i.pinimg.com/originals/9d/91/7e/9d917e70d9aa18896ae66ff5d1739419.gif",
+            description: "Manos en el banco, cuerpo alineado, baja el pecho."
           },
           {
-            id: "e16",
-            name: "Bent Over Rows",
+            id: "e10",
+            name: "Dead bug",
             type: "reps",
-            reps: "10",
-            sets: 3,
-            rest: 90,
-            media_url: "https://images.unsplash.com/photo-1603287681836-e5452e4d6f5e?w=800&q=80",
-            description: "Pull the barbell to your lower chest. Squeeze shoulder blades."
+            reps: "8/lado",
+            sets: 2,
+            rest: 45,
+            media_url: "https://www.verywellfit.com/thmb/MHZjRAV_-B8M38m5mHnX75EmA1c=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc()/105-Dead-Bug-ExerciseGIF-407d0bbb6d8742be855b219e74c18bd0.gif",
+            description: "Tumbado boca arriba, extiende brazo y pierna contraria."
           }
         ]
       },
       {
         id: "s3",
-        name: "Hypertrophy Accessor",
+        name: "BLOQUE A – TIRÓN",
+        orderType: 'single',
         exercises: [
           {
-            id: "e7",
-            name: "Dumbbell Lunges",
+            id: "e11",
+            name: "Dominadas pronas",
             type: "reps",
-            reps: "12/leg",
-            sets: 3,
-            rest: 60,
-            media_url: "https://images.unsplash.com/photo-1574680178050-55c6a6a96e0a?w=800&q=80",
-            description: "Step forward and drop your back knee. Keep torso upright."
+            reps: "3-5",
+            sets: 4,
+            rest: 90,
+            media_url: "https://wefit.es/library/exercises/pull-ups-dominada.gif",
+            description: "Sube llevando el pecho a la barra. Baja lento."
           },
           {
-            id: "e8",
-            name: "Pull-Ups",
+            id: "e12",
+            name: "Remo invertido",
             type: "reps",
-            reps: "AMRAP",
+            reps: "8-10",
             sets: 3,
             rest: 90,
-            media_url: "https://images.unsplash.com/photo-1598971639058-211a73287750?w=800&q=80",
-            description: "Full extension at the bottom. Chin over bar at the top."
-          },
-          {
-            id: "e9",
-            name: "Dumbbell Lateral Raises",
-            type: "reps",
-            reps: "15",
-            sets: 3,
-            rest: 45,
-            media_url: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=800&q=80",
-            description: "Lead with your elbows. Don't swing the weights."
-          },
-          {
-            id: "e17",
-            name: "Face Pulls",
-            type: "reps",
-            reps: "15",
-            sets: 3,
-            rest: 45,
-            media_url: "https://images.unsplash.com/photo-1599058945522-28d584b6f0ff?w=800&q=80",
-            description: "Pull rope to forehead. Focus on rear delts."
-          },
-          {
-            id: "e18",
-            name: "Tricep Extensions",
-            type: "reps",
-            reps: "12",
-            sets: 3,
-            rest: 45,
-            media_url: "https://images.unsplash.com/photo-1530822847156-5df684ec5ee1?w=800&q=80",
-            description: "Keep elbows tucked in. Full extension."
+            media_url: "https://hips.hearstapps.com/hmg-prod/images/workouts/2016/03/invertedrow-1457101739.gif?resize=980:*",
+            description: "Cuerpo recto bajo barra baja, tira del pecho hacia la barra."
           }
         ]
       },
       {
         id: "s4",
-        name: "Core Finisher",
+        name: "BLOQUE B – EMPUJE",
+        orderType: 'single',
         exercises: [
           {
-            id: "e10",
-            name: "Plank",
-            type: "time",
-            duration: 60,
-            rest: 30,
-            media_url: "https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?w=800&q=80",
-            description: "Hold a solid plank position. Squeeze glutes and abs."
+            id: "e13",
+            name: "Fondos en paralelas",
+            type: "reps",
+            reps: "6-8",
+            sets: 3,
+            rest: 90,
+            media_url: "https://i.makeagif.com/media/1-18-2016/ktp4my.gif",
+            description: "Baja controlando con ligera inclinación, empuja hasta extender."
           },
           {
-            id: "e11",
-            name: "Russian Twists",
-            type: "time",
-            duration: 45,
-            rest: 30,
-            media_url: "https://images.unsplash.com/photo-1599058945522-28d584b6f0ff?w=800&q=80",
-            description: "Feet off the ground if possible. Rotate torso side to side."
+            id: "e14",
+            name: "Flexiones en banco",
+            type: "reps",
+            reps: "8-12",
+            sets: 3,
+            rest: 90,
+            media_url: "https://i.makeagif.com/media/10-01-2017/iwdrrC.gif",
+            description: "Manos en banco, cuerpo alineado, pecho al borde."
+          }
+        ]
+      },
+      {
+        id: "s5",
+        name: "BLOQUE C – PIERNAS",
+        orderType: 'single',
+        exercises: [
+          {
+            id: "e15",
+            name: "Sentadilla búlgara",
+            type: "reps",
+            reps: "6-8/pierna",
+            sets: 3,
+            rest: 90,
+            media_url: "https://static.wixstatic.com/media/c94d75_474f468bbe954444ac19711721df217f~mv2.gif",
+            description: "Pie trasero en banco, baja con pierna delantera."
           },
           {
-            id: "e12",
-            name: "Mountain Climbers",
+            id: "e16",
+            name: "Step-ups al banco",
+            type: "reps",
+            reps: "8/pierna",
+            sets: 3,
+            rest: 90,
+            media_url: "https://www.clinicacemes.com/wp-content/uploads/2020/04/chair_steps.gif",
+            description: "Sube empujando con el pie sobre el banco."
+          },
+          {
+            id: "e17",
+            name: "Elevaciones de gemelo",
+            type: "reps",
+            reps: "12-15",
+            sets: 3,
+            rest: 90,
+            media_url: "https://hips.hearstapps.com/hmg-prod/images/eccentric-single-leg-calf-raise-calf-stretching-0028-652ef00e9074b.gif?crop=0.99975xw:1xh;center,top&resize=980:*",
+            description: "Eleva talones lentamente y baja controlando."
+          }
+        ]
+      },
+      {
+        id: "s6",
+        name: "BLOQUE D – CORE",
+        orderType: 'single',
+        exercises: [
+          {
+            id: "e18",
+            name: "Plancha frontal",
             type: "time",
-            duration: 45,
-            rest: 0,
-            media_url: "https://images.unsplash.com/photo-1434608519344-49d77a699ded?w=800&q=80",
-            description: "Drive knees to chest rapidly. Keep hips down."
+            duration: 30,
+            sets: 3,
+            rest: 60,
+            media_url: "https://www.murciaclubdetenis.es/wp-content/uploads/2020/03/plancha.gif",
+            description: "Antebrazos en suelo, cuerpo recto, abdomen tenso."
           },
           {
             id: "e19",
-            name: "Leg Raises",
+            name: "Elevaciones de rodillas",
             type: "reps",
-            reps: "15",
+            reps: "6-10",
             sets: 3,
-            rest: 45,
-            media_url: "https://images.unsplash.com/photo-1566241483342-3658512f5a02?w=800&q=80",
-            description: "Lie flat. Lift legs to 90 degrees. Control the descent."
+            rest: 60,
+            media_url: "https://www.entrenador.fit/wp-content/uploads/Levantamiento-de-rodillas.gif",
+            description: "Colgado, eleva rodillas al pecho."
           },
           {
             id: "e20",
-            name: "Bicycle Crunches",
+            name: "Pallof press con banda",
+            type: "reps",
+            reps: "8-10/lado",
+            sets: 3,
+            rest: 60,
+            media_url: "https://i.makeagif.com/media/10-01-2014/XREki3.gif",
+            description: "Extiende brazos al frente manteniendo estabilidad lateral."
+          }
+        ]
+      },
+      {
+        id: "s7",
+        name: "VUELTA A LA CALMA",
+        orderType: 'linear',
+        exercises: [
+          {
+            id: "e21",
+            name: "Colgado pasivo",
             type: "time",
-            duration: 45,
+            duration: 60,
+            sets: 1,
             rest: 0,
-            media_url: "https://images.unsplash.com/photo-1601422407692-ec4eeec1d9b3?w=800&q=80",
-            description: "Opposite elbow to opposite knee. Constant tension."
+            media_url: "https://wefit.es/wp-content/uploads/2024/03/archer-pull-up.gif",
+            description: "Simplemente cuélgate de la barra y relaja la espalda."
+          },
+          {
+            id: "e22",
+            name: "Estiramiento pecho/hombros",
+            type: "time",
+            duration: 90,
+            sets: 1,
+            rest: 0,
+            media_url: "https://jlfisios.com/wp-content/uploads/2023/01/Estiramiento-pectoral-en-pared.jpg",
+            description: "Estira pectorales y deltoides suavemente."
+          },
+          {
+            id: "e23",
+            name: "Isquiotibiales y glúteos",
+            type: "time",
+            duration: 150,
+            sets: 1,
+            rest: 0,
+            media_url: "https://www.healthline.com/hlcmsresource/images/topic_centers/Fitness-Exercise/400x400_10_Essential_Stretches_For_Runners_Hamstring.gif",
+            description: "Estiramientos profundos para la cadena posterior."
+          },
+          {
+            id: "e24",
+            name: "Cadera y psoas",
+            type: "time",
+            duration: 120,
+            sets: 1,
+            rest: 0,
+            media_url: "https://www.hsnstore.com/blog/wp-content/uploads/2013/08/psoas-retroversion-extension.gif",
+            description: "Estira los flexores de cadera."
+          },
+          {
+            id: "e25",
+            name: "Respiración profunda",
+            type: "time",
+            duration: 120,
+            sets: 1,
+            rest: 0,
+            media_url: "https://i.gifer.com/9FkX.gif",
+            description: "Relajación final, inhala y exhala profundamente."
           }
         ]
       }
     ]
   }
 
-  const currentSection = workout.sections[currentSectionIndex]
-
-  const finishWorkout = () => {
-    setIsCompleted(true)
-    setHasStarted(false)
-  }
-
-  const handleNextStep = () => {
-    if (isResting) {
-      // Finishing Rest -> Start Next Exercise
-      setIsResting(false)
-      if (currentExerciseIndex < currentSection.exercises.length - 1) {
-        setCurrentExerciseIndex(prev => prev + 1)
-      } else if (currentSectionIndex < workout.sections.length - 1) {
-        setCurrentSectionIndex(prev => prev + 1)
-        setCurrentExerciseIndex(0)
-      } else {
-        finishWorkout()
-      }
-    } else {
-      // Finishing Exercise -> Start Rest (or Finish)
-      const isLastExerciseInSection = currentExerciseIndex === currentSection.exercises.length - 1
-      const isLastSection = currentSectionIndex === workout.sections.length - 1
-      
-      if (isLastExerciseInSection && isLastSection) {
-        finishWorkout()
-      } else {
-        setIsResting(true)
-      }
+  useEffect(() => {
+    // Only initialize if it's a new workout or no workout is loaded
+    if (activeWorkout?.id !== workout.id) {
+      initializeWorkout(workout)
     }
-  }
+  }, [params.id])
+
+  // Helper to determine if we have a session in progress
+  const hasActiveSession = activeWorkout?.id === workout.id && (currentSectionIndex > 0 || currentExerciseIndex > 0 || isResting)
 
   // Render Logic
-  if (!workout) return <div>Loading...</div>
+  if (!activeWorkout) return <div>Loading...</div>
 
   // 1. Completion View
   if (isCompleted) {
     return (
       <WorkoutCompleted 
-        workout={workout} 
-        onRestart={() => window.location.reload()} 
+        workout={activeWorkout} 
+        onRestart={restartWorkout} 
       />
     )
   }
@@ -290,22 +367,28 @@ export default function WorkoutSessionPage({ params }: { params: { id: string } 
   if (!hasStarted) {
     return (
       <WorkoutOverview 
-        workout={workout}
-        onStart={() => setHasStarted(true)}
+        workout={activeWorkout}
+        onStart={restartWorkout}
+        onResume={startSession}
         onBack={() => router.push('/')}
+        hasActiveSession={hasActiveSession}
+        onExerciseClick={jumpToStep}
       />
     )
   }
 
   // 3. Active Session View
   return (
-    <ActiveSession 
-      workout={workout}
-      currentSectionIndex={currentSectionIndex}
-      currentExerciseIndex={currentExerciseIndex}
-      isResting={isResting}
-      onExit={() => setHasStarted(false)}
-      onNextStep={handleNextStep}
-    />
+    <>
+      <ActiveSession 
+        workout={activeWorkout}
+        currentSectionIndex={currentSectionIndex}
+        currentExerciseIndex={currentExerciseIndex}
+        currentSet={currentSet}
+        isResting={isResting}
+        onExit={endSession}
+        onNextStep={nextStep}
+      />
+    </>
   )
 }

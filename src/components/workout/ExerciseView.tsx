@@ -1,12 +1,14 @@
 import { Button } from '@/components/Button'
 import { WorkoutTimer } from '@/components/WorkoutTimer'
-import { CheckCircle2, Dumbbell } from 'lucide-react'
+import { CheckCircle2, Dumbbell, Volume2, VolumeX } from 'lucide-react'
 import { LocalExercise, LocalSection } from '@/types/workout/viewTypes'
+import { useState, useRef } from 'react'
 
 interface ExerciseViewProps {
   currentExercise: LocalExercise
   currentExerciseIndex: number
   currentSection: LocalSection
+  currentSet: number
   onComplete: () => void
 }
 
@@ -14,17 +16,86 @@ export function ExerciseView({
   currentExercise, 
   currentExerciseIndex, 
   currentSection, 
+  currentSet,
   onComplete 
 }: ExerciseViewProps) {
+  const [isVideoMuted, setIsVideoMuted] = useState(true)
+  const videoRef = useRef<HTMLIFrameElement>(null)
+  const totalSets = currentExercise.sets || 1
+
+  const isYouTubeUrl = (url: string) => {
+    return url.includes('youtube.com') || url.includes('youtu.be')
+  }
+
+  const getYouTubeEmbedUrl = (url: string) => {
+    let videoId = ''
+    if (url.includes('youtu.be')) {
+      videoId = url.split('youtu.be/')[1].split('?')[0]
+    } else if (url.includes('youtube.com')) {
+      videoId = new URL(url).searchParams.get('v') || ''
+    }
+    // Add autoplay, mute, loop, controls=0, enablejsapi=1
+    return `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&controls=0&loop=1&playlist=${videoId}&playsinline=1&rel=0&enablejsapi=1`
+  }
+
+  const toggleVideoMute = () => {
+    if (videoRef.current && videoRef.current.contentWindow) {
+      const command = isVideoMuted ? 'unMute' : 'mute'
+      videoRef.current.contentWindow.postMessage(JSON.stringify({
+        'event': 'command',
+        'func': command,
+        'args': []
+      }), '*')
+      setIsVideoMuted(!isVideoMuted)
+    }
+  }
+
   return (
     <div className="absolute inset-0 flex flex-col bg-black animate-in fade-in duration-500">
        <div className="relative flex-1 w-full h-full overflow-hidden">
           {currentExercise.media_url ? (
-            <img 
-              src={currentExercise.media_url} 
-              alt={currentExercise.name} 
-              className="w-full h-full object-cover opacity-90" 
-            />
+            isYouTubeUrl(currentExercise.media_url) ? (
+               <>
+                 <iframe 
+                   ref={videoRef}
+                   src={getYouTubeEmbedUrl(currentExercise.media_url)} 
+                   className="w-full h-full object-cover opacity-90 pointer-events-none scale-125"
+                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                   allowFullScreen
+                 />
+                 <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={toggleVideoMute}
+                    className="absolute top-20 right-6 z-30 h-10 w-10 rounded-full bg-black/40 backdrop-blur-md text-white hover:bg-black/60 border border-white/10"
+                 >
+                    {isVideoMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+                 </Button>
+               </>
+            ) : (
+              <div className="relative w-full h-full flex items-center justify-center bg-black">
+                {/* Blurred Background */}
+                <div className="absolute inset-0 overflow-hidden">
+                  <img 
+                    src={currentExercise.media_url} 
+                    alt="" 
+                    className="w-full h-full object-cover blur-3xl opacity-30 scale-110" 
+                  />
+                  <div className="absolute inset-0 bg-black/40" />
+                </div>
+
+                {/* Card Image */}
+                <div className="relative z-10 w-full max-w-md px-6 -mt-20">
+                  <div className="relative aspect-square w-full rounded-2xl overflow-hidden shadow-2xl ring-1 ring-white/10 bg-zinc-900/50 backdrop-blur-sm">
+                    <img 
+                      src={currentExercise.media_url} 
+                      alt={currentExercise.name} 
+                      className="w-full h-full object-contain p-2" 
+                    />
+                  </div>
+                </div>
+              </div>
+            )
           ) : (
             <div className="w-full h-full flex flex-col items-center justify-center bg-zinc-900 text-zinc-700">
               <Dumbbell className="w-24 h-24 mb-4 opacity-20" />
@@ -57,6 +128,11 @@ export function ExerciseView({
                      {currentExerciseIndex + 1} / {currentSection.exercises.length}
                    </span>
                  </div>
+                 {totalSets > 1 && (
+                    <div className="inline-block px-3 py-1 mb-2 rounded-full bg-orange-500/20 text-orange-400 text-xs font-bold uppercase tracking-wider border border-orange-500/20">
+                      Set {currentSet} of {totalSets} <span className="text-white/40 ml-1">• {totalSets - currentSet} Left</span>
+                    </div>
+                 )}
                  <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-white leading-[0.9] tracking-tight">
                    {currentExercise.name}
                  </h2>
@@ -67,16 +143,17 @@ export function ExerciseView({
                  )}
               </div>
 
-              {currentExercise.type === 'reps' && (
                  <Button 
                    size="lg" 
                    className="h-16 px-8 rounded-2xl text-lg font-bold shadow-xl shadow-primary/20 hover:scale-105 transition-transform shrink-0 w-full sm:w-auto" 
                    onClick={onComplete}
                  >
                    <CheckCircle2 className="mr-3 w-6 h-6" /> 
-                   Done ({currentExercise.reps})
+                   {currentExercise.type === 'reps' 
+                     ? `Done (${currentExercise.reps})` 
+                     : currentSet < totalSets ? 'Next Set' : 'Next Exercise'
+                   }
                  </Button>
-              )}
           </div>
        </div>
     </div>
