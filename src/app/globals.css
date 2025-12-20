@@ -1,0 +1,84 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: light dark;
+    --background: 0 0% 100%;
+    --foreground: 240 10% 3.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 3.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 3.9%;
+    --primary: 142.1 76.2% 36.3%; /* Green 600 */
+    --primary-foreground: 355.7 100% 97.3%;
+    --secondary: 240 4.8% 95.9%;
+    --secondary-foreground: 240 5.9% 10%;
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
+    --accent: 240 4.8% 95.9%;
+    --accent-foreground: 240 5.9% 10%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 90%;
+    --ring: 142.1 76.2% 36.3%; /* Green 600 */
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 240 10% 3.9%;
+    --card-foreground: 0 0% 98%;
+    --popover: 240 10% 3.9%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 142.1 70.6% 45.3%; /* Green 500 */
+    --primary-foreground: 144.9 80.4% 10%;
+    --secondary: 240 3.7% 15.6%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 240 3.7% 15.6%;
+    --muted-foreground: 240 5% 64.9%;
+    --accent: 240 3.7% 15.6%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 3.7% 15.6%;
+    --input: 240 3.7% 15.6%;
+    --ring: 142.1 70.6% 45.3%; /* Green 500 */
+  }
+}
+
+@layer utilities {
+  .glass {
+    @apply bg-background/60 backdrop-blur-md border-b border-border/50;
+  }
+  
+  /* Exclusive Glow Effects */
+  .glow-card {
+    @apply transition-all duration-300 ease-in-out;
+  }
+  
+  /* Light mode: "Dark Green Shines" */
+  /* Persistent state: Enhanced gloss and green shadow */
+  :root .glow-card {
+    @apply shadow-[0_8px_25px_-5px_rgba(21,128,61,0.25)] border-primary/30;
+  }
+  /* Hover state: Intense gloss and deep green shadow */
+  :root .glow-card:hover {
+    @apply shadow-[0_20px_40px_-5px_rgba(21,128,61,0.4)] border-primary/50 -translate-y-1;
+  }
+  
+  /* Dark mode: "Neon Green Shines" */
+  /* Persistent state: Visible neon green glow */
+  .dark .glow-card {
+    @apply shadow-[0_0_30px_-5px_rgba(74,222,128,0.15)] border-primary/40 bg-secondary/20;
+  }
+  /* Hover state: Bright neon green glow */
+  .dark .glow-card:hover {
+    @apply shadow-[0_0_50px_-10px_rgba(74,222,128,0.3)] border-primary/80 ring-1 ring-primary/40 bg-secondary/30 -translate-y-1;
+  }
+}
+
+
