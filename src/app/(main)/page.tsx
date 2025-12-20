@@ -1,10 +1,10 @@
-import './globals.css'
-import WorkoutCard from '../components/WorkoutCard'
-import type { Workout } from '../types/database'
-import { Card, CardHeader, CardContent } from '@/components/Card'
-import { Button } from '@/components/Button'
-import { TrendingUp, Users, Flame } from 'lucide-react'
+'use client'
 
+import WorkoutCard from '@/components/WorkoutCard'
+import type { Workout } from '@/types/database'
+import { Button } from '@/components/Button'
+
+// Temporary mock data until we connect to Supabase
 const sampleWorkouts: Workout[] = [
   {
     id: 'w1',
@@ -19,9 +19,9 @@ const sampleWorkouts: Workout[] = [
     updated_at: new Date().toISOString(),
     user: { id: 'u1', email: 'john@example.com', username: 'johndoe', name: 'John Doe', avatar_url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=John', created_at: '', updated_at: '' },
     sections: [
-      { id: 's1', workout_id: 'w1', name: 'Warm Up', order: 1, created_at: '', exercises: [{}, {}, {}] as any },
-      { id: 's2', workout_id: 'w1', name: 'Main Circuit', order: 2, created_at: '', exercises: [{}, {}, {}, {}] as any },
-      { id: 's3', workout_id: 'w1', name: 'Cool Down', order: 3, created_at: '', exercises: [{}, {}] as any },
+      { id: 's1', workout_id: 'w1', name: 'Warm Up', order_index: 1, created_at: '' },
+      { id: 's2', workout_id: 'w1', name: 'Main Circuit', order_index: 2, created_at: '' },
+      { id: 's3', workout_id: 'w1', name: 'Cool Down', order_index: 3, created_at: '' },
     ],
     likes_count: 12,
     is_liked: false,
@@ -38,10 +38,7 @@ const sampleWorkouts: Workout[] = [
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
     user: { id: 'u2', email: 'jane@example.com', username: 'janefit', name: 'Jane Fit', avatar_url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Jane', created_at: '', updated_at: '' },
-    sections: [
-       { id: 's4', workout_id: 'w2', name: 'High Intensity Intervals', order: 1, created_at: '', exercises: [{}, {}, {}, {}, {}] as any },
-       { id: 's5', workout_id: 'w2', name: 'Active Recovery', order: 2, created_at: '', exercises: [{}, {}] as any },
-    ],
+    sections: [],
     likes_count: 45,
     is_liked: true,
   },
@@ -81,7 +78,7 @@ const sampleWorkouts: Workout[] = [
 
 export default function Page() {
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
       {/* Main Feed Column */}
       <div className="lg:col-span-8 space-y-6">
         <div className="flex items-center justify-between mb-2">
@@ -100,52 +97,20 @@ export default function Page() {
           ))}
         </div>
       </div>
-
-      {/* Sidebar Column */}
+      
+      {/* Sidebar Column (Optional - for trending tags, suggested users, etc.) */}
       <div className="hidden lg:block lg:col-span-4 space-y-6">
-        {/* Trending Section */}
-        <Card className="glass border-none shadow-lg">
-          <CardHeader className="pb-3 border-b border-border/50">
-            <div className="flex items-center gap-2">
-              <Flame className="h-5 w-5 text-orange-500" />
-              <h2 className="font-semibold text-lg">Trending Now</h2>
+         <div className="sticky top-24 p-6 rounded-xl border bg-card text-card-foreground shadow-sm">
+            <h3 className="font-semibold mb-4">Trending Topics</h3>
+            <div className="flex flex-wrap gap-2">
+                {['#SummerBody', '#HIIT', '#YogaLife', '#Bulking', '#Calisthenics'].map(tag => (
+                    <span key={tag} className="px-3 py-1 bg-secondary text-secondary-foreground rounded-full text-xs cursor-pointer hover:bg-primary/20 transition-colors">
+                        {tag}
+                    </span>
+                ))}
             </div>
-          </CardHeader>
-          <CardContent className="pt-4 space-y-4">
-            {['#SummerBody', '#CrossFitGames', '#MorningRoutine', '#Calisthenics'].map((tag, i) => (
-              <div key={i} className="flex items-center justify-between group cursor-pointer">
-                <span className="text-sm font-medium text-muted-foreground group-hover:text-primary transition-colors">{tag}</span>
-                <span className="text-xs text-muted-foreground/60">{10 + i}k posts</span>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-
-        {/* Suggested Users Section */}
-        <Card className="glass border-none shadow-lg">
-          <CardHeader className="pb-3 border-b border-border/50">
-             <div className="flex items-center gap-2">
-              <Users className="h-5 w-5 text-blue-500" />
-              <h2 className="font-semibold text-lg">Who to Follow</h2>
-            </div>
-          </CardHeader>
-          <CardContent className="pt-4 space-y-4">
-            {[1, 2, 3].map((_, i) => (
-              <div key={i} className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary/20 to-purple-500/20" />
-                  <div>
-                    <p className="text-sm font-medium leading-none">Gym Rat {i + 1}</p>
-                    <p className="text-xs text-muted-foreground">Suggested for you</p>
-                  </div>
-                </div>
-                <Button variant="ghost" size="sm" className="text-primary hover:bg-primary/10">Follow</Button>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
+         </div>
       </div>
     </div>
   )
 }
-

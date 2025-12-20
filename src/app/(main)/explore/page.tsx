@@ -1,4 +1,3 @@
-import '../globals.css'
 import WorkoutCard from '../../../components/WorkoutCard'
 import type { Workout } from '../../../types/database'
 
