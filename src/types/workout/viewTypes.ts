@@ -12,6 +12,8 @@ export interface LocalExercise {
     url: string
   }
   description?: string
+  muscle_groups?: string[]
+  equipment?: string[]
 }
 
 export interface LocalSection {
@@ -26,6 +28,8 @@ export interface LocalWorkout {
   title: string
   cover?: string
   description: string
+  tags?: string[]
+  difficulty?: string
   audio?: string[] // YouTube URLs
   sections: LocalSection[]
 }

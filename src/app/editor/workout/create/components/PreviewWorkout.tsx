@@ -1,7 +1,8 @@
 import React, { useState, useMemo } from 'react'
-import { X, Play, Dumbbell } from 'lucide-react'
+import { Play, Dumbbell, TimerIcon, Info, ChevronLeft, Clock } from 'lucide-react'
 import { Button } from '@/components/Button'
 import { PreviewActivity } from './PreviewActivity'
+import { LocalWorkout } from '@/types/workout/viewTypes'
 
 interface PreviewWorkoutProps {
   data: any
@@ -12,16 +13,46 @@ export function PreviewWorkout({ data, onClose }: PreviewWorkoutProps) {
   const [isPlaying, setIsPlaying] = useState(false)
   const [currentStep, setCurrentStep] = useState(0)
 
-  // Flatten structure for linear navigation
+  // Map form data to LocalWorkout structure
+  const workout: LocalWorkout = useMemo(() => {
+    return {
+      id: 'preview',
+      title: data.title || 'Untitled Workout',
+      description: data.description || 'No description provided.',
+      cover: data.cover || 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=1470&auto=format&fit=crop',
+      tags: data.tags,
+      difficulty: data.difficulty,
+      audio: Array.isArray(data.audio) ? data.audio : (data.audio ? [data.audio] : []),
+      sections: (data.sections || []).map((s: any) => ({
+        id: s.id,
+        name: s.name || 'Untitled Section',
+        orderType: s.orderType || 'single',
+        exercises: (s.exercises || []).map((e: any) => ({
+          id: e.id,
+          name: e.name || 'Untitled Exercise',
+          type: e.type || 'reps',
+          reps: e.reps,
+          sets: e.sets,
+          rest: e.rest || 60,
+          description: e.description,
+          media_url: e.media_url,
+          muscle_groups: e.muscle_groups,
+          equipment: e.equipment
+        }))
+      }))
+    }
+  }, [data])
+
+  // Flatten structure for linear navigation (Playing Mode)
   const flatSteps = useMemo(() => {
     const steps: any[] = []
-    data.sections?.forEach((section: any) => {
-      section.exercises?.forEach((ex: any) => {
+    workout.sections.forEach((section) => {
+      section.exercises.forEach((ex) => {
         steps.push({ ...ex, sectionName: section.name })
       })
     })
     return steps
-  }, [data])
+  }, [workout])
 
   if (isPlaying) {
     return (
@@ -31,10 +62,11 @@ export function PreviewWorkout({ data, onClose }: PreviewWorkoutProps) {
         totalSteps={flatSteps.length}
         sectionName={flatSteps[currentStep]?.sectionName}
         onNext={() => {
-            if (currentStep < flatSteps.length) {
+            if (currentStep < flatSteps.length - 1) {
                 setCurrentStep(prev => prev + 1)
             } else {
                 setIsPlaying(false) // Finish
+                setCurrentStep(0)
             }
         }}
         onPrev={() => setCurrentStep(prev => Math.max(0, prev - 1))}
@@ -43,79 +75,114 @@ export function PreviewWorkout({ data, onClose }: PreviewWorkoutProps) {
     )
   }
 
-  // OVERVIEW MODE
+  // OVERVIEW MODE (Similar to WorkoutOverview)
   return (
-    <div className="h-full w-full bg-background flex flex-col relative">
-      {/* Header */}
-      <div className="h-14 border-b flex items-center justify-between px-4 shrink-0 bg-background/50 backdrop-blur z-10">
-        <h2 className="font-bold text-sm">Workout Preview</h2>
-      </div>
-
-      <div className="flex-1 overflow-y-auto p-4 w-full pb-20 scrollbar-hide">
-         <div className="text-center mb-6">
-            <div className="inline-flex items-center justify-center p-3 bg-primary/10 rounded-full mb-3">
-                <Dumbbell className="h-6 w-6 text-primary" />
-            </div>
-            <h1 className="text-xl font-bold mb-1 leading-tight">{data.title || 'Untitled Workout'}</h1>
-            <p className="text-xs text-muted-foreground line-clamp-2">{data.description || 'No description provided.'}</p>
-            
-            <div className="flex justify-center gap-2 mt-4">
-                <div className="flex flex-col items-center bg-muted/50 px-3 py-1.5 rounded-lg min-w-[70px]">
-                    <span className="text-[10px] text-muted-foreground uppercase font-bold">Category</span>
-                    <span className="font-medium capitalize text-xs">{data.category}</span>
-                </div>
-                <div className="flex flex-col items-center bg-muted/50 px-3 py-1.5 rounded-lg min-w-[70px]">
-                    <span className="text-[10px] text-muted-foreground uppercase font-bold">Level</span>
-                    <span className="font-medium capitalize text-xs">{data.difficulty}</span>
-                </div>
-            </div>
+    <div className="h-full w-full bg-background flex flex-col relative overflow-y-auto scrollbar-hide">
+      {/* Hero Section */}
+      <div className="relative h-[45%] min-h-[300px] w-full shrink-0">
+         <div className="absolute top-4 left-4 z-50">
+           <Button 
+             variant="ghost" 
+             size="icon" 
+             className="h-10 w-10 rounded-full bg-black/20 backdrop-blur-md text-white hover:bg-black/40 border border-white/10" 
+             onClick={onClose}
+           >
+             <ChevronLeft className="w-6 h-6" />
+           </Button>
          </div>
 
-         <div className="space-y-4">
-            {data.sections?.map((section: any, idx: number) => (
-                <div key={idx} className="space-y-2">
-                    <h3 className="font-bold flex items-center gap-2 text-sm border-b pb-1">
-                        <span className="flex items-center justify-center w-5 h-5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold">
-                            {idx + 1}
-                        </span>
-                        {section.name || 'Section'}
-                    </h3>
-                    <div className="space-y-2 pl-1">
-                        {section.exercises?.map((ex: any, eIdx: number) => (
-                            <div key={eIdx} className="bg-card border rounded-lg p-2.5 flex justify-between items-center shadow-sm">
-                                <div className="flex items-center gap-2.5">
-                                    <div className="h-6 w-1 bg-primary/20 rounded-full" />
-                                    <div>
-                                        <p className="font-semibold text-xs">{ex.name || 'New Exercise'}</p>
-                                        <p className="text-[10px] text-muted-foreground">
-                                            {ex.sets}×{ex.reps} • {ex.rest}s
-                                        </p>
-                                    </div>
-                                </div>
-                                {ex.weight && (
-                                    <span className="font-mono text-[10px] font-bold bg-muted px-1.5 py-0.5 rounded">
-                                        {ex.weight}kg
-                                    </span>
-                                )}
-                            </div>
-                        ))}
-                        {(!section.exercises || section.exercises.length === 0) && (
-                            <p className="text-xs text-muted-foreground italic pl-3">No exercises added yet.</p>
-                        )}
+         <div className="absolute inset-0">
+           <img 
+             src={workout.cover} 
+             alt="Workout Cover" 
+             className="w-full h-full object-cover opacity-90"
+           />
+           <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-black/30" />
+         </div>
+         
+         <div className="absolute bottom-0 left-0 right-0 p-6 w-full z-10">
+           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/20 backdrop-blur-md text-primary text-xs font-medium mb-3 border border-primary/20">
+             <Dumbbell className="w-3 h-3" /> {data.category || 'Strength Training'}
+           </div>
+           <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-foreground mb-2 drop-shadow-sm leading-tight">
+             {workout.title}
+           </h1>
+           <div className="flex items-center gap-4 text-xs md:text-sm text-muted-foreground font-medium">
+             <span className="flex items-center gap-1">
+               <TimerIcon className="w-3 h-3 md:w-4 md:h-4" /> ~45 mins
+             </span>
+             <span className="flex items-center gap-1">
+               <Info className="w-3 h-3 md:w-4 md:h-4" /> {data.difficulty || 'Intermediate'}
+             </span>
+           </div>
+         </div>
+      </div>
+
+      {/* Content Section */}
+      <div className="flex-1 w-full px-4 md:px-6 py-6 space-y-8 bg-background">
+         <div className="prose prose-sm prose-invert max-w-none">
+           <p className="text-muted-foreground leading-relaxed">
+             {workout.description}
+           </p>
+         </div>
+
+         <div className="space-y-8 pb-24">
+           {workout.sections.map((section, idx) => (
+             <div key={idx} className="space-y-4">
+               <div className="flex items-center gap-3 pb-2 border-b border-border/50">
+                 <span className="flex items-center justify-center w-6 h-6 rounded-full bg-secondary text-xs font-bold text-primary ring-1 ring-border">
+                   {idx + 1}
+                 </span>
+                 <h3 className="text-lg font-bold tracking-tight">{section.name}</h3>
+               </div>
+               
+               <div className="grid gap-3 grid-cols-1">
+                 {section.exercises.map((ex, exIdx) => (
+                   <div 
+                     key={exIdx} 
+                     className="group relative flex items-center gap-3 p-3 rounded-xl bg-card border border-border/50 hover:border-primary/50 transition-all cursor-default"
+                   >
+                     <div className="w-12 h-12 rounded-lg bg-muted overflow-hidden shrink-0 border border-border/30 flex items-center justify-center">
+                       {ex.media_url ? (
+                         <img src={ex.media_url} alt={ex.name} className="w-full h-full object-cover" />
+                       ) : (
+                         <Dumbbell className="w-5 h-5 text-muted-foreground/40" />
+                       )}
+                     </div>
+                     
+                     <div className="flex-1 min-w-0">
+                       <h4 className="font-semibold text-sm text-foreground truncate pr-2">{ex.name}</h4>
+                       <div className="flex items-center gap-2 mt-1 text-[10px] md:text-xs text-muted-foreground">
+                         <span className="bg-secondary px-1.5 py-0.5 rounded-md font-medium">
+                           {ex.type === 'reps' ? `${ex.reps || 0} reps` : `${ex.duration || 0}s`}
+                         </span>
+                         {ex.sets && <span>{ex.sets} sets</span>}
+                         {ex.rest && <span className="flex items-center gap-0.5"><Clock className="w-3 h-3" /> {ex.rest}s</span>}
+                       </div>
+                     </div>
+                   </div>
+                 ))}
+                 {section.exercises.length === 0 && (
+                    <div className="text-center py-4 text-xs text-muted-foreground italic">
+                        No exercises added yet.
                     </div>
-                </div>
-            ))}
+                 )}
+               </div>
+             </div>
+           ))}
          </div>
       </div>
 
-      <div className="p-4 bg-background/80 backdrop-blur absolute bottom-0 w-full border-t z-10">
-          <Button 
-            className="w-full text-sm h-10 rounded-full shadow-lg shadow-primary/20 hover:scale-[1.02] transition-transform" 
-            onClick={() => setIsPlaying(true)}
-            disabled={flatSteps.length === 0}
-        >
-              <Play className="h-4 w-4 mr-2 fill-current" /> Start Workout
-          </Button>
+      {/* Floating Start Button */}
+      <div className="sticky bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-background via-background/95 to-transparent z-50">
+         <Button 
+           className="w-full h-12 text-base font-bold shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all rounded-xl" 
+           onClick={() => setIsPlaying(true)}
+           disabled={flatSteps.length === 0}
+         >
+           <Play className="w-5 h-5 mr-2 fill-current" /> 
+           Start Preview
+         </Button>
       </div>
     </div>
   )

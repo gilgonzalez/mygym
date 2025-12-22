@@ -5,7 +5,19 @@ import { useForm, useFieldArray, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd'
-import { Plus, Trash2, GripVertical, Save, Dumbbell, ArrowLeft, Eye, Clock, Play, Smartphone, Monitor, Tag, Image as ImageIcon, Video, Music, X, Upload, Mic, FileAudio } from 'lucide-react'
+import { Plus, Trash2, GripVertical, Save,  ArrowLeft, Eye, Play, Smartphone, Monitor, Tag, Image as ImageIcon, Video, Music, X, Upload, Mic, FileAudio, Square, Maximize2, Camera, Circle, Dna, Activity, Zap, Trophy, Crown, Repeat, List } from 'lucide-react'
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import Link from 'next/link'
 
 import { Button } from '@/components/Button'
@@ -22,29 +34,31 @@ import { PreviewWorkout } from './components/PreviewWorkout'
 const exerciseSchema = z.object({
   id: z.string(),
   name: z.string().min(1, "Required"),
-  sets: z.string().optional(),
-  reps: z.string().optional(),
-  rest: z.string().optional(),
-  notes: z.string().optional(),
-  media_id: z.string().optional(), // Added media_id
-  equipment: z.array(z.string()).optional(), // Added equipment array
-  muscle_group: z.array(z.string()).optional(), // Added muscle_group array
   type: z.enum(['reps', 'time']).default('reps'),
-  duration: z.string().optional(),
+  reps: z.union([z.string(), z.number()]).optional(),
+  sets: z.union([z.string(), z.number()]).optional(),
+  duration: z.union([z.string(), z.number()]).optional(),
+  rest: z.union([z.string(), z.number()]).optional(),
+  media_url: z.string().optional(),
+  description: z.string().optional(),
+  muscle_groups: z.array(z.string()).optional(),
+  equipment: z.array(z.string()).optional(),
 })
 
 const sectionSchema = z.object({
   id: z.string(),
   name: z.string().min(1, "Required"),
+  orderType: z.enum(['linear', 'single']).default('single'),
   exercises: z.array(exerciseSchema),
 })
 
 const workoutSchema = z.object({
   title: z.string().min(3, "Title required"),
   description: z.string().optional(),
+  cover: z.string().optional(),
   tags: z.array(z.string()).optional(),
-  difficulty: z.string().min(1, "Required"),
-  audio: z.string().optional(),
+  difficulty: z.enum(['Beginner', 'Intermediate', 'Advanced', 'Elite', 'Pro']).optional(),
+  audio: z.array(z.string()).optional(),
   sections: z.array(sectionSchema),
 })
 
@@ -62,13 +76,14 @@ export default function CreateWorkoutPage() {
     defaultValues: {
       title: '',
       description: '',
-      tags: [],
-      difficulty: 'intermediate',
+      cover: '',
+      audio: [],
       sections: [
         {
           id: 'section-1',
           name: 'Warm Up',
-          exercises: [{ id: 'ex-1', name: '', sets: '3', reps: '10', rest: '60', equipment: [], muscle_group: [], type: 'reps', duration: '' }]
+          orderType: 'linear',
+          exercises: [{ id: 'ex-1', name: '', sets: 3, reps: 10, rest: 60, type: 'reps', duration: 0, description: '' }]
         }
       ]
     }
@@ -148,49 +163,104 @@ export default function CreateWorkoutPage() {
                 />
               </div>
 
-              <div className="flex flex-wrap gap-4 items-center">
-                 {/* Difficulty Select */}
-                 <div className="relative group">
-                    <div className="absolute inset-0 bg-gradient-to-r from-orange-500 to-red-500 rounded-full blur opacity-20 group-hover:opacity-40 transition-opacity" />
-                    <select {...register('difficulty')} className="relative appearance-none bg-white dark:bg-zinc-900 border-2 border-transparent hover:border-orange-500/50 px-6 py-3 pr-10 rounded-full text-sm font-bold uppercase tracking-wide outline-none cursor-pointer transition-all shadow-sm">
-                        <option value="beginner">Beginner</option>
-                        <option value="intermediate">Intermediate</option>
-                        <option value="advanced">Advanced</option>
-                    </select>
-                 </div>
-                 
-                 {/* Tags Input */}
-                 <div className="relative flex-1 min-w-[300px] group">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                 {/* Cover Image */}
+                 <div className="space-y-2">
+                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest pl-1">Cover Image</label>
                     <Controller
-                      control={control}
-                      name="tags"
-                      render={({ field }) => (
-                        <TagInput 
-                          value={field.value || []} 
-                          onChange={field.onChange}
-                          placeholder="Add tags (e.g. cardio, morning)"
-                          icon={<Tag className="h-4 w-4" />}
-                        />
-                      )}
+                        control={control}
+                        name="cover"
+                        render={({ field }) => (
+                            <MediaInput 
+                                value={field.value} 
+                                onChange={field.onChange}
+                                placeholder="Add cover image..."
+                                type="media"
+                            />
+                        )}
                     />
                  </div>
-              </div>
 
-              {/* Workout Audio */}
-              <div className="space-y-2">
-                 <label className="text-sm font-bold text-muted-foreground uppercase tracking-widest pl-1">Workout Audio</label>
-                 <Controller
-                    control={control}
-                    name="audio"
-                    render={({ field }) => (
-                        <MediaInput 
-                            value={field.value} 
-                            onChange={field.onChange}
-                            placeholder="Add workout music (URL or File)..."
-                            type="audio"
-                        />
-                    )}
-                 />
+                 {/* Workout Audio */}
+                 <div className="space-y-2">
+                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest pl-1">Workout Playlist (URLs)</label>
+                    <Controller
+                        control={control}
+                        name="audio"
+                        render={({ field }) => (
+                            <TagInput 
+                                value={field.value || []} 
+                                onChange={field.onChange}
+                                placeholder="Add YouTube/Spotify links..."
+                                icon={<Music className="h-4 w-4" />}
+                                variant="blue"
+                            />
+                        )}
+                    />
+                 </div>
+
+                 {/* Tags & Difficulty */}
+                 <div className="space-y-2">
+                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest pl-1">Tags</label>
+                    <Controller
+                        control={control}
+                        name="tags"
+                        render={({ field }) => (
+                            <TagInput 
+                                value={field.value || []} 
+                                onChange={field.onChange}
+                                placeholder="Cardio, HIIT, Strength..."
+                                icon={<Tag className="h-4 w-4" />}
+                            />
+                        )}
+                    />
+                 </div>
+                 <div className="space-y-2">
+                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest pl-1">Difficulty</label>
+                    <Controller
+                        control={control}
+                        name="difficulty"
+                        render={({ field }) => (
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <SelectTrigger className="w-full h-10 rounded-xl bg-background border-border/50 focus:ring-primary/20 font-medium">
+                                    <SelectValue placeholder="Select difficulty level" />
+                                </SelectTrigger>
+                                <SelectContent className="rounded-xl border-border/50 shadow-xl">
+                                    <SelectItem value="Beginner" className="rounded-lg my-1 cursor-pointer focus:bg-primary/5 focus:text-primary font-medium">
+                                        <div className="flex items-center gap-2">
+                                            <Dna className="h-4 w-4 text-emerald-500" />
+                                            <span>Beginner</span>
+                                        </div>
+                                    </SelectItem>
+                                    <SelectItem value="Intermediate" className="rounded-lg my-1 cursor-pointer focus:bg-primary/5 focus:text-primary font-medium">
+                                        <div className="flex items-center gap-2">
+                                            <Activity className="h-4 w-4 text-blue-500" />
+                                            <span>Intermediate</span>
+                                        </div>
+                                    </SelectItem>
+                                    <SelectItem value="Advanced" className="rounded-lg my-1 cursor-pointer focus:bg-primary/5 focus:text-primary font-medium">
+                                        <div className="flex items-center gap-2">
+                                            <Zap className="h-4 w-4 text-orange-500" />
+                                            <span>Advanced</span>
+                                        </div>
+                                    </SelectItem>
+                                    <SelectItem value="Elite" className="rounded-lg my-1 cursor-pointer focus:bg-primary/5 focus:text-primary font-medium">
+                                        <div className="flex items-center gap-2">
+                                            <Trophy className="h-4 w-4 text-purple-500" />
+                                            <span>Elite</span>
+                                        </div>
+                                    </SelectItem>
+                                    <SelectItem value="Pro" className="rounded-lg my-1 cursor-pointer focus:bg-primary/5 focus:text-primary font-medium">
+                                        <div className="flex items-center gap-2">
+                                            <Crown className="h-4 w-4 text-yellow-500" />
+                                            <span>Pro Athlete</span>
+                                        </div>
+                                    </SelectItem>
+                                </SelectContent>
+                            </Select>
+                        )}
+                    />
+                 </div>
               </div>
             </div>
 
@@ -212,11 +282,58 @@ export default function CreateWorkoutPage() {
                               <div {...provided.dragHandleProps} className="cursor-grab text-muted-foreground/30 hover:text-foreground transition-colors p-2 hover:bg-black/5 rounded-xl">
                                 <GripVertical className="h-6 w-6" />
                               </div>
-                              <div className="flex-1">
+                              <div className="flex-1 flex items-center gap-4">
                                 <Input 
                                     {...register(`sections.${index}.name` as const)} 
                                     placeholder="SECTION NAME" 
                                     className="bg-transparent border-none shadow-none font-black text-2xl tracking-tight focus-visible:ring-0 px-0 h-auto w-full placeholder:text-muted-foreground/20 uppercase"
+                                />
+                                <Controller
+                                    control={control}
+                                    name={`sections.${index}.orderType` as const}
+                                    render={({ field }) => (
+                                <div className="flex bg-muted/50 p-1 rounded-lg shrink-0 gap-1">
+                                    {/* Straight Sets (Single) */}
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <button 
+                                                type="button"
+                                                onClick={() => field.onChange('single')}
+                                                className={cn(
+                                                    "px-3 py-1.5 rounded-md text-xs font-bold uppercase transition-all flex items-center gap-1.5",
+                                                    field.value === 'single' ? "bg-white dark:bg-zinc-800 shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+                                                )}
+                                            >
+                                                <List className="h-3.5 w-3.5" />
+                                                Straight Sets
+                                            </button>
+                                        </TooltipTrigger>
+                                        <TooltipContent className="bg-zinc-900 text-white border-white/10 text-xs">
+                                            <p>Complete all sets of one exercise before moving to the next.</p>
+                                        </TooltipContent>
+                                    </Tooltip>
+
+                                    {/* Circuit (Linear) */}
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <button 
+                                                type="button"
+                                                onClick={() => field.onChange('linear')}
+                                                className={cn(
+                                                    "px-3 py-1.5 rounded-md text-xs font-bold uppercase transition-all flex items-center gap-1.5",
+                                                    field.value === 'linear' || !field.value ? "bg-white dark:bg-zinc-800 shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+                                                )}
+                                            >
+                                                <Repeat className="h-3.5 w-3.5" />
+                                                Circuit
+                                            </button>
+                                        </TooltipTrigger>
+                                        <TooltipContent className="bg-zinc-900 text-white border-white/10 text-xs">
+                                            <p>Perform one set of each exercise in sequence, then repeat the cycle.</p>
+                                        </TooltipContent>
+                                    </Tooltip>
+                                </div>
+                                    )}
                                 />
                               </div>
                               <Button 
@@ -240,19 +357,25 @@ export default function CreateWorkoutPage() {
               </Droppable>
             </DragDropContext>
 
-            <Button 
-              type="button" 
-              variant="outline" 
-              className="w-full border-dashed border-4 py-16 text-muted-foreground/50 hover:text-primary hover:border-primary hover:bg-primary/5 rounded-[2.5rem] transition-all duration-300 group mt-12 mb-20"
-              onClick={() => appendSection({ id: `sec-${Date.now()}`, name: '', exercises: [] })}
-            >
-              <div className="flex flex-col items-center gap-4">
-                <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform duration-300 group-hover:rotate-90">
-                    <Plus className="h-8 w-8" />
+            <div className="relative mt-8 mb-20 group">
+                <div className="absolute inset-0 flex items-center" aria-hidden="true">
+                    <div className="w-full border-t border-dashed border-border/40 group-hover:border-primary/20 transition-colors" />
                 </div>
-                <span className="font-black text-xl tracking-tight uppercase">Add New Section</span>
-              </div>
-            </Button>
+                <div className="relative flex justify-center">
+                    <Button 
+                        type="button" 
+                        variant="outline" 
+                        size="lg"
+                        className="h-12 px-8 rounded-full border border-dashed border-border/60 hover:border-primary/40 bg-background text-muted-foreground/60 hover:text-primary hover:bg-primary/5 text-xs font-bold uppercase tracking-widest shadow-sm hover:shadow-md transition-all duration-300"
+                        onClick={() => appendSection({ id: `sec-${Date.now()}`, name: '', orderType: 'linear', exercises: [] })}
+                    >
+                        <span className="flex items-center gap-2 group-hover:gap-3 transition-all">
+                            <Plus className="h-4 w-4" />
+                            Add New Section
+                        </span>
+                    </Button>
+                </div>
+            </div>
           </div>
         </div>
 
@@ -263,13 +386,13 @@ export default function CreateWorkoutPage() {
             previewDevice === 'mobile' ? "w-full md:w-[420px]" : "w-full md:w-[65%]"
         )}>
           {/* Preview Controls */}
-          <div className="absolute top-0 left-0 right-0 h-16 flex items-center justify-center px-6 z-30 pointer-events-none">
-             <div className="flex items-center gap-1 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md p-1.5 rounded-full shadow-lg border border-black/5 pointer-events-auto transform translate-y-4">
+          <div className="absolute top-0 left-0 right-0 h-16 flex items-center justify-center px-6 z-50 pointer-events-none">
+             <div className="flex items-center gap-1 bg-background/95 backdrop-blur-md p-1.5 rounded-full shadow-xl border border-border pointer-events-auto">
                 <button
                     onClick={() => setPreviewDevice('mobile')}
                     className={cn(
                         "p-2.5 rounded-full transition-all duration-300",
-                        previewDevice === 'mobile' ? "bg-primary text-primary-foreground shadow-sm scale-110" : "text-muted-foreground hover:text-foreground hover:bg-black/5"
+                        previewDevice === 'mobile' ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground hover:bg-muted"
                     )}
                 >
                     <Smartphone className="h-4 w-4" />
@@ -278,7 +401,7 @@ export default function CreateWorkoutPage() {
                     onClick={() => setPreviewDevice('desktop')}
                     className={cn(
                         "p-2.5 rounded-full transition-all duration-300",
-                        previewDevice === 'desktop' ? "bg-primary text-primary-foreground shadow-sm scale-110" : "text-muted-foreground hover:text-foreground hover:bg-black/5"
+                        previewDevice === 'desktop' ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground hover:bg-muted"
                     )}
                 >
                     <Monitor className="h-4 w-4" />
@@ -291,8 +414,8 @@ export default function CreateWorkoutPage() {
             <div className={cn(
                 "transition-all duration-500 ease-in-out relative shadow-2xl overflow-hidden bg-background",
                 previewDevice === 'mobile' 
-                    ? "w-full max-w-[360px] h-[720px] rounded-[3rem] border-[8px] border-zinc-900 ring-1 ring-white/20" 
-                    : "w-full max-w-5xl h-[600px] rounded-xl border-[12px] border-zinc-900 ring-1 ring-white/20"
+                    ? "w-full max-w-[360px] h-[720px] max-h-[calc(100vh-8rem)] rounded-[3rem] border-[8px] border-zinc-900 ring-1 ring-white/20" 
+                    : "w-full max-w-5xl h-[600px] max-h-[calc(100vh-8rem)] rounded-xl border-[12px] border-zinc-900 ring-1 ring-white/20"
             )}>
                {/* Mobile Notch */}
                {previewDevice === 'mobile' && (
@@ -328,182 +451,187 @@ function ExercisesFieldArray({ nestIndex, control, register }: { nestIndex: numb
   })
 
   return (
-    <div className="space-y-6">
-      {/* Table Header */}
-      {fields.length > 0 && (
-          <div className="grid grid-cols-12 gap-4 px-4 text-xs font-bold text-muted-foreground uppercase tracking-widest opacity-60">
-              <div className="col-span-6">Exercise Details</div>
-              <div className="col-span-2 text-center">Type</div>
-              <div className="col-span-2 text-center">Value</div>
-              <div className="col-span-2 text-right">Actions</div>
-          </div>
-      )}
-      
+    <div className="space-y-4">
       {fields.map((item, k) => (
-        <div key={item.id} className="group relative bg-white dark:bg-zinc-900 rounded-2xl p-5 transition-all hover:shadow-lg border border-transparent hover:border-primary/10 space-y-4">
-             {/* Top Row: Name, Sets, Reps, Actions */}
-             <div className="grid grid-cols-12 gap-4 items-start">
-                <div className="col-span-6 space-y-4">
-                    <Input 
-                        {...register(`sections.${nestIndex}.exercises.${k}.name`)} 
-                        placeholder="Exercise name" 
-                        className="h-11 bg-muted/30 border-transparent focus:bg-background focus-visible:ring-2 focus-visible:ring-primary/20 font-bold text-lg"
-                    />
-                    
-                    {/* Media Input */}
-                    <div className="w-full">
-                         <Controller
-                            control={control}
-                            name={`sections.${nestIndex}.exercises.${k}.media_id`}
-                            render={({ field }) => (
-                                <MediaInput 
-                                    value={field.value} 
-                                    onChange={field.onChange} 
-                                />
-                            )}
-                         />
-                    </div>
+        <div key={item.id} className="group relative bg-white dark:bg-zinc-900 rounded-3xl p-6 border border-border/50 shadow-sm hover:shadow-lg transition-all">
+             
+             {/* Delete Button (Absolute Top Right) */}
+             <div className="absolute top-4 right-4 z-10">
+                 <Button 
+                    type="button" variant="ghost" size="icon" 
+                    onClick={() => remove(k)}
+                    className="h-8 w-8 text-muted-foreground/30 hover:text-destructive hover:bg-destructive/10 rounded-full"
+                >
+                    <Trash2 className="h-4 w-4" />
+                </Button>
+             </div>
 
-                    {/* Tags for Equipment & Muscles */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                         <Controller
-                            control={control}
-                            name={`sections.${nestIndex}.exercises.${k}.equipment`}
-                            render={({ field }) => (
-                                <TagInput
-                                    value={field.value || []}
-                                    onChange={field.onChange}
-                                    placeholder="Add equipment..."
-                                    icon={<Dumbbell className="h-3 w-3" />}
-                                    variant="orange"
-                                />
-                            )}
-                         />
-                         
-                         <Controller
-                            control={control}
-                            name={`sections.${nestIndex}.exercises.${k}.muscle_group`}
-                            render={({ field }) => (
-                                <TagInput
-                                    value={field.value || []}
-                                    onChange={field.onChange}
-                                    placeholder="Target muscles..."
-                                    icon={<ImageIcon className="h-3 w-3" />}
-                                    variant="blue"
-                                />
-                            )}
-                         />
-                    </div>
-                </div>
-
-                <div className="col-span-2">
-                    <div className="relative h-full flex items-center justify-center">
-                        <Controller
-                            control={control}
-                            name={`sections.${nestIndex}.exercises.${k}.type`}
-                            render={({ field }) => (
-                                <div className="flex flex-col gap-1 w-full">
-                                    <button 
-                                        type="button"
-                                        onClick={() => field.onChange('reps')}
-                                        className={cn(
-                                            "flex-1 rounded-lg text-xs font-bold uppercase tracking-wider transition-all border border-transparent",
-                                            field.value === 'reps' ? "bg-primary text-primary-foreground shadow-sm scale-105" : "bg-muted/30 text-muted-foreground hover:bg-muted/50"
-                                        )}
-                                    >
-                                        Reps
-                                    </button>
-                                    <button 
-                                        type="button"
-                                        onClick={() => field.onChange('time')}
-                                        className={cn(
-                                            "flex-1 rounded-lg text-xs font-bold uppercase tracking-wider transition-all border border-transparent",
-                                            field.value === 'time' ? "bg-primary text-primary-foreground shadow-sm scale-105" : "bg-muted/30 text-muted-foreground hover:bg-muted/50"
-                                        )}
-                                    >
-                                        Time
-                                    </button>
-                                </div>
-                            )}
+             <div className="flex flex-wrap gap-8">
+                 {/* Main Content (Left) */}
+                 <div className="flex-1 min-w-[300px] space-y-6">
+                    {/* Header: Name & Description */}
+                    <div className="space-y-2 pr-10">
+                        <Input 
+                            {...register(`sections.${nestIndex}.exercises.${k}.name`)} 
+                            placeholder="Exercise Name" 
+                            className="h-auto text-xl font-black bg-transparent border-none px-0 focus-visible:ring-0 placeholder:text-muted-foreground/30 tracking-tight"
+                        />
+                        <Input 
+                            {...register(`sections.${nestIndex}.exercises.${k}.description`)} 
+                            placeholder="Add instructions, cues or notes..." 
+                            className="h-auto text-sm bg-transparent border-none px-0 hover:bg-muted/10 transition-colors focus-visible:ring-0 placeholder:text-muted-foreground/40 w-full font-medium text-muted-foreground"
                         />
                     </div>
-                </div>
-                <div className="col-span-2">
-                    <Controller
-                        control={control}
-                        name={`sections.${nestIndex}.exercises.${k}.type`}
-                        render={({ field: typeField }) => (
-                            <div className="relative">
-                                {typeField.value === 'reps' ? (
-                                    <>
-                                        <Input 
-                                            {...register(`sections.${nestIndex}.exercises.${k}.reps`)} 
-                                            placeholder="0" type="number" 
-                                            className="h-14 text-center text-2xl font-black bg-muted/20 border-transparent focus:bg-background focus-visible:ring-2 focus-visible:ring-primary/20"
-                                        />
-                                        <span className="absolute bottom-1 left-0 right-0 text-center text-[10px] text-muted-foreground font-bold uppercase tracking-wider pointer-events-none">Reps</span>
-                                    </>
-                                ) : (
-                                    <>
-                                        <Input 
-                                            {...register(`sections.${nestIndex}.exercises.${k}.duration`)} 
-                                            placeholder="0" type="number" 
-                                            className="h-14 text-center text-2xl font-black bg-muted/20 border-transparent focus:bg-background focus-visible:ring-2 focus-visible:ring-primary/20"
-                                        />
-                                        <span className="absolute bottom-1 left-0 right-0 text-center text-[10px] text-muted-foreground font-bold uppercase tracking-wider pointer-events-none">Seconds</span>
-                                    </>
+
+                    {/* Metrics Panel */}
+                    <div className="bg-muted/30 rounded-2xl p-4 border border-border/50 flex flex-col justify-center gap-4">
+                        <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground pl-1">Metrics</label>
+                        <div className="flex items-center justify-between gap-2">
+                            {/* Type Toggle */}
+                            <Controller
+                                control={control}
+                                name={`sections.${nestIndex}.exercises.${k}.type`}
+                                render={({ field }) => (
+                                    <div className="flex bg-muted/50 p-1 rounded-lg shrink-0">
+                                        <button 
+                                            type="button"
+                                            onClick={() => field.onChange('reps')}
+                                            className={cn(
+                                                "px-2 py-1.5 rounded-md text-[10px] font-bold uppercase transition-all min-w-[40px]",
+                                                field.value === 'reps' ? "bg-white dark:bg-zinc-800 shadow-sm text-primary" : "text-muted-foreground hover:text-foreground"
+                                            )}
+                                        >
+                                            Reps
+                                        </button>
+                                        <button 
+                                            type="button"
+                                            onClick={() => field.onChange('time')}
+                                            className={cn(
+                                                "px-2 py-1.5 rounded-md text-[10px] font-bold uppercase transition-all min-w-[40px]",
+                                                field.value === 'time' ? "bg-white dark:bg-zinc-800 shadow-sm text-primary" : "text-muted-foreground hover:text-foreground"
+                                            )}
+                                        >
+                                            Time
+                                        </button>
+                                    </div>
                                 )}
+                            />
+
+                            {/* Value */}
+                            <div className="flex flex-col items-center">
+                                <span className="text-[9px] font-bold text-muted-foreground uppercase mb-1">
+                                        <Controller
+                                        control={control}
+                                        name={`sections.${nestIndex}.exercises.${k}.type`}
+                                        render={({ field }) => <>{field.value === 'reps' ? 'Count' : 'Work'}</>}
+                                    />
+                                </span>
+                                <Controller
+                                    control={control}
+                                    name={`sections.${nestIndex}.exercises.${k}.type`}
+                                    render={({ field: typeField }) => (
+                                        <Input 
+                                            {...register(typeField.value === 'reps' ? `sections.${nestIndex}.exercises.${k}.reps` : `sections.${nestIndex}.exercises.${k}.duration`)}
+                                            placeholder="0" 
+                                            className="h-8 w-16 text-center bg-white dark:bg-zinc-800 border-none shadow-sm rounded-lg font-bold focus-visible:ring-0"
+                                        />
+                                    )}
+                                />
                             </div>
-                        )}
-                    />
-                </div>
-                <div className="col-span-2 flex justify-end items-start pt-1">
-                     <Button 
-                        type="button" variant="ghost" size="icon" 
-                        onClick={() => remove(k)}
-                        className="h-10 w-10 text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 rounded-xl transition-colors"
-                    >
-                        <Trash2 className="h-5 w-5" />
-                    </Button>
-                </div>
-             </div>
-             
-             <div className="flex gap-4 pl-1 pt-2 border-t border-dashed border-border/40">
-                 <div className="relative w-24 group/sets shrink-0">
-                     <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-                        <Tag className="h-4 w-4 text-muted-foreground/60 group-hover/sets:text-primary transition-colors" />
-                     </div>
-                     <Input 
-                        {...register(`sections.${nestIndex}.exercises.${k}.sets`)} 
-                        placeholder="Sets" type="number" 
-                        className="h-10 text-sm pl-9 pr-3 bg-muted/20 border-transparent hover:bg-muted/40 transition-colors rounded-xl font-semibold"
-                    />
+
+                            {/* Sets */}
+                            <div className="flex flex-col items-center">
+                                <span className="text-[9px] font-bold text-muted-foreground uppercase mb-1">Sets</span>
+                                <Input 
+                                    {...register(`sections.${nestIndex}.exercises.${k}.sets`)} 
+                                    placeholder="0" 
+                                    type="number"
+                                    className="h-8 w-14 text-center bg-white dark:bg-zinc-800 border-none shadow-sm rounded-lg font-bold focus-visible:ring-0"
+                                />
+                            </div>
+
+                            {/* Rest */}
+                            <div className="flex flex-col items-center">
+                                <span className="text-[9px] font-bold text-muted-foreground uppercase mb-1">Rest</span>
+                                <div className="relative">
+                                    <Input 
+                                        {...register(`sections.${nestIndex}.exercises.${k}.rest`)} 
+                                        placeholder="0" 
+                                        type="number"
+                                        className="h-8 w-14 text-center bg-white dark:bg-zinc-800 border-none shadow-sm rounded-lg font-bold focus-visible:ring-0"
+                                    />
+                                    <span className="absolute right-1 top-2 text-[9px] text-muted-foreground font-medium">s</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Metadata Panel (Muscles & Equipment) */}
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1.5">
+                            <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-1">Target Muscles</label>
+                            <Controller
+                                control={control}
+                                name={`sections.${nestIndex}.exercises.${k}.muscle_groups`}
+                                render={({ field }) => (
+                                    <TagInput 
+                                        value={field.value || []} 
+                                        onChange={field.onChange}
+                                        placeholder="Add muscles..."
+                                        variant="orange"
+                                    />
+                                )}
+                            />
+                        </div>
+                        <div className="space-y-1.5">
+                            <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-1">Equipment</label>
+                            <Controller
+                                control={control}
+                                name={`sections.${nestIndex}.exercises.${k}.equipment`}
+                                render={({ field }) => (
+                                    <TagInput 
+                                        value={field.value || []} 
+                                        onChange={field.onChange}
+                                        placeholder="Add equipment..."
+                                        variant="blue"
+                                    />
+                                )}
+                            />
+                        </div>
+                    </div>
                  </div>
-                 <div className="relative w-24 group/rest shrink-0">
-                     <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-                        <Clock className="h-4 w-4 text-muted-foreground/60 group-hover/rest:text-primary transition-colors" />
+
+                 {/* Media Column (Right) - Full Height */}
+                 <div className="w-full md:w-[340px] shrink-0 flex flex-col">
+                     <div className="h-full flex flex-col gap-2">
+                         <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground pl-1">Visual Aid</label>
+                         <Controller
+                            control={control}
+                            name={`sections.${nestIndex}.exercises.${k}.media_url`}
+                            render={({ field }) => (
+                                <div className="w-full h-full min-h-[200px] rounded-2xl overflow-hidden bg-muted/30 border-2 border-dashed border-border/50 hover:border-primary/20 relative group/media transition-colors shadow-inner flex items-center justify-center">
+                                    <MediaInput 
+                                        value={field.value} 
+                                        onChange={field.onChange} 
+                                        variant="thumbnail"
+                                    />
+                                </div>
+                            )}
+                         />
                      </div>
-                     <Input 
-                        {...register(`sections.${nestIndex}.exercises.${k}.rest`)} 
-                        placeholder="Rest" type="number" 
-                        className="h-10 text-sm pl-10 pr-3 bg-muted/20 border-transparent hover:bg-muted/40 transition-colors rounded-xl font-semibold"
-                    />
-                    <span className="absolute inset-y-0 right-3 flex items-center pointer-events-none text-xs text-muted-foreground/60 font-medium">sec</span>
                  </div>
-                <Input 
-                    {...register(`sections.${nestIndex}.exercises.${k}.notes`)} 
-                    placeholder="Add specific instructions, muscle groups, or notes..." 
-                    className="h-10 text-sm flex-1 bg-muted/20 border-transparent hover:bg-muted/40 transition-colors rounded-xl px-4"
-                />
              </div>
         </div>
       ))}
       <Button
         type="button" variant="ghost" size="sm"
-        className="w-full h-14 border-2 border-dashed border-border/50 hover:border-primary/50 hover:text-primary hover:bg-primary/5 rounded-2xl text-sm font-bold uppercase tracking-widest transition-all group"
-        onClick={() => append({ id: `ex-${Date.now()}`, name: '', sets: '3', reps: '10', duration: '', type: 'reps', rest: '60', equipment: [], muscle_group: [] })}
+        className="w-full h-12 border border-dashed border-border/40 hover:border-primary/40 text-muted-foreground/60 hover:text-primary hover:bg-primary/5 rounded-xl text-xs font-bold uppercase tracking-widest transition-all group"
+        onClick={() => append({ id: `ex-${Date.now()}`, name: '', sets: 3, reps: 10, duration: 0, type: 'reps', rest: 60, description: '' })}
       >
-        <Plus className="h-5 w-5 mr-2 group-hover:scale-110 transition-transform" /> Add Exercise
+        <span className="flex items-center gap-2 group-hover:gap-3 transition-all">
+             <Plus className="h-3.5 w-3.5" /> 
+             Add Exercise
+        </span>
       </Button>
     </div>
   )
@@ -597,9 +725,29 @@ function TagInput({
     )
 }
 
-function MediaInput({ value, onChange, placeholder, type = 'media' }: { value?: string, onChange: (val: string) => void, placeholder?: string, type?: 'media' | 'audio' }) {
+function MediaInput({ value, onChange, placeholder, type = 'media', variant = 'default' }: { value?: string, onChange: (val: string) => void, placeholder?: string, type?: 'media' | 'audio', variant?: 'default' | 'thumbnail' }) {
     const fileInputRef = React.useRef<HTMLInputElement>(null)
-    const cameraInputRef = React.useRef<HTMLInputElement>(null)
+    
+    // Audio State
+    const [isRecordingAudio, setIsRecordingAudio] = useState(false)
+    const [recordingTime, setRecordingTime] = useState(0)
+    
+    // Video State
+    const [isRecordingVideo, setIsRecordingVideo] = useState(false)
+    const [videoStream, setVideoStream] = useState<MediaStream | null>(null)
+    const [countdown, setCountdown] = useState<number | null>(null)
+    
+    // Preview Modal State
+    const [isPreviewOpen, setIsPreviewOpen] = useState(false)
+    const [isPlaying, setIsPlaying] = useState(false)
+    
+    const videoRef = React.useRef<HTMLVideoElement>(null)
+    const playbackVideoRef = React.useRef<HTMLVideoElement>(null)
+    const playbackAudioRef = React.useRef<HTMLAudioElement>(null)
+
+    const mediaRecorderRef = React.useRef<MediaRecorder | null>(null)
+    const chunksRef = React.useRef<Blob[]>([])
+    const timerRef = React.useRef<NodeJS.Timeout | null>(null)
     
     const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
@@ -609,8 +757,353 @@ function MediaInput({ value, onChange, placeholder, type = 'media' }: { value?: 
         }
     }
 
+    // --- AUDIO RECORDING ---
+    const startAudioRecording = async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+            const recorder = new MediaRecorder(stream)
+            mediaRecorderRef.current = recorder
+            chunksRef.current = []
+
+            recorder.ondataavailable = (e) => {
+                if (e.data.size > 0) chunksRef.current.push(e.data)
+            }
+
+            recorder.onstop = () => {
+                const blob = new Blob(chunksRef.current, { type: 'audio/webm' })
+                const url = URL.createObjectURL(blob)
+                onChange(url)
+                stream.getTracks().forEach(track => track.stop())
+                if (timerRef.current) clearInterval(timerRef.current)
+                setRecordingTime(0)
+            }
+
+            recorder.start()
+            setIsRecordingAudio(true)
+            setRecordingTime(0)
+            timerRef.current = setInterval(() => {
+                setRecordingTime(prev => prev + 1)
+            }, 1000)
+        } catch (err) {
+            console.error("Error accessing microphone:", err)
+            alert("Could not access microphone. Please check permissions.")
+        }
+    }
+
+    const stopAudioRecording = () => {
+        if (mediaRecorderRef.current && isRecordingAudio) {
+            mediaRecorderRef.current.stop()
+            setIsRecordingAudio(false)
+            if (timerRef.current) clearInterval(timerRef.current)
+        }
+    }
+
+    // --- VIDEO RECORDING ---
+    const openCamera = async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: true })
+            setVideoStream(stream)
+            setIsRecordingVideo(true)
+        } catch (err) {
+            console.error("Error accessing camera:", err)
+            alert("Could not access camera. Please check permissions.")
+        }
+    }
+
+    const startCountdown = () => {
+        setCountdown(3)
+        const countInterval = setInterval(() => {
+            setCountdown(prev => {
+                if (prev === 1) {
+                    clearInterval(countInterval)
+                    beginVideoRecording()
+                    return null
+                }
+                return prev ? prev - 1 : null
+            })
+        }, 1000)
+    }
+
+    const beginVideoRecording = () => {
+        if (!videoStream) return
+        
+        // Use correct mime type for browser
+        const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9') ? 'video/webm;codecs=vp9' : 'video/webm'
+        const recorder = new MediaRecorder(videoStream, { mimeType })
+        
+        mediaRecorderRef.current = recorder
+        chunksRef.current = []
+
+        recorder.ondataavailable = (e) => {
+            if (e.data.size > 0) chunksRef.current.push(e.data)
+        }
+
+        recorder.onstop = () => {
+            const blob = new Blob(chunksRef.current, { type: 'video/webm' })
+            const url = URL.createObjectURL(blob)
+            onChange(url)
+            closeVideoRecorder()
+        }
+
+        recorder.start()
+        setRecordingTime(0)
+        timerRef.current = setInterval(() => setRecordingTime(p => p + 1), 1000)
+    }
+
+    const stopVideoRecording = () => {
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+            mediaRecorderRef.current.stop()
+        }
+    }
+
+    const closeVideoRecorder = () => {
+        if (videoStream) {
+            videoStream.getTracks().forEach(t => t.stop())
+            setVideoStream(null)
+        }
+        setIsRecordingVideo(false)
+        setCountdown(null)
+        if (timerRef.current) clearInterval(timerRef.current)
+        setRecordingTime(0)
+    }
+
+    // Assign stream to video element when ready
+    React.useEffect(() => {
+        if (videoRef.current && videoStream) {
+            videoRef.current.srcObject = videoStream
+        }
+    }, [videoStream])
+
+    // Cleanup
+    React.useEffect(() => {
+        return () => {
+             if (timerRef.current) clearInterval(timerRef.current)
+             if (videoStream) videoStream.getTracks().forEach(t => t.stop())
+        }
+    }, [])
+
+    // Autoplay logic
+    React.useEffect(() => {
+        if (isPlaying) {
+            // Small timeout to ensure element is mounted
+            const timeout = setTimeout(() => {
+                if (playbackVideoRef.current) playbackVideoRef.current.play().catch(e => console.log("Video play failed", e))
+                if (playbackAudioRef.current) playbackAudioRef.current.play().catch(e => console.log("Audio play failed", e))
+            }, 100)
+            return () => clearTimeout(timeout)
+        }
+    }, [isPlaying])
+
     const Icon = type === 'audio' ? Music : ImageIcon
 
+    if (variant === 'thumbnail') {
+        return (
+            <div className="w-full h-full relative group bg-muted/20">
+                <input 
+                    type="file" ref={fileInputRef} className="hidden" 
+                    accept={type === 'audio' ? "audio/*" : "image/*,video/*,audio/*"} 
+                    onChange={handleFile} 
+                />
+
+                {/* --- VIDEO RECORDING OVERLAY --- */}
+                {isRecordingVideo && (
+                    <div className="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center">
+                        <video 
+                            ref={videoRef} 
+                            autoPlay 
+                            muted 
+                            playsInline 
+                            className="absolute inset-0 w-full h-full object-cover"
+                        />
+                        
+                        {/* Controls */}
+                        <div className="relative z-10 flex flex-col items-center gap-8">
+                            {countdown !== null ? (
+                                <div className="text-[150px] font-black text-white animate-pulse drop-shadow-2xl">
+                                    {countdown}
+                                </div>
+                            ) : mediaRecorderRef.current?.state === 'recording' ? (
+                                <div className="flex flex-col items-center gap-4">
+                                    <div className="flex items-center gap-2 bg-red-600/80 px-4 py-2 rounded-full backdrop-blur-md">
+                                        <div className="w-3 h-3 bg-white rounded-full animate-pulse" />
+                                        <span className="font-mono text-white font-bold text-xl">
+                                            {new Date(recordingTime * 1000).toISOString().substr(14, 5)}
+                                        </span>
+                                    </div>
+                                    <Button 
+                                        type="button" 
+                                        size="lg"
+                                        variant="destructive"
+                                        className="h-20 w-20 rounded-full border-4 border-white/50 shadow-2xl hover:scale-105 transition-transform"
+                                        onClick={stopVideoRecording}
+                                    >
+                                        <Square className="h-8 w-8 fill-current text-white" />
+                                    </Button>
+                                </div>
+                            ) : (
+                                <div className="flex flex-col items-center gap-6">
+                                    <Button 
+                                        type="button" 
+                                        size="lg"
+                                        className="h-20 w-20 rounded-full bg-white hover:bg-white/90 text-red-600 border-4 border-white/20 shadow-2xl hover:scale-110 transition-transform p-0 flex items-center justify-center"
+                                        onClick={startCountdown}
+                                    >
+                                        <Circle className="w-16 h-16 fill-current" />
+                                    </Button>
+                                    <Button 
+                                        type="button" 
+                                        variant="secondary"
+                                        className="rounded-full px-6"
+                                        onClick={closeVideoRecorder}
+                                    >
+                                        Cancel
+                                    </Button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
+
+                {/* --- AUDIO RECORDING OVERLAY --- */}
+                {isRecordingAudio && (
+                    <div className="absolute inset-0 z-50 bg-red-500/90 flex flex-col items-center justify-center text-white animate-in fade-in duration-200">
+                        <div className="w-3 h-3 rounded-full bg-white animate-pulse mb-2" />
+                        <span className="text-xs font-mono font-bold mb-3">{new Date(recordingTime * 1000).toISOString().substr(14, 5)}</span>
+                        <Button 
+                            type="button" 
+                            variant="secondary" 
+                            size="icon"
+                            className="h-16 w-16 rounded-full hover:scale-110 transition-transform shadow-xl border-4 border-white/10"
+                            onClick={(e) => { e.stopPropagation(); stopAudioRecording() }}
+                        >
+                            <Square className="w-6 h-6 text-red-500 fill-current" />
+                        </Button>
+                    </div>
+                )}
+                
+                {/* --- MEDIA PREVIEW MODAL (Removed/Disabled per request) --- */}
+                {/* {isPreviewOpen && value && (
+                    <div className="fixed inset-0 z-[100] bg-black/95 flex flex-col items-center justify-center p-4 animate-in fade-in duration-200" onClick={(e) => e.stopPropagation()}>
+                         <Button 
+                            type="button" 
+                            variant="ghost" 
+                            size="icon"
+                            className="absolute top-4 right-4 text-white hover:bg-white/10 rounded-full h-12 w-12"
+                            onClick={() => setIsPreviewOpen(false)}
+                        >
+                            <X className="h-6 w-6" />
+                        </Button>
+                        
+                        <div className="max-w-4xl w-full max-h-[80vh] flex items-center justify-center relative">
+                            {value.match(/\.(mp4|webm|mov)$/i) || value.startsWith('blob:') ? (
+                                <video src={value} controls autoPlay className="max-w-full max-h-full rounded-lg shadow-2xl" />
+                            ) : type === 'audio' || value.match(/\.(mp3|wav|ogg)$/i) ? (
+                                <div className="bg-zinc-900 p-8 rounded-3xl flex flex-col items-center gap-6 w-full max-w-md border border-white/10">
+                                    <div className="w-32 h-32 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-2xl animate-pulse">
+                                        <Music className="h-12 w-12 text-white" />
+                                    </div>
+                                    <audio src={value} controls className="w-full" />
+                                </div>
+                            ) : (
+                                <img src={value} alt="Preview" className="max-w-full max-h-full rounded-lg shadow-2xl object-contain" />
+                            )}
+                        </div>
+                    </div>
+                )} */}
+
+                {value ? (
+                    isPlaying ? (
+                        <div className="w-full h-full relative bg-black flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
+                            {value.match(/\.(mp4|webm|mov)$/i) || value.startsWith('blob:') ? (
+                                <video ref={playbackVideoRef} src={value} className="w-full h-full object-contain" controls autoPlay onEnded={() => setIsPlaying(false)} />
+                            ) : type === 'audio' || value.match(/\.(mp3|wav|ogg)$/i) ? (
+                                <div className="w-full h-full flex flex-col items-center justify-center bg-zinc-900 gap-2 p-4">
+                                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg animate-pulse">
+                                        <Music className="h-6 w-6 text-white" />
+                                    </div>
+                                    <audio ref={playbackAudioRef} src={value} controls autoPlay className="w-full h-8" onEnded={() => setIsPlaying(false)} />
+                                </div>
+                            ) : (
+                                <div className="w-full h-full relative">
+                                    <img src={value} alt="Preview" className="w-full h-full object-contain" />
+                                </div>
+                            )}
+                            <Button 
+                                size="icon" 
+                                variant="ghost" 
+                                className="absolute top-2 right-2 text-white/70 hover:text-white hover:bg-white/10 rounded-full h-6 w-6 z-10 bg-black/20" 
+                                onClick={(e) => { e.stopPropagation(); setIsPlaying(false) }}
+                            >
+                                <X className="h-4 w-4" />
+                            </Button>
+                        </div>
+                    ) : (
+                        <div className="w-full h-full relative group">
+                            {/* Preview (Thumbnail) */}
+                            {value.match(/\.(mp4|webm|mov)$/i) || value.startsWith('blob:') ? (
+                                 <video src={value} className="w-full h-full object-cover" muted loop playsInline />
+                            ) : type === 'audio' || value.match(/\.(mp3|wav|ogg)$/i) ? (
+                                 <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-indigo-500/20 to-purple-600/20">
+                                     <Music className="h-8 w-8 text-indigo-500" />
+                                 </div>
+                            ) : (
+                                 <img src={value} alt="Preview" className="w-full h-full object-cover" />
+                            )}
+                            
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                                 <Button size="icon" variant="secondary" className="h-8 w-8 rounded-full shadow-lg hover:scale-110 transition-transform" onClick={(e) => { e.stopPropagation(); setIsPlaying(true) }}>
+                                    <Play className="h-4 w-4 ml-0.5" />
+                                 </Button>
+                                 <Button size="icon" variant="destructive" className="h-8 w-8 rounded-full shadow-lg hover:scale-110 transition-transform" onClick={(e) => { e.stopPropagation(); onChange('') }}>
+                                    <Trash2 className="h-4 w-4" />
+                                 </Button>
+                            </div>
+                            <div className="absolute bottom-1 right-1 px-1.5 py-0.5 bg-black/50 backdrop-blur rounded text-[8px] font-bold text-white uppercase pointer-events-none">
+                                {value.match(/\.(mp4|webm|mov)$/i) || value.startsWith('blob:') ? 'Video' : type === 'audio' ? 'Audio' : 'Image'}
+                            </div>
+                        </div>
+                    )
+                ) : (
+                    <div className="w-full h-full flex flex-col items-stretch divide-y divide-border/10">
+                        {/* Top: Video */}
+                        <button 
+                            type="button"
+                            className="flex-1 flex flex-col items-center justify-center gap-1 hover:bg-black/5 transition-colors text-muted-foreground hover:text-blue-500"
+                            onClick={() => openCamera()}
+                            title="Record Video"
+                        >
+                             <Camera className="h-5 w-5 opacity-70" />
+                             <span className="text-[8px] font-bold uppercase">Cam</span>
+                        </button>
+                        
+                        {/* Center: Upload */}
+                        <button 
+                            type="button"
+                            className="flex-1 flex flex-col items-center justify-center gap-1 hover:bg-black/5 transition-colors text-muted-foreground hover:text-foreground"
+                            onClick={() => fileInputRef.current?.click()}
+                            title="Upload File"
+                        >
+                             <Upload className="h-5 w-5 opacity-70" />
+                             <span className="text-[8px] font-bold uppercase">Up</span>
+                        </button>
+                        
+                        {/* Bottom: Audio */}
+                        <button 
+                            type="button"
+                            className="flex-1 flex flex-col items-center justify-center gap-1 hover:bg-black/5 transition-colors text-muted-foreground hover:text-red-500"
+                            onClick={() => startAudioRecording()}
+                            title="Record Audio"
+                        >
+                             <Mic className="h-5 w-5 opacity-70" />
+                             <span className="text-[8px] font-bold uppercase">Mic</span>
+                        </button>
+                    </div>
+                )}
+            </div>
+        )
+    }
+
+    // Default List View (unchanged)
     return (
         <div className="flex gap-2 items-center group/media">
             <input 
@@ -620,20 +1113,11 @@ function MediaInput({ value, onChange, placeholder, type = 'media' }: { value?: 
                 accept={type === 'audio' ? "audio/*" : "image/*,video/*,audio/*"} 
                 onChange={handleFile} 
             />
-            {/* Camera/Microphone Capture Input */}
-            <input 
-                type="file" 
-                ref={cameraInputRef} 
-                className="hidden" 
-                accept="video/*" 
-                capture="environment"
-                onChange={handleFile} 
-            />
-
+            
             <div className="relative flex-1">
                 <Input 
                     value={value || ''} 
-                    readOnly 
+                    onChange={(e) => onChange(e.target.value)}
                     placeholder={placeholder || "Media URL or File"} 
                     className="h-9 text-xs bg-muted/30 border-transparent text-muted-foreground w-full pl-8 pr-24"
                 />
@@ -651,18 +1135,6 @@ function MediaInput({ value, onChange, placeholder, type = 'media' }: { value?: 
                     >
                         <Upload className="h-3 w-3" />
                     </Button>
-                    {type !== 'audio' && (
-                        <Button 
-                            type="button" 
-                            size="icon" 
-                            variant="ghost" 
-                            className="h-7 w-7 text-muted-foreground hover:text-red-500"
-                            onClick={() => cameraInputRef.current?.click()}
-                            title="Record Video"
-                        >
-                            <Video className="h-3 w-3" />
-                        </Button>
-                    )}
                 </div>
             </div>
         </div>
