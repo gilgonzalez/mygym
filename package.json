@@ -8,9 +8,12 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "check": "tsc -b --noEmit"
+    "check": "tsc -b --noEmit",
+    "supabase:types": "supabase gen types typescript --project-id kbjdrsfrfgtyyntfxfns --schema public > src/types/database.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.956.0",
+    "@aws-sdk/s3-request-presigner": "^3.956.0",
     "@hello-pangea/dnd": "^18.0.1",
     "@hookform/resolvers": "^5.2.2",
     "@radix-ui/react-avatar": "^1.1.11",

@@ -46,7 +46,7 @@ function LoginForm() {
   })
 
   useEffect(() => {
-    if (searchParams.get('registered') === 'true') {
+    if (searchParams?.get('registered') === 'true') {
       setSuccessMessage('Account created successfully! Please sign in.')
     }
   }, [searchParams])

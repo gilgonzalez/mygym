@@ -152,19 +152,22 @@ CREATE POLICY "Users can unlike" ON public.workout_likes FOR DELETE USING (auth.
 
 -- AUTOMATIC USER PROFILE CREATION TRIGGER
 CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER AS $
 BEGIN
   INSERT INTO public.users (id, email, username, name, avatar_url)
   VALUES (
     new.id,
     new.email,
+    -- Priorizar username de metadata, sino parte del email
     COALESCE(new.raw_user_meta_data->>'username', split_part(new.email, '@', 1)),
-    COALESCE(new.raw_user_meta_data->>'name', split_part(new.email, '@', 1)),
+    -- Priorizar full_name (Google), luego name, luego email
+    COALESCE(new.raw_user_meta_data->>'full_name', new.raw_user_meta_data->>'name', split_part(new.email, '@', 1)),
     new.raw_user_meta_data->>'avatar_url'
-  );
+  )
+  ON CONFLICT (id) DO NOTHING; -- Evitar fallos si el usuario ya existe
   RETURN new;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Drop trigger if exists to avoid error on multiple runs
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;

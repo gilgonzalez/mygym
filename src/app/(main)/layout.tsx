@@ -69,7 +69,7 @@ export default function MainLayout({
             {/* Right: Actions */}
             <div className="flex items-center gap-4">
               {/* Create Workout Action */}
-              <Link href="/create-workout">
+              <Link href="/editor/workout/create">
                 <Button size="sm" className="hidden sm:flex gap-2 shadow-sm">
                   <PlusSquare className="h-4 w-4" />
                   Create Workout
