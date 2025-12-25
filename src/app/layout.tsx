@@ -6,6 +6,8 @@ import { ThemeProvider } from "@/components/ThemeProvider";
 import { cn } from "@/lib/utils";
 import { AuthInitializer } from "@/components/AuthInitializer";
 
+import { QueryProvider } from "@/components/QueryProvider";
+
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
@@ -27,7 +29,9 @@ export default function RootLayout({
             enableSystem
           >
             <AuthInitializer />
-            {children}
+            <QueryProvider>
+              {children}
+            </QueryProvider>
         </ThemeProvider>
       </body>
     </html>

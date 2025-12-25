@@ -8,6 +8,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Loader2, AlertCircle, CheckCircle2 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
+import { signInWithProvider } from '../actions'
 
 function GoogleIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
@@ -55,22 +56,16 @@ function LoginForm() {
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }))
   }
 
-  const handleGoogleLogin = async () => {
+ const handleProviderSignIn = async () => {
     try {
-      setIsLoading(true)
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
-        }
-      })
-      if (error) throw error
-    } catch (err: any) {
-      setError(err.message)
-    } finally {
-      setIsLoading(false)
+      const redirectUrl = await signInWithProvider("google"); // Llamamos a la función del servidor
+      if (redirectUrl) {
+        window.location.href = redirectUrl; // Redirigimos al cliente a la URL proporcionada por Supabase
+      }
+    } catch (error) {
+      console.error("Error during sign-in with provider:", error);
     }
-  }
+  };
 
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -126,7 +121,7 @@ function LoginForm() {
           <Button
             variant="outline"
             className="w-full flex items-center justify-center gap-2 h-11"
-            onClick={handleGoogleLogin}
+            onClick={handleProviderSignIn}
             disabled={isLoading}
           >
             {isLoading ? (

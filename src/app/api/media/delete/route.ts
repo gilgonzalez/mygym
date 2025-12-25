@@ -10,7 +10,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Key is required' }, { status: 400 })
     }
 
-    console.log('Deleting from R2:', key)
 
     const command = new DeleteObjectCommand({
       Bucket: process.env.R2_BUCKET_NAME,

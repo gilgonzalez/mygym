@@ -17,33 +17,8 @@ export default function WorkoutCard({ workout }: WorkoutCardProps) {
   const [isLiked, setIsLiked] = useState(workout.is_liked || false)
   const { user } = useAuthStore()
 
-  const handleLike = async () => {
-    if (!user) return
-
-    try {
-      if (isLiked) {
-        await supabase
-          .from('likes')
-          .delete()
-          .eq('workout_id', workout.id)
-          .eq('user_id', user.id)
-        
-        setIsLiked(false)
-        setLikesCount(prev => prev - 1)
-      } else {
-        await supabase
-          .from('likes')
-          .insert({
-            workout_id: workout.id,
-            user_id: user.id
-          })
-        
-        setIsLiked(true)
-        setLikesCount(prev => prev + 1)
-      }
-    } catch (error) {
-      console.error('Error toggling like:', error)
-    }
+  const handleLike = () => {
+    console.log('handle like clicked')
   }
 
   const getDifficultyColor = (difficulty: string) => {
@@ -75,7 +50,12 @@ export default function WorkoutCard({ workout }: WorkoutCardProps) {
               <div className="flex items-center space-x-3">
                 <div className="relative w-10 h-10 rounded-full overflow-hidden ring-2 ring-primary/20 transition-transform group-hover:scale-105">
                   {workout.user?.avatar_url ? (
-                    <img src={workout.user.avatar_url} alt={workout.user.name} className="w-full h-full object-cover" />
+                    <img 
+                      src={workout.user.avatar_url} 
+                      alt={workout.user.name || 'User'} 
+                      className="w-full h-full object-cover" 
+                      referrerPolicy="no-referrer"
+                    />
                   ) : (
                     <div className="w-full h-full bg-primary/10 flex items-center justify-center"><User className="w-5 h-5 text-primary" /></div>
                   )}
@@ -97,11 +77,11 @@ export default function WorkoutCard({ workout }: WorkoutCardProps) {
               </p>
               
               <div className="flex flex-wrap gap-2 pt-2">
-                <span className={`px-2.5 py-1 rounded-md text-[11px] font-medium uppercase tracking-wider border ${getDifficultyColor(workout.difficulty)}`}>
+                <span className={`px-2.5 py-1 rounded-md text-[11px] font-medium uppercase tracking-wider border ${getDifficultyColor(workout.difficulty || 'beginner')}`}>
                   {workout.difficulty}
                 </span>
-                <span className={`px-2.5 py-1 rounded-md text-[11px] font-medium uppercase tracking-wider border ${getCategoryColor(workout.category)}`}>
-                  {workout.category}
+                <span className={`px-2.5 py-1 rounded-md text-[11px] font-medium uppercase tracking-wider border ${getCategoryColor('cardio')}`}>
+                  {workout.tags?.join(', ') || 'No tags'}
                 </span>
               </div>
            </div>
@@ -115,7 +95,7 @@ export default function WorkoutCard({ workout }: WorkoutCardProps) {
             </button>
             <div className="flex items-center gap-2">
               <Clock className="w-5 h-5" />
-              <span>{workout.duration_minutes} min</span>
+              <span>45 min</span>
             </div>
             <div className="flex items-center gap-2">
                <BarChart className="w-5 h-5 rotate-90" />

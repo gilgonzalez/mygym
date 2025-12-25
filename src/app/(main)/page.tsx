@@ -1,61 +1,22 @@
 'use client'
 
-import { useEffect, useState } from 'react'
 import WorkoutCard from '@/components/WorkoutCard'
-import { Workout, WorkoutApiResponse } from '@/types/workout/composite'
 import { Button } from '@/components/Button'
 import { Loader2 } from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
+import { getWorkoutsAction } from '../actions/workout/list'
 
 export default function Page() {
-  const [workouts, setWorkouts] = useState<Workout[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    const fetchWorkouts = async () => {
-      try {
-        const response = await fetch('/api/workouts')
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}))
-          console.error('API Error Details:', errorData)
-          throw new Error(errorData.error || `Failed to fetch workouts: ${response.status} ${response.statusText}`)
-        }
-        const data: WorkoutApiResponse[] = await response.json()
-        
-        // Transform API response to UI model
-        const transformedWorkouts: Workout[] = data.map(workout => ({
-          ...workout,
-          user: workout.workout_user?.user || { id: workout.user_id, name: 'Unknown User', username: 'unknown', avatar_url: null },
-          sections: workout.workout_sections
-            .sort((a, b) => a.order_index - b.order_index)
-            .map(ws => ({
-              ...ws.sections,
-              exercises: ws.sections.section_exercises
-                .sort((a, b) => a.order_index - b.order_index)
-                .map(se => ({
-                  ...se.exercises,
-                  sets: se.sets,
-                  reps: se.reps,
-                  rest: se.rest_seconds,
-                  weight_kg: se.weight_kg,
-                  duration: se.duration_seconds
-                }))
-            }))
-        }))
-
-        setWorkouts(transformedWorkouts)
-      } catch (err) {
-        console.error('Error fetching workouts:', err)
-        setError('Failed to load workouts')
-      } finally {
-        setLoading(false)
-      }
+  const { data: workouts = [], isLoading, error } = useQuery({
+    queryKey: ['workouts'],
+    queryFn: async () => {
+      const res = await getWorkoutsAction()
+      if (!res.success) throw new Error(res.error)
+      return res.data || []
     }
+  })
 
-    fetchWorkouts()
-  }, [])
-
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -66,7 +27,7 @@ export default function Page() {
   if (error) {
     return (
       <div className="flex items-center justify-center min-h-[50vh] text-destructive">
-        {error}
+        {JSON.stringify(error)}
       </div>
     )
   }

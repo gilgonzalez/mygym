@@ -16,7 +16,7 @@ export type Database = {
     Tables: {
       exercises: {
         Row: {
-          created_at: string
+          created_at: string | null
           created_by: string | null
           description: string | null
           difficulty: string | null
@@ -31,10 +31,9 @@ export type Database = {
           rest: number | null
           sets: number | null
           type: string | null
-          weight_kg: number | null
         }
         Insert: {
-          created_at?: string
+          created_at?: string | null
           created_by?: string | null
           description?: string | null
           difficulty?: string | null
@@ -49,10 +48,9 @@ export type Database = {
           rest?: number | null
           sets?: number | null
           type?: string | null
-          weight_kg?: number | null
         }
         Update: {
-          created_at?: string
+          created_at?: string | null
           created_by?: string | null
           description?: string | null
           difficulty?: string | null
@@ -67,9 +65,15 @@ export type Database = {
           rest?: number | null
           sets?: number | null
           type?: string | null
-          weight_kg?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "exercises_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "exercises_media_id_fkey"
             columns: ["media_id"]
@@ -79,77 +83,44 @@ export type Database = {
           },
         ]
       }
-      follows: {
-        Row: {
-          created_at: string
-          follower_id: string
-          following_id: string
-        }
-        Insert: {
-          created_at?: string
-          follower_id: string
-          following_id: string
-        }
-        Update: {
-          created_at?: string
-          follower_id?: string
-          following_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "follows_follower_id_fkey"
-            columns: ["follower_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "follows_following_id_fkey"
-            columns: ["following_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       media: {
         Row: {
           bucket_path: string | null
-          created_at: string
+          created_at: string | null
           filename: string | null
           id: string
           mime_type: string | null
           size_bytes: number | null
           type: string | null
-          uploader_id: string | null
           url: string
+          user_id: string
         }
         Insert: {
           bucket_path?: string | null
-          created_at?: string
+          created_at?: string | null
           filename?: string | null
           id?: string
           mime_type?: string | null
           size_bytes?: number | null
           type?: string | null
-          uploader_id?: string | null
           url: string
+          user_id: string
         }
         Update: {
           bucket_path?: string | null
-          created_at?: string
+          created_at?: string | null
           filename?: string | null
           id?: string
           mime_type?: string | null
           size_bytes?: number | null
           type?: string | null
-          uploader_id?: string | null
           url?: string
+          user_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "media_uploader_id_fkey"
-            columns: ["uploader_id"]
+            foreignKeyName: "media_user_id_fkey"
+            columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
@@ -158,22 +129,37 @@ export type Database = {
       }
       section_exercises: {
         Row: {
-          exercise_id: string | null
+          duration: number | null
+          exercise_id: string
           id: string
           order_index: number
-          section_id: string | null
+          reps: number | null
+          rest: number | null
+          section_id: string
+          sets: number | null
+          weight_kg: number | null
         }
         Insert: {
-          exercise_id?: string | null
-          id?: string
-          order_index: number
-          section_id?: string | null
-        }
-        Update: {
-          exercise_id?: string | null
+          duration?: number | null
+          exercise_id: string
           id?: string
           order_index?: number
-          section_id?: string | null
+          reps?: number | null
+          rest?: number | null
+          section_id: string
+          sets?: number | null
+          weight_kg?: number | null
+        }
+        Update: {
+          duration?: number | null
+          exercise_id?: string
+          id?: string
+          order_index?: number
+          reps?: number | null
+          rest?: number | null
+          section_id?: string
+          sets?: number | null
+          weight_kg?: number | null
         }
         Relationships: [
           {
@@ -194,19 +180,19 @@ export type Database = {
       }
       sections: {
         Row: {
-          created_at: string
+          created_at: string | null
           id: string
           name: string
           type: string | null
         }
         Insert: {
-          created_at?: string
+          created_at?: string | null
           id?: string
           name: string
           type?: string | null
         }
         Update: {
-          created_at?: string
+          created_at?: string | null
           id?: string
           name?: string
           type?: string | null
@@ -217,56 +203,56 @@ export type Database = {
         Row: {
           avatar_url: string | null
           bio: string | null
-          created_at: string
+          created_at: string | null
           email: string
           id: string
           name: string | null
-          updated_at: string
+          updated_at: string | null
           username: string
         }
         Insert: {
           avatar_url?: string | null
           bio?: string | null
-          created_at?: string
+          created_at?: string | null
           email: string
           id: string
           name?: string | null
-          updated_at?: string
+          updated_at?: string | null
           username: string
         }
         Update: {
           avatar_url?: string | null
           bio?: string | null
-          created_at?: string
+          created_at?: string | null
           email?: string
           id?: string
           name?: string | null
-          updated_at?: string
+          updated_at?: string | null
           username?: string
         }
         Relationships: []
       }
       workout_sections: {
         Row: {
-          created_at: string
+          created_at: string | null
           id: string
           order_index: number
-          section_id: string | null
-          workout_id: string | null
+          section_id: string
+          workout_id: string
         }
         Insert: {
-          created_at?: string
-          id?: string
-          order_index: number
-          section_id?: string | null
-          workout_id?: string | null
-        }
-        Update: {
-          created_at?: string
+          created_at?: string | null
           id?: string
           order_index?: number
-          section_id?: string | null
-          workout_id?: string | null
+          section_id: string
+          workout_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          order_index?: number
+          section_id?: string
+          workout_id?: string
         }
         Relationships: [
           {
@@ -289,45 +275,45 @@ export type Database = {
         Row: {
           audio: string[] | null
           cover: string | null
-          created_at: string
+          created_at: string | null
           description: string | null
           difficulty: string | null
           id: string
           is_public: boolean | null
           tags: string[] | null
           title: string
-          updated_at: string
-          user_id: string | null
+          updated_at: string | null
+          user_id: string
         }
         Insert: {
           audio?: string[] | null
           cover?: string | null
-          created_at?: string
+          created_at?: string | null
           description?: string | null
           difficulty?: string | null
           id?: string
           is_public?: boolean | null
           tags?: string[] | null
           title: string
-          updated_at?: string
-          user_id?: string | null
+          updated_at?: string | null
+          user_id: string
         }
         Update: {
           audio?: string[] | null
           cover?: string | null
-          created_at?: string
+          created_at?: string | null
           description?: string | null
           difficulty?: string | null
           id?: string
           is_public?: boolean | null
           tags?: string[] | null
           title?: string
-          updated_at?: string
-          user_id?: string | null
+          updated_at?: string | null
+          user_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "workouts_user_id_fkey1"
+            foreignKeyName: "workouts_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
@@ -340,7 +326,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      create_complete_workout: {
+        Args: { p_user_id: string; p_workout_data: Json }
+        Returns: string
+      }
     }
     Enums: {
       [_ in never]: never

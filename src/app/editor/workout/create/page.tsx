@@ -1,7 +1,8 @@
 'use client'
 
 import React, { useState } from 'react'
-import { useForm, useFieldArray, Controller, type Resolver } from 'react-hook-form'
+
+import { useMutation } from '@tanstack/react-query'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd'
@@ -29,8 +30,11 @@ import { useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
 
 import { PreviewWorkout } from './components/PreviewWorkout'
-import { submitWorkout, type WorkoutInput } from '@/services/workout'
+import { type WorkoutInput, uploadFile } from '@/services/workout'
 import { useCreateWorkoutStore } from '@/store/createWorkoutStore'
+import { supabase } from '@/lib/supabase'
+import { Controller, Resolver, useFieldArray, useForm } from 'react-hook-form'
+import { createWorkoutAction } from '@/app/actions/workout/create'
 
 // --- Schema Definition ---
 const exerciseSchema = z.object({
@@ -96,6 +100,73 @@ export default function CreateWorkoutPage() {
   
   const { workoutData, setWorkoutData, setFormErrors, setSubmitStatus, reset: resetStore } = useCreateWorkoutStore()
 
+  const { mutate: createWorkout, isPending: isCreating } = useMutation({
+    mutationFn: async (data: WorkoutFormValues) => {
+        if (!user?.id) throw new Error("User not found")
+
+        // 1. Upload Media First (Client-side)
+        // Upload Cover
+        const coverUrl = await uploadFile(data.cover)
+        
+        // Upload Audio
+        const audioUrls = await Promise.all(
+            (data.audio || []).map(url => uploadFile(url))
+        )
+        const validAudioUrls = audioUrls.filter((url): url is string => !!url)
+
+        // Upload Exercise Media
+        const sectionsWithMedia = await Promise.all(data.sections.map(async (section) => {
+            const exercisesWithMedia = await Promise.all(section.exercises.map(async (exercise) => {
+                let finalMediaUrl = exercise.media_url
+                if (exercise.media_url && exercise.media_url.startsWith('blob:')) {
+                    finalMediaUrl = await uploadFile(exercise.media_url)
+                }
+                return { ...exercise, media_url: finalMediaUrl }
+            }))
+            return { ...section, exercises: exercisesWithMedia }
+        }))
+
+        // Prepare clean data for server action
+        const cleanData: WorkoutInput = {
+            title: data.title,
+            description: data.description,
+            difficulty: data.difficulty,
+            tags: data.tags,
+            cover: coverUrl,
+            audio: validAudioUrls,
+            sections: sectionsWithMedia.map(s => ({
+                name: s.name,
+                orderType: s.orderType,
+                exercises: s.exercises.map(e => ({
+                    ...e,
+                    media_url: e.media_url,
+                    media_id: undefined
+                }))
+            }))
+        }
+        
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session?.access_token) throw new Error("Authentication required")
+
+        // 2. Call Server Action
+        const result = await createWorkoutAction(cleanData)
+        if (!result.success) throw new Error(result.error)
+        return result
+    },
+    onSuccess: () => {
+        setSubmitStatus('success')
+        resetStore()
+        reset()
+        router.push('/')
+    },
+    onError: (error) => {
+        setSubmitStatus('idle')
+        console.error(error)
+        alert("Failed to create workout: " + error.message)
+        setIsSubmitting(false)
+    }
+  })
+
   // 1. Sync Form Data to Store
   React.useEffect(() => {
     const subscription = watch((value) => {
@@ -146,50 +217,7 @@ export default function CreateWorkoutPage() {
     
     setIsSubmitting(true)
     setSubmitStatus('loading')
-    try {
-        // Transform form data to match API input
-        const apiData: WorkoutInput = {
-            title: data.title,
-            description: data.description || null,
-            difficulty: data.difficulty || null,
-            tags: data.tags || null,
-            cover: data.cover || null,
-            audio: data.audio || [],
-            sections: data.sections.map(section => ({
-                name: section.name,
-                orderType: section.orderType || null,
-                exercises: section.exercises.map(exercise => ({
-                    name: exercise.name,
-                    description: exercise.description || null,
-                    type: exercise.type || null,
-                    sets: exercise.sets || 0,
-                    reps: exercise.reps || 0,
-                    duration: exercise.duration || 0,
-                    rest: exercise.rest || 0,
-                    muscle_group: exercise.muscle_groups || null,
-                    equipment: exercise.equipment || null,
-                    difficulty: exercise.difficulty || null,
-                    media_url: exercise.media_url || null,
-                    is_public: false // Default value
-                }))
-            }))
-        }
-
-        const workout = await submitWorkout(apiData, user.id)
-        console.log('Workout created:', workout)
-        
-        setSubmitStatus('success')
-        resetStore() // Clear draft
-        
-        // Redirect to the new workout page or list
-        router.push('/')
-    } catch (error) {
-        console.error('Error saving workout:', error)
-        setSubmitStatus('error')
-        alert('Failed to save workout. See console for details.')
-    } finally {
-        setIsSubmitting(false)
-    }
+    createWorkout(data)
   }
 
   return (

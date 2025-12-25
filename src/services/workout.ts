@@ -22,7 +22,7 @@ export type WorkoutInput = Omit<DbWorkout, 'id' | 'created_at' | 'updated_at' | 
     sections: SectionInput[]
 }
 
-async function uploadFile(fileUrl: string | undefined | null): Promise<string | null> {
+export async function uploadFile(fileUrl: string | undefined | null): Promise<string | null> {
   if (!fileUrl) return null
   if (!fileUrl.startsWith('blob:')) return fileUrl
 

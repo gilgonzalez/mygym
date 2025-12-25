@@ -7,9 +7,8 @@ export async function GET(request: Request) {
 
   try {
     const { data, error } = await supabase
-      .from('users')
+      .from('workouts')
       .select()
-    console.log(data)
     if (error) {
       console.error('Error fetching workouts:', error)
       return NextResponse.json({ error: error.message }, { status: 500 })
