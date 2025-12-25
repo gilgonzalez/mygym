@@ -1,11 +1,11 @@
 'use client'
 
 import React, { useState } from 'react'
-import { useForm, useFieldArray, Controller } from 'react-hook-form'
+import { useForm, useFieldArray, Controller, type Resolver } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd'
-import { Plus, Trash2, GripVertical, Save,  ArrowLeft, Eye, Play, Smartphone, Monitor, Tag, Image as ImageIcon, Video, Music, X, Upload, Mic, FileAudio, Square, Maximize2, Camera, Circle, Dna, Activity, Zap, Trophy, Crown, Repeat, List } from 'lucide-react'
+import { Plus, Trash2, GripVertical, Save,  ArrowLeft, Eye, Play, Smartphone, Monitor, Tag, Image as ImageIcon,  Music, X, Upload, Mic, Square, Camera, Circle, Dna, Activity, Zap, Trophy, Crown, Repeat, List } from 'lucide-react'
 import { 
   Select,
   SelectContent,
@@ -29,20 +29,23 @@ import { useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
 
 import { PreviewWorkout } from './components/PreviewWorkout'
+import { submitWorkout, type WorkoutInput } from '@/services/workout'
+import { useCreateWorkoutStore } from '@/store/createWorkoutStore'
 
 // --- Schema Definition ---
 const exerciseSchema = z.object({
   id: z.string(),
   name: z.string().min(1, "Required"),
   type: z.enum(['reps', 'time']).default('reps'),
-  reps: z.union([z.string(), z.number()]).optional(),
-  sets: z.union([z.string(), z.number()]).optional(),
-  duration: z.union([z.string(), z.number()]).optional(),
-  rest: z.union([z.string(), z.number()]).optional(),
-  media_url: z.string().optional(),
+  reps: z.coerce.number().optional(),
+  sets: z.coerce.number().optional(),
+  duration: z.coerce.number().optional(),
+  rest: z.coerce.number().optional(),
+  media_url: z.string().optional().nullable(),
   description: z.string().optional(),
   muscle_groups: z.array(z.string()).optional(),
   equipment: z.array(z.string()).optional(),
+  difficulty: z.enum(['beginner', 'intermediate', 'advanced']).optional(),
 })
 
 const sectionSchema = z.object({
@@ -57,7 +60,7 @@ const workoutSchema = z.object({
   description: z.string().optional(),
   cover: z.string().optional(),
   tags: z.array(z.string()).optional(),
-  difficulty: z.enum(['Beginner', 'Intermediate', 'Advanced', 'Elite', 'Pro']).optional(),
+  difficulty: z.enum(['beginner', 'intermediate', 'advanced']).optional(),
   audio: z.array(z.string()).optional(),
   sections: z.array(sectionSchema),
 })
@@ -66,13 +69,13 @@ type WorkoutFormValues = z.infer<typeof workoutSchema>
 
 export default function CreateWorkoutPage() {
   const router = useRouter()
-  const { user } = useAuthStore()
+  const { user, isLoading } = useAuthStore()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showPreview, setShowPreview] = useState(true)
   const [previewDevice, setPreviewDevice] = useState<'mobile' | 'desktop'>('mobile')
 
   const form = useForm<WorkoutFormValues>({
-    resolver: zodResolver(workoutSchema),
+    resolver: zodResolver(workoutSchema) as unknown as Resolver<WorkoutFormValues>,
     defaultValues: {
       title: '',
       description: '',
@@ -83,14 +86,29 @@ export default function CreateWorkoutPage() {
           id: 'section-1',
           name: 'Warm Up',
           orderType: 'linear',
-          exercises: [{ id: 'ex-1', name: '', sets: 3, reps: 10, rest: 60, type: 'reps', duration: 0, description: '' }]
+          exercises: [{ id: 'ex-1', name: '', sets: 3, reps: 10, rest: 60, type: 'reps', duration: 0, description: '', difficulty: 'beginner' }]
         }
       ]
     }
   })
 
-  const { control, register, handleSubmit, watch, formState: { errors } } = form
+  const { control, register, handleSubmit, watch, formState: { errors }, reset } = form
   
+  const { workoutData, setWorkoutData, setFormErrors, setSubmitStatus, reset: resetStore } = useCreateWorkoutStore()
+
+  // 1. Sync Form Data to Store
+  React.useEffect(() => {
+    const subscription = watch((value) => {
+      setWorkoutData(value)
+    })
+    return () => subscription.unsubscribe()
+  }, [watch, setWorkoutData])
+
+  // 2. Sync Errors to Store
+  React.useEffect(() => {
+    setFormErrors(errors)
+  }, [errors, setFormErrors])
+
   // Watch all fields for live preview
   const formValues = watch()
 
@@ -98,6 +116,20 @@ export default function CreateWorkoutPage() {
     control,
     name: "sections"
   })
+
+  React.useEffect(() => {
+    if (!isLoading && !user) {
+      router.push('/auth/login')
+    }
+  }, [user, isLoading, router])
+
+  if (isLoading) {
+    return <div className="flex items-center justify-center min-h-screen">Loading...</div>
+  }
+
+  if (!user) {
+      return null // Will redirect
+  }
 
   const onDragEnd = (result: DropResult) => {
     if (!result.destination) return
@@ -107,7 +139,57 @@ export default function CreateWorkoutPage() {
   }
 
   const onSubmit = async (data: WorkoutFormValues) => {
-    console.log({data})
+    if (!user) {
+        alert("Please sign in to save workouts")
+        return
+    }
+    
+    setIsSubmitting(true)
+    setSubmitStatus('loading')
+    try {
+        // Transform form data to match API input
+        const apiData: WorkoutInput = {
+            title: data.title,
+            description: data.description || null,
+            difficulty: data.difficulty || null,
+            tags: data.tags || null,
+            cover: data.cover || null,
+            audio: data.audio || [],
+            sections: data.sections.map(section => ({
+                name: section.name,
+                orderType: section.orderType || null,
+                exercises: section.exercises.map(exercise => ({
+                    name: exercise.name,
+                    description: exercise.description || null,
+                    type: exercise.type || null,
+                    sets: exercise.sets || 0,
+                    reps: exercise.reps || 0,
+                    duration: exercise.duration || 0,
+                    rest: exercise.rest || 0,
+                    muscle_group: exercise.muscle_groups || null,
+                    equipment: exercise.equipment || null,
+                    difficulty: exercise.difficulty || null,
+                    media_url: exercise.media_url || null,
+                    is_public: false // Default value
+                }))
+            }))
+        }
+
+        const workout = await submitWorkout(apiData, user.id)
+        console.log('Workout created:', workout)
+        
+        setSubmitStatus('success')
+        resetStore() // Clear draft
+        
+        // Redirect to the new workout page or list
+        router.push('/')
+    } catch (error) {
+        console.error('Error saving workout:', error)
+        setSubmitStatus('error')
+        alert('Failed to save workout. See console for details.')
+    } finally {
+        setIsSubmitting(false)
+    }
   }
 
   return (
@@ -123,6 +205,21 @@ export default function CreateWorkoutPage() {
         </div>
         
         <div className="flex items-center gap-3">
+          {workoutData && (
+            <Button 
+                variant="outline" 
+                size="sm" 
+                className="gap-2 rounded-full px-4 border-orange-200 bg-orange-50 text-orange-700 hover:bg-orange-100 hover:text-orange-800 dark:bg-orange-900/20 dark:border-orange-900/50 dark:text-orange-400"
+                onClick={() => {
+                    if (confirm('Recover saved draft? Current changes will be lost.')) {
+                        reset(workoutData)
+                    }
+                }}
+            >
+                <Repeat className="h-3.5 w-3.5" />
+                Recover Draft
+            </Button>
+          )}
           <Button 
             variant={showPreview ? "secondary" : "ghost"}
             size="icon"
@@ -156,11 +253,13 @@ export default function CreateWorkoutPage() {
                   placeholder="Workout Title" 
                   className="text-5xl md:text-6xl font-black tracking-tighter border-none px-0 h-auto focus-visible:ring-0 placeholder:text-muted-foreground/20 bg-transparent text-foreground"
                 />
+                {errors.title && <p className="text-red-500 text-sm font-medium">{errors.title.message}</p>}
                 <Textarea 
                   {...register('description')} 
                   placeholder="What's the goal of this session?" 
                   className="resize-none border-none px-0 min-h-[40px] focus-visible:ring-0 text-xl text-muted-foreground bg-transparent font-medium"
                 />
+                {errors.description && <p className="text-red-500 text-sm font-medium">{errors.description.message}</p>}
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -226,34 +325,22 @@ export default function CreateWorkoutPage() {
                                     <SelectValue placeholder="Select difficulty level" />
                                 </SelectTrigger>
                                 <SelectContent className="rounded-xl border-border/50 shadow-xl">
-                                    <SelectItem value="Beginner" className="rounded-lg my-1 cursor-pointer focus:bg-primary/5 focus:text-primary font-medium">
+                                    <SelectItem value="beginner" className="rounded-lg my-1 cursor-pointer focus:bg-primary/5 focus:text-primary font-medium">
                                         <div className="flex items-center gap-2">
                                             <Dna className="h-4 w-4 text-emerald-500" />
                                             <span>Beginner</span>
                                         </div>
                                     </SelectItem>
-                                    <SelectItem value="Intermediate" className="rounded-lg my-1 cursor-pointer focus:bg-primary/5 focus:text-primary font-medium">
+                                    <SelectItem value="intermediate" className="rounded-lg my-1 cursor-pointer focus:bg-primary/5 focus:text-primary font-medium">
                                         <div className="flex items-center gap-2">
                                             <Activity className="h-4 w-4 text-blue-500" />
                                             <span>Intermediate</span>
                                         </div>
                                     </SelectItem>
-                                    <SelectItem value="Advanced" className="rounded-lg my-1 cursor-pointer focus:bg-primary/5 focus:text-primary font-medium">
+                                    <SelectItem value="advanced" className="rounded-lg my-1 cursor-pointer focus:bg-primary/5 focus:text-primary font-medium">
                                         <div className="flex items-center gap-2">
                                             <Zap className="h-4 w-4 text-orange-500" />
                                             <span>Advanced</span>
-                                        </div>
-                                    </SelectItem>
-                                    <SelectItem value="Elite" className="rounded-lg my-1 cursor-pointer focus:bg-primary/5 focus:text-primary font-medium">
-                                        <div className="flex items-center gap-2">
-                                            <Trophy className="h-4 w-4 text-purple-500" />
-                                            <span>Elite</span>
-                                        </div>
-                                    </SelectItem>
-                                    <SelectItem value="Pro" className="rounded-lg my-1 cursor-pointer focus:bg-primary/5 focus:text-primary font-medium">
-                                        <div className="flex items-center gap-2">
-                                            <Crown className="h-4 w-4 text-yellow-500" />
-                                            <span>Pro Athlete</span>
                                         </div>
                                     </SelectItem>
                                 </SelectContent>
@@ -283,11 +370,18 @@ export default function CreateWorkoutPage() {
                                 <GripVertical className="h-6 w-6" />
                               </div>
                               <div className="flex-1 flex items-center gap-4">
-                                <Input 
-                                    {...register(`sections.${index}.name` as const)} 
-                                    placeholder="SECTION NAME" 
-                                    className="bg-transparent border-none shadow-none font-black text-2xl tracking-tight focus-visible:ring-0 px-0 h-auto w-full placeholder:text-muted-foreground/20 uppercase"
-                                />
+                                <div className="flex-1">
+                                    <Input 
+                                        {...register(`sections.${index}.name` as const)} 
+                                        placeholder="SECTION NAME" 
+                                        className="bg-transparent border-none shadow-none font-black text-2xl tracking-tight focus-visible:ring-0 px-0 h-auto w-full placeholder:text-muted-foreground/20 uppercase"
+                                    />
+                                    {errors.sections?.[index]?.name && (
+                                      <p className="text-red-500 text-xs font-medium mt-1">
+                                        {errors.sections[index]?.name?.message}
+                                      </p>
+                                    )}
+                                </div>
                                 <Controller
                                     control={control}
                                     name={`sections.${index}.orderType` as const}
@@ -345,7 +439,12 @@ export default function CreateWorkoutPage() {
                               </Button>
                             </div>
                             <div className="p-6 md:p-8">
-                              <ExercisesFieldArray nestIndex={index} control={control} register={register} />
+                              <ExercisesFieldArray 
+                                nestIndex={index} 
+                                control={control} 
+                                register={register} 
+                                errors={errors}
+                              />
                             </div>
                           </div>
                         )}
@@ -444,7 +543,7 @@ export default function CreateWorkoutPage() {
 }
 
 
-function ExercisesFieldArray({ nestIndex, control, register }: { nestIndex: number, control: any, register: any }) {
+function ExercisesFieldArray({ nestIndex, control, register, errors }: { nestIndex: number, control: any, register: any, errors: any }) {
   const { fields, append, remove } = useFieldArray({
     control,
     name: `sections.${nestIndex}.exercises`
@@ -471,11 +570,18 @@ function ExercisesFieldArray({ nestIndex, control, register }: { nestIndex: numb
                  <div className="flex-1 min-w-[300px] space-y-6">
                     {/* Header: Name & Description */}
                     <div className="space-y-2 pr-10">
-                        <Input 
-                            {...register(`sections.${nestIndex}.exercises.${k}.name`)} 
-                            placeholder="Exercise Name" 
-                            className="h-auto text-xl font-black bg-transparent border-none px-0 focus-visible:ring-0 placeholder:text-muted-foreground/30 tracking-tight"
-                        />
+                        <div>
+                            <Input 
+                                {...register(`sections.${nestIndex}.exercises.${k}.name`)} 
+                                placeholder="Exercise Name" 
+                                className="h-auto text-xl font-black bg-transparent border-none px-0 focus-visible:ring-0 placeholder:text-muted-foreground/30 tracking-tight"
+                            />
+                            {errors.sections?.[nestIndex]?.exercises?.[k]?.name && (
+                                <p className="text-red-500 text-xs font-medium">
+                                    {errors.sections[nestIndex].exercises[k].name.message}
+                                </p>
+                            )}
+                        </div>
                         <Input 
                             {...register(`sections.${nestIndex}.exercises.${k}.description`)} 
                             placeholder="Add instructions, cues or notes..." 
@@ -725,7 +831,7 @@ function TagInput({
     )
 }
 
-function MediaInput({ value, onChange, placeholder, type = 'media', variant = 'default' }: { value?: string, onChange: (val: string) => void, placeholder?: string, type?: 'media' | 'audio', variant?: 'default' | 'thumbnail' }) {
+function MediaInput({ value, onChange, placeholder, type = 'media', variant = 'default' }: { value?: string | null, onChange: (val: string) => void, placeholder?: string, type?: 'media' | 'audio', variant?: 'default' | 'thumbnail' }) {
     const fileInputRef = React.useRef<HTMLInputElement>(null)
     
     // Audio State
@@ -980,37 +1086,6 @@ function MediaInput({ value, onChange, placeholder, type = 'media', variant = 'd
                         </Button>
                     </div>
                 )}
-                
-                {/* --- MEDIA PREVIEW MODAL (Removed/Disabled per request) --- */}
-                {/* {isPreviewOpen && value && (
-                    <div className="fixed inset-0 z-[100] bg-black/95 flex flex-col items-center justify-center p-4 animate-in fade-in duration-200" onClick={(e) => e.stopPropagation()}>
-                         <Button 
-                            type="button" 
-                            variant="ghost" 
-                            size="icon"
-                            className="absolute top-4 right-4 text-white hover:bg-white/10 rounded-full h-12 w-12"
-                            onClick={() => setIsPreviewOpen(false)}
-                        >
-                            <X className="h-6 w-6" />
-                        </Button>
-                        
-                        <div className="max-w-4xl w-full max-h-[80vh] flex items-center justify-center relative">
-                            {value.match(/\.(mp4|webm|mov)$/i) || value.startsWith('blob:') ? (
-                                <video src={value} controls autoPlay className="max-w-full max-h-full rounded-lg shadow-2xl" />
-                            ) : type === 'audio' || value.match(/\.(mp3|wav|ogg)$/i) ? (
-                                <div className="bg-zinc-900 p-8 rounded-3xl flex flex-col items-center gap-6 w-full max-w-md border border-white/10">
-                                    <div className="w-32 h-32 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-2xl animate-pulse">
-                                        <Music className="h-12 w-12 text-white" />
-                                    </div>
-                                    <audio src={value} controls className="w-full" />
-                                </div>
-                            ) : (
-                                <img src={value} alt="Preview" className="max-w-full max-h-full rounded-lg shadow-2xl object-contain" />
-                            )}
-                        </div>
-                    </div>
-                )} */}
-
                 {value ? (
                     isPlaying ? (
                         <div className="w-full h-full relative bg-black flex items-center justify-center" onClick={(e) => e.stopPropagation()}>

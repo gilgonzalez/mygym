@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { Heart, ChevronDown, Clock, BarChart, User, Play } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuthStore } from '../store/authStore'
-import { Workout } from '../types/database'
+import { Workout } from '../types/workout/composite'
 import { Card, CardContent, CardFooter, CardHeader } from './Card'
 import { Button } from './Button'
 

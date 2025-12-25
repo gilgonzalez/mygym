@@ -17,7 +17,7 @@ export default function MainLayout({
 }) {
   const pathname = usePathname()
   const router = useRouter()
-  const { logout } = useAuthStore()
+  const { user, logout } = useAuthStore()
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
@@ -69,15 +69,17 @@ export default function MainLayout({
             {/* Right: Actions */}
             <div className="flex items-center gap-4">
               {/* Create Workout Action */}
-              <Link href="/editor/workout/create">
-                <Button size="sm" className="hidden sm:flex gap-2 shadow-sm">
-                  <PlusSquare className="h-4 w-4" />
-                  Create Workout
-                </Button>
-                <Button size="icon" variant="ghost" className="sm:hidden">
-                    <PlusSquare className="h-5 w-5" />
-                </Button>
-              </Link>
+              {user && (
+                <Link href="/editor/workout/create">
+                  <Button size="sm" className="hidden sm:flex gap-2 shadow-sm">
+                    <PlusSquare className="h-4 w-4" />
+                    Create Workout
+                  </Button>
+                  <Button size="icon" variant="ghost" className="sm:hidden">
+                      <PlusSquare className="h-5 w-5" />
+                  </Button>
+                </Link>
+              )}
 
               {/* Divider */}
               <div className="hidden sm:block h-6 w-px bg-border/50" />

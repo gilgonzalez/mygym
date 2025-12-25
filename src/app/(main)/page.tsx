@@ -1,82 +1,76 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import WorkoutCard from '@/components/WorkoutCard'
-import type { Workout } from '@/types/database'
+import { Workout, WorkoutApiResponse } from '@/types/workout/composite'
 import { Button } from '@/components/Button'
-
-// Temporary mock data until we connect to Supabase
-const sampleWorkouts: Workout[] = [
-  {
-    id: 'w1',
-    user_id: 'u1',
-    title: 'Full Body Starter',
-    description: 'A beginner-friendly full body routine to get your muscles moving.',
-    category: 'strength',
-    difficulty: 'beginner',
-    duration_minutes: 45,
-    is_public: true,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-    user: { id: 'u1', email: 'john@example.com', username: 'johndoe', name: 'John Doe', avatar_url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=John', created_at: '', updated_at: '' },
-    sections: [
-      { id: 's1', workout_id: 'w1', name: 'Warm Up', order_index: 1, created_at: '' },
-      { id: 's2', workout_id: 'w1', name: 'Main Circuit', order_index: 2, created_at: '' },
-      { id: 's3', workout_id: 'w1', name: 'Cool Down', order_index: 3, created_at: '' },
-    ],
-    likes_count: 12,
-    is_liked: false,
-  },
-  {
-    id: 'w2',
-    user_id: 'u2',
-    title: 'HIIT Cardio Blast',
-    description: 'Intense high-interval training to burn fat quickly.',
-    category: 'cardio',
-    difficulty: 'intermediate',
-    duration_minutes: 30,
-    is_public: true,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-    user: { id: 'u2', email: 'jane@example.com', username: 'janefit', name: 'Jane Fit', avatar_url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Jane', created_at: '', updated_at: '' },
-    sections: [],
-    likes_count: 45,
-    is_liked: true,
-  },
-  {
-    id: 'w3',
-    user_id: 'u3',
-    title: 'Yoga for Flexibility',
-    description: 'Relaxing yoga flow to improve flexibility and reduce stress.',
-    category: 'flexibility',
-    difficulty: 'beginner',
-    duration_minutes: 60,
-    is_public: true,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-    user: { id: 'u3', email: 'yoga@example.com', username: 'yogamaster', name: 'Yoga Master', avatar_url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Yoga', created_at: '', updated_at: '' },
-    sections: [],
-    likes_count: 89,
-    is_liked: false,
-  },
-  {
-    id: 'w4',
-    user_id: 'u4',
-    title: 'Powerlifting 5x5',
-    description: 'Classic strength program focused on compound movements.',
-    category: 'strength',
-    difficulty: 'advanced',
-    duration_minutes: 90,
-    is_public: true,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-    user: { id: 'u4', email: 'power@example.com', username: 'ironlifter', name: 'Iron Lifter', avatar_url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Iron', created_at: '', updated_at: '' },
-    sections: [],
-    likes_count: 120,
-    is_liked: true,
-  },
-]
+import { Loader2 } from 'lucide-react'
 
 export default function Page() {
+  const [workouts, setWorkouts] = useState<Workout[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const fetchWorkouts = async () => {
+      try {
+        const response = await fetch('/api/workouts')
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}))
+          console.error('API Error Details:', errorData)
+          throw new Error(errorData.error || `Failed to fetch workouts: ${response.status} ${response.statusText}`)
+        }
+        const data: WorkoutApiResponse[] = await response.json()
+        
+        // Transform API response to UI model
+        const transformedWorkouts: Workout[] = data.map(workout => ({
+          ...workout,
+          user: workout.workout_user?.user || { id: workout.user_id, name: 'Unknown User', username: 'unknown', avatar_url: null },
+          sections: workout.workout_sections
+            .sort((a, b) => a.order_index - b.order_index)
+            .map(ws => ({
+              ...ws.sections,
+              exercises: ws.sections.section_exercises
+                .sort((a, b) => a.order_index - b.order_index)
+                .map(se => ({
+                  ...se.exercises,
+                  sets: se.sets,
+                  reps: se.reps,
+                  rest: se.rest_seconds,
+                  weight_kg: se.weight_kg,
+                  duration: se.duration_seconds
+                }))
+            }))
+        }))
+
+        setWorkouts(transformedWorkouts)
+      } catch (err) {
+        console.error('Error fetching workouts:', err)
+        setError('Failed to load workouts')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchWorkouts()
+  }, [])
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-[50vh] text-destructive">
+        {error}
+      </div>
+    )
+  }
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
       {/* Main Feed Column */}
@@ -92,11 +86,15 @@ export default function Page() {
         </div>
         
         <div className="flex flex-col gap-6">
-          {sampleWorkouts.map((workout) => (
+          {workouts.map((workout) => (
             <WorkoutCard key={workout.id} workout={workout} />
           ))}
+          {workouts.length === 0 && (
+            <p className="text-muted-foreground text-center py-10">No public workouts found.</p>
+          )}
         </div>
       </div>
+
       
       {/* Sidebar Column (Optional - for trending tags, suggested users, etc.) */}
       <div className="hidden lg:block lg:col-span-4 space-y-6">
