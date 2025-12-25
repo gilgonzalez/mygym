@@ -37,7 +37,7 @@ export default function Page() {
       {/* Main Feed Column */}
       <div className="lg:col-span-8 space-y-6">
         <div className="flex items-center justify-between mb-2">
-          <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-green-500 via-green-600 to-slate-900 dark:from-emerald-700 via-emerald-400 dark:to-slate-400 bg-clip-text text-transparent">
+          <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-green-500 via-green-600 to-slate-900 dark:from-emerald-700  dark:to-slate-400 bg-clip-text text-transparent">
             Discover Workouts
           </h1>
           <div className="flex gap-2">

@@ -31,12 +31,13 @@ export interface WorkoutApiResponse extends DbWorkout {
 export interface Workout extends DbWorkout {
   user: Pick<DbUser, 'id' | 'username' | 'name' | 'avatar_url'> | null
   sections: Array<DbSection & {
+    total_exercises?: number
     exercises: Array<DbExercise & {
       sets?: number | null
       reps?: number | null
-      rest?: number | null // mapped from rest_seconds
-      weight_kg?: number | null
-      duration?: number | null // mapped from duration_seconds
+      rest?: number | null 
+      duration?: number | null 
+      media_url?: string | null
     }>
   }>
   likes_count?: number

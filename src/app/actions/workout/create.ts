@@ -1,7 +1,25 @@
 'use server'
 
 import { createClient } from "@/lib/supabase/server"
-import { WorkoutInput } from "@/services/workout"
+import { Database } from "@/types/database"
+
+type DbWorkout = Database['public']['Tables']['workouts']['Insert']
+type DbExercise = Database['public']['Tables']['exercises']['Insert']
+type DbSection = Database['public']['Tables']['sections']['Insert']
+
+type ExerciseInput = Omit<DbExercise, 'id' | 'created_at' | 'created_by' | 'media_id' | 'is_public'> & {
+    media_url?: string | null 
+    media_id?: string | null
+}
+
+type SectionInput = Omit<DbSection, 'id' | 'created_at'> & {
+    orderType: DbSection['type'] 
+    exercises: ExerciseInput[]
+}
+export type WorkoutInput = Omit<DbWorkout, 'id' | 'created_at' | 'updated_at' | 'user_id' | 'audio'> & {
+    audio?: string[]
+    sections: SectionInput[]
+}
 
 export async function createWorkoutAction(data: WorkoutInput) {
   try {

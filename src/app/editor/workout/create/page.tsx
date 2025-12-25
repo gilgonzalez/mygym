@@ -6,7 +6,7 @@ import { useMutation } from '@tanstack/react-query'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd'
-import { Plus, Trash2, GripVertical, Save,  ArrowLeft, Eye, Play, Smartphone, Monitor, Tag, Image as ImageIcon,  Music, X, Upload, Mic, Square, Camera, Circle, Dna, Activity, Zap, Trophy, Crown, Repeat, List } from 'lucide-react'
+import { Plus, Trash2, GripVertical, Save,  ArrowLeft, Eye, Play, Smartphone, Monitor, Tag, Image as ImageIcon,  Music, X, Upload, Mic, Square, Camera, Circle, Dna, Activity, Zap, Repeat, List } from 'lucide-react'
 import { 
   Select,
   SelectContent,
@@ -30,11 +30,11 @@ import { useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
 
 import { PreviewWorkout } from './components/PreviewWorkout'
-import { type WorkoutInput, uploadFile } from '@/services/workout'
 import { useCreateWorkoutStore } from '@/store/createWorkoutStore'
 import { supabase } from '@/lib/supabase'
 import { Controller, Resolver, useFieldArray, useForm } from 'react-hook-form'
-import { createWorkoutAction } from '@/app/actions/workout/create'
+import { createWorkoutAction, WorkoutInput } from '@/app/actions/workout/create'
+import { uploadFile } from '@/services/uploadFile'
 
 // --- Schema Definition ---
 const exerciseSchema = z.object({

@@ -26,7 +26,7 @@ export function ActiveSession({
   onExit,
   onNextStep
 }: ActiveSessionProps) {
-  const { setSpeaking } = useWorkoutStore()
+  const { setSpeaking, prevStep } = useWorkoutStore()
   const currentSection = workout.sections[currentSectionIndex]
   const currentExercise = currentSection?.exercises[currentExerciseIndex]
 
@@ -48,7 +48,8 @@ export function ActiveSession({
       details = `${currentExercise.duration} segundos`
     } else if (currentExercise.type === 'reps') {
       // Handle "5-8" or "12/leg" formats broadly
-      const cleanReps = currentExercise.reps.toString().replace('/', ' por ')
+      const repsValue = currentExercise.reps || 0
+      const cleanReps = repsValue.toString().replace('/', ' por ')
       details = `${cleanReps} repeticiones`
     }
 
@@ -131,6 +132,7 @@ export function ActiveSession({
             currentSection={currentSection}
             currentSet={currentSet}
             onComplete={onNextStep}
+            onPrev={prevStep}
           />
         )}
       </main>

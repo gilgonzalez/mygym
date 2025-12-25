@@ -123,7 +123,7 @@ export default function WorkoutCard({ workout }: WorkoutCardProps) {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="truncate text-sm font-medium text-foreground">{section.name}</p>
-                      <p className="truncate text-[10px] text-muted-foreground">{section.exercises?.length || 0} exercises</p>
+                      <p className="truncate text-[10px] text-muted-foreground">{section.total_exercises || 0} exercises</p>
                     </div>
                   </div>
                 ))

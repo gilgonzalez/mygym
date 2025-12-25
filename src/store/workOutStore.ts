@@ -21,6 +21,7 @@ interface WorkoutState {
   startSession: () => void
   endSession: () => void
   nextStep: () => void
+  prevStep: () => void
   restartWorkout: () => void
   jumpToStep: (sectionIndex: number, exerciseIndex: number) => void
 }
@@ -70,6 +71,45 @@ export const useWorkoutStore = create<WorkoutState>((set, get) => ({
     currentSet: 1,
     isResting: false
   }),
+
+  prevStep: () => {
+    const state = get()
+    const { activeWorkout, currentSectionIndex, currentExerciseIndex, currentSet, isResting } = state
+    if (!activeWorkout) return
+
+    if (isResting) {
+        set({ isResting: false })
+        return
+    }
+
+    const currentSection = activeWorkout.sections[currentSectionIndex]
+    
+    // Simple logic: Go back to previous logical step (Rest of previous set/exercise)
+    // We prioritize "Single" mode logic as it's the default.
+    
+    if (currentSet > 1) {
+         set({ isResting: true, currentSet: currentSet - 1 })
+    } else {
+         // currentSet == 1
+         if (currentExerciseIndex > 0) {
+             const prevEx = currentSection.exercises[currentExerciseIndex - 1]
+             set({ 
+                 isResting: true, 
+                 currentExerciseIndex: currentExerciseIndex - 1, 
+                 currentSet: prevEx.sets || 1 
+             })
+         } else if (currentSectionIndex > 0) {
+             const prevSec = activeWorkout.sections[currentSectionIndex - 1]
+             const prevEx = prevSec.exercises[prevSec.exercises.length - 1]
+             set({ 
+                 isResting: true, 
+                 currentSectionIndex: currentSectionIndex - 1, 
+                 currentExerciseIndex: prevSec.exercises.length - 1, 
+                 currentSet: prevEx.sets || 1 
+             })
+         }
+    }
+  },
 
   nextStep: () => {
     const state = get()

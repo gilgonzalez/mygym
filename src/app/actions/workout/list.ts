@@ -13,7 +13,10 @@ export async function getWorkoutsAction(): Promise<{ success: boolean, data?: Wo
         user:users!user_id(id, username, name, avatar_url),
         workout_sections(
           order_index,
-          sections(*)
+          sections(
+            *,
+            section_exercises(count)
+          )
         )
       `)
       .eq('is_public', true)
@@ -28,16 +31,8 @@ export async function getWorkoutsAction(): Promise<{ success: boolean, data?: Wo
         .sort((a: any, b: any) => a.order_index - b.order_index)
         .map((ws: any) => ({
           ...ws.sections,
-          exercises: (ws.sections.section_exercises || [])
-            .sort((a: any, b: any) => a.order_index - b.order_index)
-            .map((se: any) => ({
-              ...se.exercises,
-              sets: se.sets,
-              reps: se.reps,
-              rest: se.rest_seconds,
-              weight_kg: se.weight_kg,
-              duration: se.duration_seconds
-            }))
+          total_exercises: ws.sections.section_exercises?.[0]?.count || 0,
+          exercises: []
         }))
     }))
 

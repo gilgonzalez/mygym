@@ -80,14 +80,25 @@ export function WorkoutOverview({ workout, onStart, onResume, onBack, hasActiveS
                      onClick={() => onExerciseClick(idx, exIdx)}
                    >
                      <div className="w-16 h-16 rounded-lg bg-muted overflow-hidden shrink-0 border border-border/30">
-                       {ex.media_url ? (
-                         <img src={ex.media_url} alt={ex.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-                       ) : (
-                         <div className="w-full h-full flex items-center justify-center">
-                           <Dumbbell className="w-6 h-6 text-muted-foreground/40" />
-                         </div>
-                       )}
-                     </div>
+                      {ex.media_url ? (
+                        /\.(mp4|webm|ogg|mov)($|\?)/i.test(ex.media_url) ? (
+                          <video 
+                            src={ex.media_url} 
+                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                            muted
+                            loop
+                            playsInline
+                            autoPlay
+                          />
+                        ) : (
+                          <img src={ex.media_url} alt={ex.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                        )
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <Dumbbell className="w-6 h-6 text-muted-foreground/40" />
+                        </div>
+                      )}
+                    </div>
                      
                      <div className="flex-1 min-w-0">
                        <h4 className="font-semibold text-foreground truncate pr-2">{ex.name}</h4>

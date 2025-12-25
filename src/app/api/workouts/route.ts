@@ -3,8 +3,6 @@ import { NextResponse } from 'next/server'
 
 export async function GET(request: Request) {
   
-  
-
   try {
     const { data, error } = await supabase
       .from('workouts')
