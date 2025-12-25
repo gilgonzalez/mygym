@@ -1,12 +1,8 @@
 'use server'
 
-import { redirect } from 'next/navigation'
 import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
-type credentials = {
-  email : string,
-  password: string
-}
+
 
 
 // Función para iniciar sesión con proveedores externos
@@ -16,12 +12,25 @@ export const signInWithProvider = async (provider: "google" | "github") => {
   const url = new URL(referer);
   const redirectParam = url.searchParams.get("redirect");
 
+  // Determine the base URL dynamically
+  let siteUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXT_PUBLIC_VERCEL_URL || 'http://localhost:3000';
+  
+  // Ensure protocol
+  if (!siteUrl.startsWith('http')) {
+    siteUrl = `https://${siteUrl}`;
+  }
+  
+  // Remove trailing slash
+  if (siteUrl.endsWith('/')) {
+    siteUrl = siteUrl.slice(0, -1);
+  }
+
   try {
     const supabase = await createClient();
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider,
       options: {
-        redirectTo: `${process.env.NEXT_PUBLIC_BASE_URL}/auth/callback${redirectParam ? '?redirect=' + redirectParam : ''}`, // IMPORTANTE: URL correcta
+        redirectTo: `${siteUrl}/auth/callback${redirectParam ? '?redirect=' + redirectParam : ''}`, // URL dinámica y robusta
       },
     });
 
