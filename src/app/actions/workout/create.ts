@@ -8,6 +8,7 @@ type DbExercise = Database['public']['Tables']['exercises']['Insert']
 type DbSection = Database['public']['Tables']['sections']['Insert']
 
 type ExerciseInput = Omit<DbExercise, 'id' | 'created_at' | 'created_by' | 'media_id' | 'is_public'> & {
+    id?: string
     media_url?: string | null 
     media_id?: string | null
 }

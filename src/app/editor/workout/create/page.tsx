@@ -6,7 +6,7 @@ import { useMutation } from '@tanstack/react-query'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd'
-import { Plus, Trash2, GripVertical, Save,  ArrowLeft, Eye, Play, Smartphone, Monitor, Tag, Image as ImageIcon,  Music, X, Upload, Mic, Square, Camera, Circle, Dna, Activity, Zap, Repeat, List } from 'lucide-react'
+import { Plus, Trash2, GripVertical, Save,  ArrowLeft, Eye, Play, Smartphone, Monitor, Tag, Image as ImageIcon,  Music, X, Upload, Mic, Square, Camera, Circle, Dna, Activity, Zap, Repeat, List, RotateCw, Library } from 'lucide-react'
 import { 
   Select,
   SelectContent,
@@ -31,10 +31,11 @@ import { cn } from '@/lib/utils'
 
 import { PreviewWorkout } from './components/PreviewWorkout'
 import { useCreateWorkoutStore } from '@/store/createWorkoutStore'
-import { supabase } from '@/lib/supabase'
 import { Controller, Resolver, useFieldArray, useForm } from 'react-hook-form'
 import { createWorkoutAction, WorkoutInput } from '@/app/actions/workout/create'
+import { updateWorkoutAction } from '@/app/actions/workout/update'
 import { uploadFile } from '@/services/uploadFile'
+import { MediaSelectionDialog } from './components/MediaSelectionDialog'
 
 // --- Schema Definition ---
 const exerciseSchema = z.object({
@@ -60,6 +61,7 @@ const sectionSchema = z.object({
 })
 
 const workoutSchema = z.object({
+  id: z.string().optional(),
   title: z.string().min(3, "Title required"),
   description: z.string().optional(),
   cover: z.string().optional(),
@@ -75,8 +77,11 @@ export default function CreateWorkoutPage() {
   const router = useRouter()
   const { user, isLoading } = useAuthStore()
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isRetry, setIsRetry] = useState(false)
   const [showPreview, setShowPreview] = useState(true)
   const [previewDevice, setPreviewDevice] = useState<'mobile' | 'desktop'>('mobile')
+  const [uploadProgress, setUploadProgress] = useState(0)
+  const [uploadStatus, setUploadStatus] = useState('')
 
   const form = useForm<WorkoutFormValues>({
     resolver: zodResolver(workoutSchema) as unknown as Resolver<WorkoutFormValues>,
@@ -100,58 +105,117 @@ export default function CreateWorkoutPage() {
   
   const { workoutData, setWorkoutData, setFormErrors, setSubmitStatus, reset: resetStore } = useCreateWorkoutStore()
 
+  // Auto-fill form if editing (workoutData has ID)
+  React.useEffect(() => {
+      if (workoutData?.id && !form.getValues('id')) {
+          console.log('Restoring edit session:', workoutData)
+          reset(workoutData)
+      }
+  }, [workoutData, form, reset])
+
   const { mutate: createWorkout, isPending: isCreating } = useMutation({
     mutationFn: async (data: WorkoutFormValues) => {
-        if (!user?.id) throw new Error("User not found")
-
-        // 1. Upload Media First (Client-side)
-        // Upload Cover
-        const coverUrl = await uploadFile(data.cover)
-        
-        // Upload Audio
-        const audioUrls = await Promise.all(
-            (data.audio || []).map(url => uploadFile(url))
+        // Timeout safeguard: 30 seconds
+        const timeout = new Promise<never>((_, reject) => 
+            setTimeout(() => reject(new Error("Request timed out. Please check your connection and try again.")), 30000)
         )
-        const validAudioUrls = audioUrls.filter((url): url is string => !!url)
 
-        // Upload Exercise Media
-        const sectionsWithMedia = await Promise.all(data.sections.map(async (section) => {
-            const exercisesWithMedia = await Promise.all(section.exercises.map(async (exercise) => {
-                let finalMediaUrl = exercise.media_url
-                if (exercise.media_url && exercise.media_url.startsWith('blob:')) {
-                    finalMediaUrl = await uploadFile(exercise.media_url)
-                }
-                return { ...exercise, media_url: finalMediaUrl }
-            }))
-            return { ...section, exercises: exercisesWithMedia }
-        }))
+        const processUpload = async () => {
+            if (!user?.id) throw new Error("User not found")
 
-        // Prepare clean data for server action
-        const cleanData: WorkoutInput = {
-            title: data.title,
-            description: data.description,
-            difficulty: data.difficulty,
-            tags: data.tags,
-            cover: coverUrl,
-            audio: validAudioUrls,
-            sections: sectionsWithMedia.map(s => ({
-                name: s.name,
-                orderType: s.orderType,
-                exercises: s.exercises.map(e => ({
-                    ...e,
-                    media_url: e.media_url,
-                    media_id: undefined
+            // Count total operations
+            let totalOps = 1; // Server action
+            if (data.cover?.startsWith('blob:')) totalOps++;
+            (data.audio || []).forEach(url => { if (url.startsWith('blob:')) totalOps++; });
+            data.sections.forEach(s => s.exercises.forEach(e => {
+                if (e.media_url?.startsWith('blob:')) totalOps++;
+            }));
+
+            let completedOps = 0;
+            const updateProgress = (text: string) => {
+                completedOps++;
+                setUploadProgress(Math.min(Math.round((completedOps / totalOps) * 100), 99));
+                setUploadStatus(text);
+            }
+            
+            setUploadStatus('Preparing uploads...');
+
+            // 1. Upload Media First (Client-side)
+            // Upload Cover
+            let coverUrl = data.cover
+            if (data.cover?.startsWith('blob:')) {
+                setUploadStatus('Uploading cover image...')
+                coverUrl = await uploadFile(data.cover)
+                updateProgress('Cover uploaded')
+            }
+            
+            // Upload Audio
+            const audioUrls = await Promise.all(
+                (data.audio || []).map(async (url) => {
+                    if (url.startsWith('blob:')) {
+                        const res = await uploadFile(url)
+                        updateProgress('Audio track uploaded')
+                        return res
+                    }
+                    return url
+                })
+            )
+            const validAudioUrls = audioUrls.filter((url): url is string => !!url)
+
+            // Upload Exercise Media
+            const sectionsWithMedia = await Promise.all(data.sections.map(async (section) => {
+                const exercisesWithMedia = await Promise.all(section.exercises.map(async (exercise) => {
+                    let finalMediaUrl = exercise.media_url
+                    if (exercise.media_url && exercise.media_url.startsWith('blob:')) {
+                        // setUploadStatus(`Uploading media: ${exercise.name}...`)
+                        finalMediaUrl = await uploadFile(exercise.media_url)
+                        updateProgress(`Media uploaded: ${exercise.name}`)
+                    }
+                    return { ...exercise, media_url: finalMediaUrl }
                 }))
+                return { ...section, exercises: exercisesWithMedia }
             }))
-        }
-        
-        const { data: { session } } = await supabase.auth.getSession()
-        if (!session?.access_token) throw new Error("Authentication required")
 
-        // 2. Call Server Action
-        const result = await createWorkoutAction(cleanData)
-        if (!result.success) throw new Error(result.error)
-        return result
+            setUploadStatus('Finalizing workout...')
+
+            // Prepare clean data for server action
+            const cleanData: WorkoutInput = {
+                title: data.title,
+                description: data.description,
+                difficulty: data.difficulty,
+                tags: data.tags,
+                cover: coverUrl,
+                audio: validAudioUrls,
+                sections: sectionsWithMedia.map(s => ({
+                    name: s.name,
+                    orderType: s.orderType,
+                    exercises: s.exercises.map(e => ({
+                        ...e,
+                        media_url: e.media_url,
+                        media_id: undefined
+                    }))
+                }))
+            }
+            
+            // 2. Call Server Action
+            let result;
+            if (data.id) {
+                // Update existing
+                setUploadStatus('Updating workout...')
+                result = await updateWorkoutAction(data.id, cleanData)
+            } else {
+                // Create new
+                setUploadStatus('Creating workout...')
+                result = await createWorkoutAction(cleanData)
+            }
+            
+            if (!result.success) throw new Error(result.error)
+            
+            updateProgress('Done!')
+            return result
+        }
+
+        return Promise.race([processUpload(), timeout])
     },
     onSuccess: () => {
         setSubmitStatus('success')
@@ -164,13 +228,18 @@ export default function CreateWorkoutPage() {
         console.error(error)
         alert("Failed to create workout: " + error.message)
         setIsSubmitting(false)
+        setIsRetry(true)
     }
   })
 
   // 1. Sync Form Data to Store
   React.useEffect(() => {
     const subscription = watch((value) => {
-      setWorkoutData(value)
+      // Avoid overwriting store with initial empty default values on mount
+      // We only update store if the value has meaningful content or if the user has started typing
+      if (value.title || (value.sections?.length || 0) > 1 || (value.sections?.[0]?.exercises?.length || 0) > 1 || value.sections?.[0]?.name !== 'Warm Up') {
+         setWorkoutData(value)
+      }
     })
     return () => subscription.unsubscribe()
   }, [watch, setWorkoutData])
@@ -182,7 +251,6 @@ export default function CreateWorkoutPage() {
 
   // Watch all fields for live preview
   const formValues = watch()
-
   const { fields: sectionFields, append: appendSection, remove: removeSection, move: moveSection } = useFieldArray({
     control,
     name: "sections"
@@ -215,6 +283,9 @@ export default function CreateWorkoutPage() {
         return
     }
     
+    setUploadProgress(0)
+    setUploadStatus('')
+    setIsRetry(false)
     setIsSubmitting(true)
     setSubmitStatus('loading')
     createWorkout(data)
@@ -257,9 +328,39 @@ export default function CreateWorkoutPage() {
           >
             <Eye className="h-4 w-4" /> 
           </Button>
+
+          {isSubmitting && (
+             <div className="flex flex-col items-end mr-2 min-w-[120px]">
+                 <div className="flex justify-between w-full text-[10px] text-muted-foreground mb-1">
+                    <span>{uploadStatus || 'Saving...'}</span>
+                    <span>{uploadProgress}%</span>
+                 </div>
+                 <div className="h-1.5 w-full bg-secondary rounded-full overflow-hidden">
+                    <div 
+                        className="h-full bg-primary transition-all duration-300 ease-out" 
+                        style={{ width: `${uploadProgress}%` }} 
+                    />
+                 </div>
+             </div>
+          )}
+
           <Button onClick={handleSubmit(onSubmit)} disabled={isSubmitting} size="sm" className="gap-2 rounded-full px-6 font-bold">
-            <Save className="h-4 w-4" />
-            {isSubmitting ? 'Saving...' : 'Save Workout'}
+            {isSubmitting ? (
+                <>
+                    <RotateCw className="h-4 w-4 animate-spin" />
+                    Saving...
+                </>
+            ) : isRetry ? (
+                <>
+                    <RotateCw className="h-4 w-4" />
+                    Retry
+                </>
+            ) : (
+                <>
+                    <Save className="h-4 w-4" />
+                    Save Workout
+                </>
+            )}
           </Button>
         </div>
       </header>
@@ -701,7 +802,27 @@ function ExercisesFieldArray({ nestIndex, control, register, errors }: { nestInd
                     </div>
 
                     {/* Metadata Panel (Muscles & Equipment) */}
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-3 gap-4">
+                        {/* Difficulty */}
+                    <div className="space-y-1.5">
+                        <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-1">Difficulty</label>
+                        <Controller
+                            control={control}
+                            name={`sections.${nestIndex}.exercises.${k}.difficulty`}
+                            render={({ field }) => (
+                                <Select onValueChange={field.onChange} value={field.value || 'beginner'}>
+                                    <SelectTrigger className="w-full h-9 rounded-lg bg-muted/30 border-border/50 text-xs font-medium">
+                                        <SelectValue placeholder="Select difficulty" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="beginner">Beginner</SelectItem>
+                                        <SelectItem value="intermediate">Intermediate</SelectItem>
+                                        <SelectItem value="advanced">Advanced</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            )}
+                        />
+                    </div>
                         <div className="space-y-1.5">
                             <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-1">Target Muscles</label>
                             <Controller
@@ -733,6 +854,8 @@ function ExercisesFieldArray({ nestIndex, control, register, errors }: { nestInd
                             />
                         </div>
                     </div>
+
+                    
                  </div>
 
                  {/* Media Column (Right) - Full Height */}
@@ -861,6 +984,7 @@ function TagInput({
 
 function MediaInput({ value, onChange, placeholder, type = 'media', variant = 'default' }: { value?: string | null, onChange: (val: string) => void, placeholder?: string, type?: 'media' | 'audio', variant?: 'default' | 'thumbnail' }) {
     const fileInputRef = React.useRef<HTMLInputElement>(null)
+    const [isLibraryOpen, setIsLibraryOpen] = useState(false)
     
     // Audio State
     const [isRecordingAudio, setIsRecordingAudio] = useState(false)
@@ -1168,6 +1292,16 @@ function MediaInput({ value, onChange, placeholder, type = 'media', variant = 'd
                     )
                 ) : (
                     <div className="w-full h-full flex flex-col items-stretch divide-y divide-border/10">
+                        <button 
+                            type="button"
+                            className="flex-1 flex flex-col items-center justify-center gap-1 hover:bg-black/5 transition-colors text-muted-foreground hover:text-emerald-500"
+                            onClick={() => setIsLibraryOpen(true)}
+                            title="Select from Library"
+                        >
+                             <Library className="h-5 w-5 opacity-70" />
+                             <span className="text-[8px] font-bold uppercase">Lib</span>
+                        </button>
+
                         {/* Top: Video */}
                         <button 
                             type="button"
@@ -1202,6 +1336,13 @@ function MediaInput({ value, onChange, placeholder, type = 'media', variant = 'd
                         </button>
                     </div>
                 )}
+                
+                <MediaSelectionDialog 
+                    isOpen={isLibraryOpen} 
+                    onClose={() => setIsLibraryOpen(false)} 
+                    onSelect={(url) => { onChange(url); setIsLibraryOpen(false) }} 
+                    mediaType={type === 'audio' ? 'audio' : 'image'}
+                />
             </div>
         )
     }
@@ -1233,6 +1374,16 @@ function MediaInput({ value, onChange, placeholder, type = 'media', variant = 'd
                         size="icon" 
                         variant="ghost" 
                         className="h-7 w-7 text-muted-foreground hover:text-primary"
+                        onClick={() => setIsLibraryOpen(true)}
+                        title="Select from Library"
+                    >
+                        <Library className="h-3 w-3" />
+                    </Button>
+                     <Button 
+                        type="button" 
+                        size="icon" 
+                        variant="ghost" 
+                        className="h-7 w-7 text-muted-foreground hover:text-primary"
                         onClick={() => fileInputRef.current?.click()}
                         title="Upload File"
                     >
@@ -1240,6 +1391,13 @@ function MediaInput({ value, onChange, placeholder, type = 'media', variant = 'd
                     </Button>
                 </div>
             </div>
+            
+            <MediaSelectionDialog 
+                isOpen={isLibraryOpen} 
+                onClose={() => setIsLibraryOpen(false)} 
+                onSelect={(url) => { onChange(url); setIsLibraryOpen(false) }} 
+                mediaType={type === 'audio' ? 'audio' : 'image'}
+            />
         </div>
     )
 }

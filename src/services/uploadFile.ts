@@ -1,3 +1,4 @@
+
 export async function uploadFile(fileUrl: string | undefined | null): Promise<string | null> {
   if (!fileUrl) return null
   if (!fileUrl.startsWith('blob:')) return fileUrl
@@ -24,7 +25,7 @@ export async function uploadFile(fileUrl: string | undefined | null): Promise<st
         throw new Error('Failed to get upload URL')
     }
 
-    const { url, publicUrl } = await uploadRes.json()
+    const { url, publicUrl, key } = await uploadRes.json()
 
     // 3. Upload to R2 using the signed URL
     const r2UploadRes = await fetch(url, {
@@ -38,6 +39,15 @@ export async function uploadFile(fileUrl: string | undefined | null): Promise<st
     if (!r2UploadRes.ok) {
         throw new Error('Failed to upload file to R2')
     }
+
+    // 4. Save to Media Library (DB)
+    await createMediaAction({
+        url: publicUrl,
+        type: fileType,
+        filename: fileName,
+        bucket_path: key,
+        size: blob.size
+    })
 
     return publicUrl
   } catch (error) {

@@ -1,12 +1,16 @@
 'use client'
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
-import { Heart, ChevronDown, Clock, BarChart, User, Play } from 'lucide-react'
-import { supabase } from '../lib/supabase'
+import { Heart, Clock, BarChart, User, Play, MoreVertical, Edit, Trash2, Loader2 } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
 import { Workout } from '../types/workout/composite'
-import { Card, CardContent, CardFooter, CardHeader } from './Card'
+import { Card } from './Card'
 import { Button } from './Button'
+import { deleteWorkoutAction } from '@/app/actions/workout/delete'
+import { useRouter } from 'next/navigation'
+import { getWorkoutById } from '@/app/actions/workout/get'
+import { useCreateWorkoutStore } from '@/store/createWorkoutStore'
+import { useQueryClient } from '@tanstack/react-query'
 
 interface WorkoutCardProps {
   workout: Workout
@@ -15,7 +19,87 @@ interface WorkoutCardProps {
 export default function WorkoutCard({ workout }: WorkoutCardProps) {
   const [likesCount, setLikesCount] = useState(workout.likes_count || 0)
   const [isLiked, setIsLiked] = useState(workout.is_liked || false)
+  const [showMenu, setShowMenu] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [isLoadingEdit, setIsLoadingEdit] = useState(false)
+  
   const { user } = useAuthStore()
+  const router = useRouter()
+  const { setWorkoutData } = useCreateWorkoutStore()
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  const isOwner = user?.id === workout.user_id
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setShowMenu(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  const queryClient = useQueryClient()
+  
+  const handleDelete = async () => {
+      if (!confirm('Are you sure you want to delete this workout? This action cannot be undone.')) return
+      
+      setIsDeleting(true)
+      const res = await deleteWorkoutAction(workout.id)
+      
+      if (res.success) {
+          // Invalidamos la query 'workouts' para que se recargue la lista automáticamente
+          await queryClient.invalidateQueries({ queryKey: ['workouts'] })
+          setIsDeleting(false) 
+          router.refresh() // Mantenemos esto por si hay datos de servidor (Server Components) que actualizar
+      } else {
+          alert('Failed to delete workout: ' + res.error)
+          setIsDeleting(false)
+      }
+  }
+
+  const handleEdit = async () => {
+      setIsLoadingEdit(true)
+      try {
+          // 1. Fetch full details (exercises are not included in the list view)
+          const res = await getWorkoutById(workout.id)
+          if (!res.success || !res.data) throw new Error(res.error || "Failed to load")
+          
+          const fullWorkout = res.data
+
+          // 2. Map to Form Values
+          // We need to match the structure expected by the Create page
+          const formValues = {
+              id: fullWorkout.id,
+              title: fullWorkout.title,
+              description: fullWorkout.description || '',
+              cover: fullWorkout.cover || '',
+              tags: fullWorkout.tags || [],
+              difficulty: fullWorkout.difficulty as any,
+              audio: fullWorkout.audio || [],
+              sections: fullWorkout.sections.map(s => ({
+                  id: s.id, // Keep ID to potentially track it (though Create page might regenerate)
+                  name: s.name,
+                  orderType: s.type as any || 'single',
+                  exercises: s.exercises.map(e => ({
+                      ...e,
+                      type: e.type as 'reps' | 'time',
+                      difficulty: e.difficulty as 'beginner' | 'intermediate' | 'advanced',
+                  }))
+              }))
+          }
+
+          // 3. Set Store and Redirect
+          setWorkoutData(formValues)
+          router.push('/editor/workout/create')
+      } catch (error: any) {
+          console.error(error)
+          alert("Error loading workout for edit")
+      } finally {
+          setIsLoadingEdit(false)
+      }
+  }
 
   const handleLike = () => {
     console.log('handle like clicked')
@@ -65,6 +149,43 @@ export default function WorkoutCard({ workout }: WorkoutCardProps) {
                   <span className="text-[11px] text-muted-foreground uppercase tracking-wider transition-colors duration-300">@{workout.user?.username}</span>
                 </div>
               </div>
+
+              {/* Owner Actions */}
+              {isOwner && (
+                  <div className="relative" ref={menuRef}>
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu) }}
+                        className="p-1 rounded-full hover:bg-muted/50 text-muted-foreground transition-colors"
+                      >
+                          {isDeleting || isLoadingEdit ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                              <MoreVertical className="h-4 w-4" />
+                          )}
+                      </button>
+                      
+                      {showMenu && (
+                          <div className="absolute right-0 top-8 w-32 bg-popover border border-border rounded-lg shadow-xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                              <div className="flex flex-col p-1">
+                                  <button 
+                                    onClick={(e) => { e.stopPropagation(); setShowMenu(false); handleEdit() }}
+                                    className="flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted rounded-md transition-colors text-left"
+                                  >
+                                      <Edit className="h-3.5 w-3.5" />
+                                      Edit
+                                  </button>
+                                  <button 
+                                    onClick={(e) => { e.stopPropagation(); setShowMenu(false); handleDelete() }}
+                                    className="flex items-center gap-2 px-3 py-2 text-sm text-red-500 hover:bg-red-500/10 rounded-md transition-colors text-left"
+                                  >
+                                      <Trash2 className="h-3.5 w-3.5" />
+                                      Delete
+                                  </button>
+                              </div>
+                          </div>
+                      )}
+                  </div>
+              )}
            </div>
 
            {/* Main Content */}
