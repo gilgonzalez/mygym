@@ -18,6 +18,10 @@ export async function getWorkoutById(id: string): Promise<{ success: boolean, da
             *,
             section_exercises(
               order_index,
+              reps,
+              sets,
+              duration,
+              rest,
               exercises(
                 *,
                 media(
@@ -50,6 +54,10 @@ export async function getWorkoutById(id: string): Promise<{ success: boolean, da
             .sort((a: any, b: any) => a.order_index - b.order_index)
             .map((se: any) => ({
               ...se.exercises,
+              reps: se.reps ?? 0,
+              sets: se.sets ?? 0,
+              duration: se.duration ?? 0,
+              rest: se.rest ?? 0,
               media_url: se.exercises.media?.url || undefined,
               filename: se.exercises.media?.filename || undefined,
               bucket_path: se.exercises.media?.bucket_path || undefined,

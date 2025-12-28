@@ -141,7 +141,6 @@ function CreateWorkoutContent() {
 
   const form = useForm<WorkoutFormValues>({
     resolver: zodResolver(workoutSchema) as unknown as Resolver<WorkoutFormValues>,
-    values: (workoutData?.id === workoutId ? workoutData : loadedWorkout) || undefined,
     defaultValues: {
       title: '',
       description: '',
@@ -158,6 +157,43 @@ function CreateWorkoutContent() {
     }
   })
   const { control, register, handleSubmit, watch, formState: { errors }, reset } = form
+
+  // Handle initial data loading without creating a render loop
+  const initializedRef = React.useRef(false)
+  
+  // Reset initialization flag when ID changes
+  React.useEffect(() => {
+    initializedRef.current = false
+  }, [workoutId])
+
+  React.useEffect(() => {
+    if (initializedRef.current) return
+
+    // 1. Priority: Existing Draft for this specific ID
+    if (workoutData?.id === workoutId && (workoutData.title || workoutData.sections.length > 0)) {
+        reset(workoutData)
+        initializedRef.current = true
+        return
+    }
+
+    // 2. Priority: Server Data
+    if (loadedWorkout) {
+        reset(loadedWorkout)
+        initializedRef.current = true
+        return
+    }
+
+    // 3. New Workout (no ID) - defaults are already set, just mark initialized
+    if (!workoutId) {
+        // Check if we have a "new" draft in store (draft with no ID or temp ID)
+        // If the user was working on a new workout and refreshed, we might want to restore it.
+        // Assuming if workoutData.id is missing/null and we have content, it's a draft for a new workout.
+        if (workoutData && !workoutData.id && (workoutData.title || workoutData.sections.length > 1)) {
+             reset(workoutData)
+        }
+        initializedRef.current = true
+    }
+  }, [workoutData, loadedWorkout, workoutId, reset])
 
 
   const { mutate: createWorkout, isPending: isCreating } = useMutation({
