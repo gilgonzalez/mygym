@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, Suspense } from 'react'
 
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -79,7 +79,7 @@ const workoutSchema = z.object({
 
 type WorkoutFormValues = z.infer<typeof workoutSchema>
 
-export default function CreateWorkoutPage() {
+function CreateWorkoutContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const workoutId = searchParams.get('id')
@@ -1090,6 +1090,18 @@ function TagInput({
             )}
         </div>
     )
+}
+
+export default function CreateWorkoutPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex h-screen w-full items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    }>
+      <CreateWorkoutContent />
+    </Suspense>
+  )
 }
 
 function MediaInput({ value, onChange, placeholder, type = 'media', variant = 'default' }: { value?: string | null, onChange: (val: string) => void, placeholder?: string, type?: 'media' | 'audio', variant?: 'default' | 'thumbnail' }) {
