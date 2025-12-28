@@ -1,6 +1,7 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { useQuery } from '@tanstack/react-query'
 import { X, Image as ImageIcon, Music, Film, Loader2, Check, AlertCircle, Search } from 'lucide-react'
 import { listMediaAction, MediaItem } from '@/app/actions/media/list'
@@ -20,6 +21,12 @@ export function MediaSelectionDialog({ isOpen, onClose, onSelect, mediaType = 'i
   const [imgErrors, setImgErrors] = useState<Record<string, boolean>>({})
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+    return () => setMounted(false)
+  }, [])
 
   React.useEffect(() => {
     const timer = setTimeout(() => {
@@ -36,7 +43,7 @@ export function MediaSelectionDialog({ isOpen, onClose, onSelect, mediaType = 'i
 
   const mediaList = result?.data || []
 
-  if (!isOpen) return null
+  if (!isOpen || !mounted) return null
 
   const handleSelect = (item: MediaItem) => {
     setSelectedId(item.id)
@@ -50,8 +57,21 @@ export function MediaSelectionDialog({ isOpen, onClose, onSelect, mediaType = 'i
     }
   }
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+  const getMediaType = (item: MediaItem) => {
+    if (item.type?.startsWith('video') || item.mime_type?.startsWith('video')) return 'video'
+    if (item.type?.startsWith('audio') || item.mime_type?.startsWith('audio')) return 'audio'
+    if (item.type?.startsWith('image') || item.mime_type?.startsWith('image')) return 'image'
+    
+    // Fallback: check extension
+    const ext = (item.filename || item.url).split('.').pop()?.toLowerCase()
+    if (['mp4', 'mov', 'webm', 'mkv'].includes(ext || '')) return 'video'
+    if (['mp3', 'wav', 'm4a', 'aac'].includes(ext || '')) return 'audio'
+    
+    return 'image' // Default to image
+  }
+
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
       <div className="bg-background border border-border w-full max-w-4xl max-h-[85vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
         
         {/* Header */}
@@ -94,7 +114,9 @@ export function MediaSelectionDialog({ isOpen, onClose, onSelect, mediaType = 'i
                 </div>
             ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                    {mediaList.map((item) => (
+                    {mediaList.map((item) => {
+                        const itemType = getMediaType(item)
+                        return (
                         <div 
                             key={item.id}
                             onClick={() => handleSelect(item)}
@@ -105,7 +127,7 @@ export function MediaSelectionDialog({ isOpen, onClose, onSelect, mediaType = 'i
                                     : "border-transparent hover:border-primary/50"
                             )}
                         >
-                            {item.type?.startsWith('image') ? (
+                            {itemType === 'image' ? (
                                 <>
                                     <img 
                                         src={item.url} 
@@ -124,7 +146,7 @@ export function MediaSelectionDialog({ isOpen, onClose, onSelect, mediaType = 'i
                                         </div>
                                     )}
                                 </>
-                            ) : item.type?.startsWith('video') ? (
+                            ) : itemType === 'video' ? (
                                 <div className="w-full h-full bg-black relative flex items-center justify-center">
                                      <video src={item.url} className="w-full h-full object-cover opacity-80" />
                                      <Film className="absolute text-white/50 h-8 w-8" />
@@ -148,7 +170,7 @@ export function MediaSelectionDialog({ isOpen, onClose, onSelect, mediaType = 'i
                                 )}
                             </div>
                         </div>
-                    ))}
+                    )})}
                 </div>
             )}
         </div>
@@ -166,6 +188,7 @@ export function MediaSelectionDialog({ isOpen, onClose, onSelect, mediaType = 'i
             </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }

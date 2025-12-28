@@ -2,11 +2,11 @@
 
 import React, { useState } from 'react'
 
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd'
-import { Plus, Trash2, GripVertical, Save,  ArrowLeft, Eye, Play, Smartphone, Monitor, Tag, Image as ImageIcon,  Music, X, Upload, Mic, Square, Camera, Circle, Dna, Activity, Zap, Repeat, List, RotateCw, Library } from 'lucide-react'
+import { Plus, Trash2, GripVertical, Save,  ArrowLeft, Eye, Play, Smartphone, Monitor, Tag, Image as ImageIcon,  Music, X, Upload, Mic, Square, Camera, Circle, Dna, Activity, Zap, Repeat, List, RotateCw, Library, Package } from 'lucide-react'
 import { 
   Select,
   SelectContent,
@@ -26,16 +26,19 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/form/TextArea'
 import { Badge } from '@/components/ui/badge'
 import { useAuthStore } from '@/store/authStore'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { cn } from '@/lib/utils'
 
-import { PreviewWorkout } from './components/PreviewWorkout'
 import { useCreateWorkoutStore } from '@/store/createWorkoutStore'
 import { Controller, Resolver, useFieldArray, useForm } from 'react-hook-form'
 import { createWorkoutAction, WorkoutInput } from '@/app/actions/workout/create'
+import { getWorkoutById } from '@/app/actions/workout/get'
 import { updateWorkoutAction } from '@/app/actions/workout/update'
 import { uploadFile } from '@/services/uploadFile'
-import { MediaSelectionDialog } from './components/MediaSelectionDialog'
+import { MediaSelectionDialog } from '../components/MediaSelectionDialog'
+import { PreviewWorkout } from '../components/PreviewWorkout'
+import { Exercise } from '@/app/actions/exercises/list'
+import { ExercisesVault } from '../components/ExercisesVault'
 
 // --- Schema Definition ---
 const exerciseSchema = z.object({
@@ -78,6 +81,9 @@ type WorkoutFormValues = z.infer<typeof workoutSchema>
 
 export default function CreateWorkoutPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const workoutId = searchParams.get('id')
+  
   const { user, isLoading } = useAuthStore()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isRetry, setIsRetry] = useState(false)
@@ -86,8 +92,56 @@ export default function CreateWorkoutPage() {
   const [uploadProgress, setUploadProgress] = useState(0)
   const [uploadStatus, setUploadStatus] = useState('')
 
+  const { workoutData, setWorkoutData, setFormErrors, setSubmitStatus, reset: resetStore } = useCreateWorkoutStore()
+
+  const { isLoading: isLoadingWorkout, data: loadedWorkout } = useQuery({
+    queryKey: ['workout', workoutId],
+    queryFn: async () => {
+      if (!workoutId) return null
+      const res = await getWorkoutById(workoutId)
+      if (!res.success || !res.data) throw new Error(res.error)
+      
+      const w = res.data
+      // Map DB response to Form Schema
+      return {
+          id: w.id,
+          title: w.title,
+          description: w.description || '',
+          cover: w.cover || '',
+          tags: w.tags || [],
+          difficulty: (w.difficulty as any) || 'beginner',
+          audio: w.audio || [],
+          sections: w.sections.map((s: any) => ({
+              id: s.id,
+              name: s.name,
+              orderType: (s.type as any) || 'single',
+              exercises: s.exercises.map((e: any) => ({
+                  id: e.id,
+                  name: e.name,
+                  type: (e.type as any) || 'reps',
+                  reps: e.reps || 0,
+                  sets: e.sets || 0,
+                  duration: e.duration || 0,
+                  rest: e.rest || 0,
+                  media_url: e.media_url,
+                  media_id: e.media_id,
+                  filename: e.filename,
+                  bucket_path: e.bucket_path,
+                  description: e.description || '',
+                  muscle_groups: e.muscle_group || [],
+                  equipment: e.equipment || [],
+                  difficulty: e.difficulty || 'beginner'
+              }))
+          }))
+      } as WorkoutFormValues
+    },
+    enabled: !!workoutId,
+    refetchOnWindowFocus: false
+  })
+
   const form = useForm<WorkoutFormValues>({
     resolver: zodResolver(workoutSchema) as unknown as Resolver<WorkoutFormValues>,
+    values: (workoutData?.id === workoutId ? workoutData : loadedWorkout) || undefined,
     defaultValues: {
       title: '',
       description: '',
@@ -103,18 +157,8 @@ export default function CreateWorkoutPage() {
       ]
     }
   })
-
   const { control, register, handleSubmit, watch, formState: { errors }, reset } = form
-  
-  const { workoutData, setWorkoutData, setFormErrors, setSubmitStatus, reset: resetStore } = useCreateWorkoutStore()
 
-  // Auto-fill form if editing (workoutData has ID)
-  React.useEffect(() => {
-      if (workoutData?.id && !form.getValues('id')) {
-          console.log('Restoring edit session:', workoutData)
-          reset(workoutData)
-      }
-  }, [workoutData, form, reset])
 
   const { mutate: createWorkout, isPending: isCreating } = useMutation({
     mutationFn: async (data: WorkoutFormValues) => {
@@ -709,6 +753,24 @@ function ExercisesFieldArray({ nestIndex, control, register, errors }: { nestInd
     name: `sections.${nestIndex}.exercises`
   })
 
+  const handleAddFromVault = (exercise: Exercise) => {
+    append({
+        id: `ex-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        name: exercise.name,
+        type: (exercise.type === 'time' ? 'time' : 'reps'),
+        reps: exercise.reps || 0,
+        sets: exercise.sets || 3,
+        rest: exercise.rest || 60,
+        duration: exercise.duration || 0,
+        description: exercise.description || '',
+        difficulty: (exercise.difficulty as any) || 'beginner',
+        muscle_groups: exercise.muscle_group || [],
+        equipment: exercise.equipment || [],
+        media_id: exercise.media_id,
+        media_url: exercise.media?.url,
+    })
+  }
+
   return (
     <div className="space-y-4">
       {fields.map((item, k) => (
@@ -911,16 +973,33 @@ function ExercisesFieldArray({ nestIndex, control, register, errors }: { nestInd
              </div>
         </div>
       ))}
-      <Button
-        type="button" variant="ghost" size="sm"
-        className="w-full h-12 border border-dashed border-border/40 hover:border-primary/40 text-muted-foreground/60 hover:text-primary hover:bg-primary/5 rounded-xl text-xs font-bold uppercase tracking-widest transition-all group"
-        onClick={() => append({ id: `ex-${Date.now()}`, name: '', sets: 3, reps: 10, duration: 0, type: 'reps', rest: 60, description: '' })}
-      >
-        <span className="flex items-center gap-2 group-hover:gap-3 transition-all">
-             <Plus className="h-3.5 w-3.5" /> 
-             Add Exercise
-        </span>
-      </Button>
+      <div className="grid grid-cols-2 gap-4">
+        <Button
+            type="button" variant="ghost" size="sm"
+            className="w-full h-12 border border-dashed border-border/40 hover:border-primary/40 text-muted-foreground/60 hover:text-primary hover:bg-primary/5 rounded-xl text-xs font-bold uppercase tracking-widest transition-all group"
+            onClick={() => append({ id: `ex-${Date.now()}`, name: '', sets: 3, reps: 10, duration: 0, type: 'reps', rest: 60, description: '' })}
+        >
+            <span className="flex items-center gap-2 group-hover:gap-3 transition-all">
+                <Plus className="h-3.5 w-3.5" /> 
+                Add Exercise
+            </span>
+        </Button>
+
+        <ExercisesVault 
+            onSelect={handleAddFromVault}
+            trigger={
+                <Button
+                    type="button" variant="ghost" size="sm"
+                    className="w-full h-12 border border-dashed border-orange-500/20 hover:border-orange-500/40 text-muted-foreground/60 hover:text-orange-500 hover:bg-orange-500/10 rounded-xl text-xs font-bold uppercase tracking-widest transition-all group"
+                >
+                    <span className="flex items-center gap-2 group-hover:gap-3 transition-all">
+                        <Package className="h-3.5 w-3.5" /> 
+                        Add Exercise from Vault
+                    </span>
+                </Button>
+            } 
+        />
+      </div>
     </div>
   )
 }

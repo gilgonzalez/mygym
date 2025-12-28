@@ -22,7 +22,9 @@ export async function getWorkoutById(id: string): Promise<{ success: boolean, da
                 *,
                 media(
                   url,
-                  type
+                  type,
+                  filename,
+                  bucket_path
                 )
               )
             )
@@ -49,6 +51,8 @@ export async function getWorkoutById(id: string): Promise<{ success: boolean, da
             .map((se: any) => ({
               ...se.exercises,
               media_url: se.exercises.media?.url || undefined,
+              filename: se.exercises.media?.filename || undefined,
+              bucket_path: se.exercises.media?.bucket_path || undefined,
             }))
         }))
     }

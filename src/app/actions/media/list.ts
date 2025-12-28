@@ -6,6 +6,7 @@ export type MediaItem = {
   id: string
   url: string
   type: string | null
+  mime_type?: string | null
   filename: string | null
   created_at: string | null
   bucket_path?: string | null
@@ -22,7 +23,7 @@ export async function listMediaAction(typeFilter?: 'image' | 'audio' | 'video', 
 
     let query = supabase
       .from('media')
-      .select('id, url, type, filename, created_at, bucket_path')
+      .select('id, url, type, mime_type, filename, created_at, bucket_path')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
 

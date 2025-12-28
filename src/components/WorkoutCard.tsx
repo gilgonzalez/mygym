@@ -8,7 +8,6 @@ import { Card } from './Card'
 import { Button } from './Button'
 import { deleteWorkoutAction } from '@/app/actions/workout/delete'
 import { useRouter } from 'next/navigation'
-import { getWorkoutById } from '@/app/actions/workout/get'
 import { useCreateWorkoutStore } from '@/store/createWorkoutStore'
 import { useQueryClient } from '@tanstack/react-query'
 
@@ -59,47 +58,7 @@ export default function WorkoutCard({ workout }: WorkoutCardProps) {
       }
   }
 
-  const handleEdit = async () => {
-      setIsLoadingEdit(true)
-      try {
-          // 1. Fetch full details (exercises are not included in the list view)
-          const res = await getWorkoutById(workout.id)
-          if (!res.success || !res.data) throw new Error(res.error || "Failed to load")
-          
-          const fullWorkout = res.data
 
-          // 2. Map to Form Values
-          // We need to match the structure expected by the Create page
-          const formValues = {
-              id: fullWorkout.id,
-              title: fullWorkout.title,
-              description: fullWorkout.description || '',
-              cover: fullWorkout.cover || '',
-              tags: fullWorkout.tags || [],
-              difficulty: fullWorkout.difficulty as any,
-              audio: fullWorkout.audio || [],
-              sections: fullWorkout.sections.map(s => ({
-                  id: s.id, // Keep ID to potentially track it (though Create page might regenerate)
-                  name: s.name,
-                  orderType: s.type as any || 'single',
-                  exercises: s.exercises.map(e => ({
-                      ...e,
-                      type: e.type as 'reps' | 'time',
-                      difficulty: e.difficulty as 'beginner' | 'intermediate' | 'advanced',
-                  }))
-              }))
-          }
-
-          // 3. Set Store and Redirect
-          setWorkoutData(formValues)
-          router.push('/editor/workout/create')
-      } catch (error: any) {
-          console.error(error)
-          alert("Error loading workout for edit")
-      } finally {
-          setIsLoadingEdit(false)
-      }
-  }
 
   const handleLike = () => {
     console.log('handle like clicked')
@@ -168,7 +127,7 @@ export default function WorkoutCard({ workout }: WorkoutCardProps) {
                           <div className="absolute right-0 top-8 w-32 bg-popover border border-border rounded-lg shadow-xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
                               <div className="flex flex-col p-1">
                                   <button 
-                                    onClick={(e) => { e.stopPropagation(); setShowMenu(false); handleEdit() }}
+                                    onClick={(e) => router.push(`/editor/workout/create?id=${workout.id}`)}
                                     className="flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted rounded-md transition-colors text-left"
                                   >
                                       <Edit className="h-3.5 w-3.5" />
