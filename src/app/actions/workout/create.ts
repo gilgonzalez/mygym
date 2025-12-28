@@ -11,6 +11,8 @@ type ExerciseInput = Omit<DbExercise, 'id' | 'created_at' | 'created_by' | 'medi
     id?: string
     media_url?: string | null 
     media_id?: string | null
+    filename?: string | null
+    bucket_path?: string | null
 }
 
 type SectionInput = Omit<DbSection, 'id' | 'created_at'> & {

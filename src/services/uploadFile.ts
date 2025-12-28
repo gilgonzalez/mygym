@@ -1,9 +1,10 @@
+import { createMediaAction } from "@/app/actions/media/create"
 
-export async function uploadFile(fileUrl: string | undefined | null): Promise<string | null> {
+export async function uploadFile(fileUrl: string | undefined | null): Promise<{ url: string, id?: string, filename?: string, bucket_path?: string } | null> {
   if (!fileUrl) return null
-  if (!fileUrl.startsWith('blob:')) return fileUrl
+    if (!fileUrl.startsWith('blob:')) return { url: fileUrl }
 
-  try {
+    try {
     // 1. Get the file blob
     const response = await fetch(fileUrl)
     const blob = await response.blob()
@@ -41,13 +42,20 @@ export async function uploadFile(fileUrl: string | undefined | null): Promise<st
     }
 
     // 4. Save to Media Library (DB)
-    await createMediaAction({
+    const { data: mediaRecord } = await createMediaAction({
         url: publicUrl,
         type: fileType,
         filename: fileName,
         bucket_path: key,
         size: blob.size
     })
+
+    return {
+        url: publicUrl,
+        id: mediaRecord?.id,
+        filename: fileName,
+        bucket_path: key
+    }
 
     return publicUrl
   } catch (error) {

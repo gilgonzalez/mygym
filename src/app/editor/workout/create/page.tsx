@@ -47,6 +47,9 @@ const exerciseSchema = z.object({
   duration: z.coerce.number().optional(),
   rest: z.coerce.number().optional(),
   media_url: z.string().optional().nullable(),
+  media_id: z.string().optional().nullable(),
+  filename: z.string().optional().nullable(),
+  bucket_path: z.string().optional().nullable(),
   description: z.string().optional(),
   muscle_groups: z.array(z.string()).optional(),
   equipment: z.array(z.string()).optional(),
@@ -144,9 +147,19 @@ export default function CreateWorkoutPage() {
             // Upload Cover
             let coverUrl = data.cover
             if (data.cover?.startsWith('blob:')) {
-                setUploadStatus('Uploading cover image...')
-                coverUrl = await uploadFile(data.cover)
-                updateProgress('Cover uploaded')
+                try {
+                    setUploadStatus('Uploading cover image...')
+                    const res = await uploadFile(data.cover)
+                    if (res) {
+                        coverUrl = res.url
+                    }
+                    updateProgress('Cover uploaded')
+                } catch (error) {
+                    console.error('Failed to upload cover:', error)
+                    // We continue without the cover or handle error gracefully
+                    // For now, logging error is safer than crashing the whole process
+                    // But if it's critical, we should throw. User asked for try-catch so probably wants to prevent crash.
+                }
             }
             
             // Upload Audio
@@ -155,7 +168,7 @@ export default function CreateWorkoutPage() {
                     if (url.startsWith('blob:')) {
                         const res = await uploadFile(url)
                         updateProgress('Audio track uploaded')
-                        return res
+                        return res?.url
                     }
                     return url
                 })
@@ -166,12 +179,28 @@ export default function CreateWorkoutPage() {
             const sectionsWithMedia = await Promise.all(data.sections.map(async (section) => {
                 const exercisesWithMedia = await Promise.all(section.exercises.map(async (exercise) => {
                     let finalMediaUrl = exercise.media_url
+                    let finalMediaId = exercise.media_id
+                    let finalFilename = exercise.filename
+                    let finalBucketPath = exercise.bucket_path
+
                     if (exercise.media_url && exercise.media_url.startsWith('blob:')) {
                         // setUploadStatus(`Uploading media: ${exercise.name}...`)
-                        finalMediaUrl = await uploadFile(exercise.media_url)
+                        const res = await uploadFile(exercise.media_url)
+                        if (res) {
+                            finalMediaUrl = res.url
+                            finalMediaId = res.id
+                            finalFilename = res.filename
+                            finalBucketPath = res.bucket_path
+                        }
                         updateProgress(`Media uploaded: ${exercise.name}`)
                     }
-                    return { ...exercise, media_url: finalMediaUrl }
+                    return { 
+                        ...exercise, 
+                        media_url: finalMediaUrl,
+                        media_id: finalMediaId,
+                        filename: finalFilename,
+                        bucket_path: finalBucketPath
+                    }
                 }))
                 return { ...section, exercises: exercisesWithMedia }
             }))
@@ -192,7 +221,9 @@ export default function CreateWorkoutPage() {
                     exercises: s.exercises.map(e => ({
                         ...e,
                         media_url: e.media_url,
-                        media_id: undefined
+                        media_id: e.media_id,
+                        filename: e.filename,
+                        bucket_path: e.bucket_path
                     }))
                 }))
             }
