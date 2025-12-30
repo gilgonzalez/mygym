@@ -6,7 +6,7 @@ import { useMutation, useQuery } from '@tanstack/react-query'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd'
-import { Plus, Trash2, GripVertical, Save,  ArrowLeft, Eye, Play, Smartphone, Monitor, Tag, Image as ImageIcon,  Music, X, Upload, Mic, Square, Camera, Circle, Dna, Activity, Zap, Repeat, List, RotateCw, Library, Package } from 'lucide-react'
+import { Plus, Trash2, GripVertical, Save,  ArrowLeft, Eye, Play, Smartphone, Monitor, Tag, Image as ImageIcon,  Music, X, Upload, Mic, Square, Camera, Circle, Dna, Activity, Zap, Repeat, List, RotateCw, Library, Package, Globe } from 'lucide-react'
 import { 
   Select,
   SelectContent,
@@ -22,6 +22,7 @@ import {
 import Link from 'next/link'
 
 import { Button } from '@/components/Button'
+import { Switch } from '@/components/Switch'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/form/TextArea'
 import { Badge } from '@/components/ui/badge'
@@ -73,6 +74,7 @@ const workoutSchema = z.object({
   cover: z.string().optional(),
   tags: z.array(z.string()).optional(),
   difficulty: z.enum(['beginner', 'intermediate', 'advanced']).optional(),
+  is_public: z.boolean().default(false).optional(),
   audio: z.array(z.string()).optional(),
   sections: z.array(sectionSchema),
 })
@@ -110,6 +112,7 @@ function CreateWorkoutContent() {
           cover: w.cover || '',
           tags: w.tags || [],
           difficulty: (w.difficulty as any) || 'beginner',
+          is_public: w.is_public || false,
           audio: w.audio || [],
           sections: w.sections.map((s: any) => ({
               id: s.id,
@@ -145,6 +148,7 @@ function CreateWorkoutContent() {
       title: '',
       description: '',
       cover: '',
+      is_public: false,
       audio: [],
       sections: [
         {
@@ -156,7 +160,7 @@ function CreateWorkoutContent() {
       ]
     }
   })
-  const { control, register, handleSubmit, watch, formState: { errors }, reset } = form
+  const { control, register, handleSubmit, watch, getValues, setValue, formState: { errors }, reset } = form
 
   // Handle initial data loading without creating a render loop
   const initializedRef = React.useRef(false)
@@ -292,6 +296,7 @@ function CreateWorkoutContent() {
                 title: data.title,
                 description: data.description,
                 difficulty: data.difficulty,
+                is_public: data.is_public,
                 tags: data.tags,
                 cover: coverUrl,
                 audio: validAudioUrls,
@@ -383,8 +388,15 @@ function CreateWorkoutContent() {
 
   const onDragEnd = (result: DropResult) => {
     if (!result.destination) return
+
     if (result.type === 'SECTION') {
       moveSection(result.source.index, result.destination.index)
+    } else if (result.type === 'EXERCISE') {
+        const sectionIndex = parseInt(result.source.droppableId.split('-')[1])
+        const exercises = getValues(`sections.${sectionIndex}.exercises`)
+        const [reorderedItem] = exercises.splice(result.source.index, 1)
+        exercises.splice(result.destination.index, 0, reorderedItem)
+        setValue(`sections.${sectionIndex}.exercises`, exercises)
     }
   }
 
@@ -588,6 +600,31 @@ function CreateWorkoutContent() {
                         )}
                     />
                  </div>
+
+                 {/* Visibility */}
+                 <div className="space-y-2">
+                    <div className="flex items-center gap-2 px-1">
+                        <Globe className="h-3 w-3 text-muted-foreground" />
+                        <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Visibility</label>
+                    </div>
+                    <div className="flex items-center gap-3 px-1 h-10">
+                         <Controller
+                            control={control}
+                            name="is_public"
+                            render={({ field }) => (
+                                <>
+                                    <Switch
+                                        checked={field.value}
+                                        onCheckedChange={field.onChange}
+                                    />
+                                    <span className="text-sm font-medium text-muted-foreground">
+                                        {field.value ? 'Public Workout' : 'Private Draft'}
+                                    </span>
+                                </>
+                            )}
+                        />
+                    </div>
+                 </div>
               </div>
             </div>
 
@@ -603,7 +640,10 @@ function CreateWorkoutContent() {
                             ref={provided.innerRef}
                             {...provided.draggableProps}
                             className="bg-white dark:bg-zinc-900/50 backdrop-blur-sm border border-border/50 rounded-[2rem] shadow-xl shadow-black/5 overflow-hidden group animate-in slide-in-from-bottom-8 duration-700 fill-mode-backwards"
-                            style={{ animationDelay: `${index * 100}ms` }}
+                            style={{ 
+                                ...provided.draggableProps.style,
+                                animationDelay: `${index * 100}ms` 
+                            }}
                           >
                             <div className="bg-gradient-to-r from-gray-50 to-white dark:from-zinc-900 dark:to-zinc-900/50 p-6 flex items-center gap-4 border-b border-border/50">
                               <div {...provided.dragHandleProps} className="cursor-grab text-muted-foreground/30 hover:text-foreground transition-colors p-2 hover:bg-black/5 rounded-xl">
@@ -809,23 +849,40 @@ function ExercisesFieldArray({ nestIndex, control, register, errors }: { nestInd
 
   return (
     <div className="space-y-4">
-      {fields.map((item, k) => (
-        <div key={item.id} className="group relative bg-white dark:bg-zinc-900 rounded-3xl p-6 border border-border/50 shadow-sm hover:shadow-lg transition-all">
-             
-             {/* Delete Button (Absolute Top Right) */}
-             <div className="absolute top-4 right-4 z-10">
-                 <Button 
-                    type="button" variant="ghost" size="icon" 
-                    onClick={() => remove(k)}
-                    className="h-8 w-8 text-muted-foreground/30 hover:text-destructive hover:bg-destructive/10 rounded-full"
-                >
-                    <Trash2 className="h-4 w-4" />
-                </Button>
-             </div>
+      <Droppable droppableId={`exercises-${nestIndex}`} type="EXERCISE">
+        {(provided) => (
+          <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-4">
+            {fields.map((item, k) => (
+                <Draggable key={item.id} draggableId={item.id} index={k}>
+                    {(provided) => (
+                        <div 
+                            ref={provided.innerRef}
+                            {...provided.draggableProps}
+                            className="group relative bg-white dark:bg-zinc-900 rounded-3xl p-6 border border-border/50 shadow-sm hover:shadow-lg transition-all"
+                        >
+                            
+                            {/* Drag Handle */}
+                            <div 
+                                {...provided.dragHandleProps} 
+                                className="absolute top-6 left-3 z-10 p-2 cursor-grab text-muted-foreground/20 hover:text-foreground transition-colors rounded-lg hover:bg-black/5"
+                            >
+                                <GripVertical className="h-5 w-5" />
+                            </div>
 
-             <div className="flex flex-wrap gap-8">
-                 {/* Main Content (Left) */}
-                 <div className="flex-1 min-w-[300px] space-y-6">
+                            {/* Delete Button (Absolute Top Right) */}
+                            <div className="absolute top-4 right-4 z-10">
+                                <Button 
+                                    type="button" variant="ghost" size="icon" 
+                                    onClick={() => remove(k)}
+                                    className="h-8 w-8 text-muted-foreground/30 hover:text-destructive hover:bg-destructive/10 rounded-full"
+                                >
+                                    <Trash2 className="h-4 w-4" />
+                                </Button>
+                            </div>
+
+                            <div className="flex flex-wrap gap-8 pl-8">
+                                {/* Main Content (Left) */}
+                                <div className="flex-1 min-w-[300px] space-y-6">
                     {/* Header: Name & Description */}
                     <div className="space-y-2 pr-10">
                         <div>
@@ -1008,7 +1065,13 @@ function ExercisesFieldArray({ nestIndex, control, register, errors }: { nestInd
                  </div>
              </div>
         </div>
+                    )}
+                </Draggable>
       ))}
+            {provided.placeholder}
+          </div>
+        )}
+      </Droppable>
       <div className="grid grid-cols-2 gap-4">
         <Button
             type="button" variant="ghost" size="sm"
