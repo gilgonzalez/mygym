@@ -8,7 +8,6 @@ import { Card } from './Card'
 import { Button } from './Button'
 import { deleteWorkoutAction } from '@/app/actions/workout/delete'
 import { useRouter } from 'next/navigation'
-import { useCreateWorkoutStore } from '@/store/createWorkoutStore'
 import { useQueryClient } from '@tanstack/react-query'
 
 interface WorkoutCardProps {
@@ -24,7 +23,6 @@ export default function WorkoutCard({ workout }: WorkoutCardProps) {
   
   const { user } = useAuthStore()
   const router = useRouter()
-  const { setWorkoutData } = useCreateWorkoutStore()
   const menuRef = useRef<HTMLDivElement>(null)
 
   const isOwner = user?.id === workout.user_id

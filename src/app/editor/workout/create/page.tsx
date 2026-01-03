@@ -29,7 +29,6 @@ import { useAuthStore } from '@/store/authStore'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { cn } from '@/lib/utils'
 
-import { useCreateWorkoutStore } from '@/store/createWorkoutStore'
 import { Controller, Resolver, useFieldArray, useForm } from 'react-hook-form'
 import { createWorkoutAction, WorkoutInput } from '@/app/actions/workout/create'
 import { getWorkoutById } from '@/app/actions/workout/get'
@@ -95,8 +94,7 @@ function CreateWorkoutContent() {
   const [previewDevice, setPreviewDevice] = useState<'mobile' | 'desktop'>('mobile')
   const [uploadProgress, setUploadProgress] = useState(0)
   const [uploadStatus, setUploadStatus] = useState('')
-
-  const { workoutData, setWorkoutData, setFormErrors, setSubmitStatus, reset: resetStore } = useCreateWorkoutStore()
+  const [submitStatus, setSubmitStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
 
   const { isLoading: isLoadingWorkout, data: loadedWorkout } = useQuery({
     queryKey: ['workout', workoutId],
@@ -175,31 +173,18 @@ function CreateWorkoutContent() {
   React.useEffect(() => {
     if (initializedRef.current) return
 
-    // 1. Priority: Existing Draft for this specific ID
-    if (workoutData?.id === workoutId && (workoutData.title || workoutData.sections.length > 0)) {
-        reset(workoutData)
-        initializedRef.current = true
-        return
-    }
-
-    // 2. Priority: Server Data
+    // Priority: Server Data
     if (loadedWorkout) {
         reset(loadedWorkout)
         initializedRef.current = true
         return
     }
 
-    // 3. New Workout (no ID) - defaults are already set, just mark initialized
+    // New Workout (no ID) - defaults are already set, just mark initialized
     if (!workoutId) {
-        // Check if we have a "new" draft in store (draft with no ID or temp ID)
-        // If the user was working on a new workout and refreshed, we might want to restore it.
-        // Assuming if workoutData.id is missing/null and we have content, it's a draft for a new workout.
-        if (workoutData && !workoutData.id && (workoutData.title || workoutData.sections.length > 1)) {
-             reset(workoutData)
-        }
         initializedRef.current = true
     }
-  }, [workoutData, loadedWorkout, workoutId, reset])
+  }, [loadedWorkout, workoutId, reset])
 
 
   const { mutate: createWorkout, isPending: isCreating } = useMutation({
@@ -415,7 +400,6 @@ function CreateWorkoutContent() {
     },
     onSuccess: () => {
         setSubmitStatus('success')
-        resetStore()
         reset()
         router.push('/')
     },
@@ -427,23 +411,6 @@ function CreateWorkoutContent() {
         setIsRetry(true)
     }
   })
-
-  // 1. Sync Form Data to Store
-  React.useEffect(() => {
-    const subscription = watch((value) => {
-      // Avoid overwriting store with initial empty default values on mount
-      // We only update store if the value has meaningful content or if the user has started typing
-      if (value.title || (value.sections?.length || 0) > 1 || (value.sections?.[0]?.exercises?.length || 0) > 1 || value.sections?.[0]?.name !== 'Warm Up') {
-         setWorkoutData(value)
-      }
-    })
-    return () => subscription.unsubscribe()
-  }, [watch, setWorkoutData])
-
-  // 2. Sync Errors to Store
-  React.useEffect(() => {
-    setFormErrors(errors)
-  }, [errors, setFormErrors])
 
   // Watch all fields for live preview
   const formValues = watch()
@@ -506,22 +473,7 @@ function CreateWorkoutContent() {
           <h1 className="font-semibold text-lg">Workout Builder</h1>
         </div>
         
-        <div className="flex items-center gap-3">
-          {workoutData && (
-            <Button 
-                variant="outline" 
-                size="sm" 
-                className="gap-2 rounded-full px-4 border-orange-200 bg-orange-50 text-orange-700 hover:bg-orange-100 hover:text-orange-800 dark:bg-orange-900/20 dark:border-orange-900/50 dark:text-orange-400"
-                onClick={() => {
-                    if (confirm('Recover saved draft? Current changes will be lost.')) {
-                        reset(workoutData)
-                    }
-                }}
-            >
-                <Repeat className="h-3.5 w-3.5" />
-                Recover Draft
-            </Button>
-          )}
+        <div className="flex items-center gap-2 md:gap-3">
           <Button 
             variant={showPreview ? "secondary" : "ghost"}
             size="icon"
@@ -533,7 +485,7 @@ function CreateWorkoutContent() {
           </Button>
 
           {isSubmitting && (
-             <div className="flex flex-col items-end mr-2 min-w-[120px]">
+             <div className="hidden sm:flex flex-col items-end mr-2 min-w-[100px] md:min-w-[120px]">
                  <div className="flex justify-between w-full text-[10px] text-muted-foreground mb-1">
                     <span>{uploadStatus || 'Saving...'}</span>
                     <span>{uploadProgress}%</span>
@@ -547,21 +499,22 @@ function CreateWorkoutContent() {
              </div>
           )}
 
-          <Button onClick={handleSubmit(onSubmit)} disabled={isSubmitting} size="sm" className="gap-2 rounded-full px-6 font-bold">
+          <Button onClick={handleSubmit(onSubmit)} disabled={isSubmitting} size="sm" className="gap-2 rounded-full px-4 md:px-6 font-bold">
             {isSubmitting ? (
                 <>
                     <RotateCw className="h-4 w-4 animate-spin" />
-                    Saving...
+                    <span className="hidden md:inline">Saving...</span>
                 </>
             ) : isRetry ? (
                 <>
                     <RotateCw className="h-4 w-4" />
-                    Retry
+                    <span className="hidden md:inline">Retry</span>
                 </>
             ) : (
                 <>
                     <Save className="h-4 w-4" />
-                    Save Workout
+                    <span className="hidden md:inline">Save Workout</span>
+                    <span className="md:hidden">Save</span>
                 </>
             )}
           </Button>
@@ -573,7 +526,7 @@ function CreateWorkoutContent() {
         {/* LEFT: Editor Panel */}
         <div className={cn(
           "flex-1 overflow-y-auto p-4 md:p-8 transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] scrollbar-hide",
-          showPreview ? (previewDevice === 'mobile' ? "lg:mr-[420px]" : "lg:mr-[65%]") : ""
+          showPreview ? (previewDevice === 'mobile' ? "hidden lg:block lg:mr-[420px]" : "hidden lg:block lg:mr-[65%]") : ""
         )}>
           <div className="max-w-5xl mx-auto space-y-10 pb-40">
             
@@ -975,9 +928,9 @@ function ExercisesFieldArray({ nestIndex, control, register, errors }: { nestInd
                                 </Button>
                             </div>
 
-                            <div className="flex flex-wrap gap-8 pl-8">
+                            <div className="flex flex-wrap gap-4 md:gap-8 pl-8 md:pl-8">
                                 {/* Main Content (Left) */}
-                                <div className="flex-1 min-w-[300px] space-y-6">
+                                <div className="flex-1 min-w-full sm:min-w-[300px] space-y-6">
                     {/* Header: Name & Description */}
                     <div className="space-y-2 pr-10">
                         <div>
@@ -1002,18 +955,18 @@ function ExercisesFieldArray({ nestIndex, control, register, errors }: { nestInd
                     {/* Metrics Panel */}
                     <div className="bg-muted/30 rounded-2xl p-4 border border-border/50 flex flex-col justify-center gap-4">
                         <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground pl-1">Metrics</label>
-                        <div className="flex items-center justify-between gap-2">
+                        <div className="flex flex-wrap items-center justify-center sm:justify-between gap-y-6 gap-x-2">
                             {/* Type Toggle */}
                             <Controller
                                 control={control}
                                 name={`sections.${nestIndex}.exercises.${k}.type`}
                                 render={({ field }) => (
-                                    <div className="flex bg-muted/50 p-1 rounded-lg shrink-0">
+                                    <div className="flex bg-muted/50 p-1 rounded-lg shrink-0 w-full sm:w-auto justify-center">
                                         <button 
                                             type="button"
                                             onClick={() => field.onChange('reps')}
                                             className={cn(
-                                                "px-2 py-1.5 rounded-md text-[10px] font-bold uppercase transition-all min-w-[40px]",
+                                                "px-2 py-1.5 rounded-md text-[10px] font-bold uppercase transition-all min-w-[40px] flex-1 sm:flex-none",
                                                 field.value === 'reps' ? "bg-white dark:bg-zinc-800 shadow-sm text-primary" : "text-muted-foreground hover:text-foreground"
                                             )}
                                         >
@@ -1023,7 +976,7 @@ function ExercisesFieldArray({ nestIndex, control, register, errors }: { nestInd
                                             type="button"
                                             onClick={() => field.onChange('time')}
                                             className={cn(
-                                                "px-2 py-1.5 rounded-md text-[10px] font-bold uppercase transition-all min-w-[40px]",
+                                                "px-2 py-1.5 rounded-md text-[10px] font-bold uppercase transition-all min-w-[40px] flex-1 sm:flex-none",
                                                 field.value === 'time' ? "bg-white dark:bg-zinc-800 shadow-sm text-primary" : "text-muted-foreground hover:text-foreground"
                                             )}
                                         >
@@ -1033,57 +986,59 @@ function ExercisesFieldArray({ nestIndex, control, register, errors }: { nestInd
                                 )}
                             />
 
-                            {/* Value */}
-                            <div className="flex flex-col items-center">
-                                <span className="text-[9px] font-bold text-muted-foreground uppercase mb-1">
-                                        <Controller
+                            <div className="flex items-center justify-center gap-4 sm:gap-6 flex-wrap">
+                                {/* Value */}
+                                <div className="flex flex-col items-center">
+                                    <span className="text-[9px] font-bold text-muted-foreground uppercase mb-1">
+                                            <Controller
+                                            control={control}
+                                            name={`sections.${nestIndex}.exercises.${k}.type`}
+                                            render={({ field }) => <>{field.value === 'reps' ? 'Count' : 'Work'}</>}
+                                        />
+                                    </span>
+                                    <Controller
                                         control={control}
                                         name={`sections.${nestIndex}.exercises.${k}.type`}
-                                        render={({ field }) => <>{field.value === 'reps' ? 'Count' : 'Work'}</>}
+                                        render={({ field: typeField }) => (
+                                            <Input 
+                                                {...register(typeField.value === 'reps' ? `sections.${nestIndex}.exercises.${k}.reps` : `sections.${nestIndex}.exercises.${k}.duration`)}
+                                                placeholder="0" 
+                                                className="h-8 w-16 text-center bg-white dark:bg-zinc-800 border-none shadow-sm rounded-lg font-bold focus-visible:ring-0"
+                                            />
+                                        )}
                                     />
-                                </span>
-                                <Controller
-                                    control={control}
-                                    name={`sections.${nestIndex}.exercises.${k}.type`}
-                                    render={({ field: typeField }) => (
-                                        <Input 
-                                            {...register(typeField.value === 'reps' ? `sections.${nestIndex}.exercises.${k}.reps` : `sections.${nestIndex}.exercises.${k}.duration`)}
-                                            placeholder="0" 
-                                            className="h-8 w-16 text-center bg-white dark:bg-zinc-800 border-none shadow-sm rounded-lg font-bold focus-visible:ring-0"
-                                        />
-                                    )}
-                                />
-                            </div>
+                                </div>
 
-                            {/* Sets */}
-                            <div className="flex flex-col items-center">
-                                <span className="text-[9px] font-bold text-muted-foreground uppercase mb-1">Sets</span>
-                                <Input 
-                                    {...register(`sections.${nestIndex}.exercises.${k}.sets`)} 
-                                    placeholder="0" 
-                                    type="number"
-                                    className="h-8 w-14 text-center bg-white dark:bg-zinc-800 border-none shadow-sm rounded-lg font-bold focus-visible:ring-0"
-                                />
-                            </div>
-
-                            {/* Rest */}
-                            <div className="flex flex-col items-center">
-                                <span className="text-[9px] font-bold text-muted-foreground uppercase mb-1">Rest</span>
-                                <div className="relative">
+                                {/* Sets */}
+                                <div className="flex flex-col items-center">
+                                    <span className="text-[9px] font-bold text-muted-foreground uppercase mb-1">Sets</span>
                                     <Input 
-                                        {...register(`sections.${nestIndex}.exercises.${k}.rest`)} 
+                                        {...register(`sections.${nestIndex}.exercises.${k}.sets`)} 
                                         placeholder="0" 
                                         type="number"
                                         className="h-8 w-14 text-center bg-white dark:bg-zinc-800 border-none shadow-sm rounded-lg font-bold focus-visible:ring-0"
                                     />
-                                    <span className="absolute right-1 top-2 text-[9px] text-muted-foreground font-medium">s</span>
+                                </div>
+
+                                {/* Rest */}
+                                <div className="flex flex-col items-center">
+                                    <span className="text-[9px] font-bold text-muted-foreground uppercase mb-1">Rest</span>
+                                    <div className="relative">
+                                        <Input 
+                                            {...register(`sections.${nestIndex}.exercises.${k}.rest`)} 
+                                            placeholder="0" 
+                                            type="number"
+                                            className="h-8 w-14 text-center bg-white dark:bg-zinc-800 border-none shadow-sm rounded-lg font-bold focus-visible:ring-0"
+                                        />
+                                        <span className="absolute right-1 top-2 text-[9px] text-muted-foreground font-medium">s</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
                     {/* Metadata Panel (Muscles & Equipment) */}
-                    <div className="grid grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         {/* Difficulty */}
                     <div className="space-y-1.5">
                         <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-1">Difficulty</label>
@@ -1167,7 +1122,7 @@ function ExercisesFieldArray({ nestIndex, control, register, errors }: { nestInd
           </div>
         )}
       </Droppable>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Button
             type="button" variant="ghost" size="sm"
             className="w-full h-12 border border-dashed border-border/40 hover:border-primary/40 text-muted-foreground/60 hover:text-primary hover:bg-primary/5 rounded-xl text-xs font-bold uppercase tracking-widest transition-all group"

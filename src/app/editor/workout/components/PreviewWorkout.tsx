@@ -75,6 +75,15 @@ export function PreviewWorkout({ data, onClose }: PreviewWorkoutProps) {
     )
   }
 
+  // Helper to determine media type
+  const getMediaType = (url?: string) => {
+    if (!url) return null
+    const ext = url.split('.').pop()?.toLowerCase()
+    if (['mp4', 'mov', 'webm', 'mkv'].includes(ext || '')) return 'video'
+    if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext || '')) return 'image'
+    return 'video' // Default assumption
+  }
+
   // OVERVIEW MODE (Similar to WorkoutOverview)
   return (
     <div className="h-full w-full bg-background flex flex-col relative overflow-y-auto scrollbar-hide">
@@ -142,9 +151,18 @@ export function PreviewWorkout({ data, onClose }: PreviewWorkoutProps) {
                      key={exIdx} 
                      className="group relative flex items-center gap-3 p-3 rounded-xl bg-card border border-border/50 hover:border-primary/50 transition-all cursor-default"
                    >
-                     <div className="w-12 h-12 rounded-lg bg-muted overflow-hidden shrink-0 border border-border/30 flex items-center justify-center">
+                     <div className="w-12 h-12 rounded-lg bg-muted overflow-hidden shrink-0 border border-border/30 flex items-center justify-center relative">
                        {ex.media_url ? (
-                         <img src={ex.media_url} alt={ex.name} className="w-full h-full object-cover" />
+                         getMediaType(ex.media_url) === 'video' ? (
+                            <video 
+                                src={ex.media_url} 
+                                className="w-full h-full object-cover" 
+                                muted 
+                                playsInline
+                            />
+                         ) : (
+                            <img src={ex.media_url} alt={ex.name} className="w-full h-full object-cover" />
+                         )
                        ) : (
                          <Dumbbell className="w-5 h-5 text-muted-foreground/40" />
                        )}

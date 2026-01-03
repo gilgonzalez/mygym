@@ -23,6 +23,16 @@ export function PreviewActivity({
 }: PreviewActivityProps) {
   const progress = ((stepIndex + 1) / totalSteps) * 100
 
+  const getMediaType = (url?: string) => {
+    if (!url) return null
+    const ext = url.split('.').pop()?.toLowerCase()
+    if (['mp4', 'mov', 'webm', 'mkv'].includes(ext || '')) return 'video'
+    if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext || '')) return 'image'
+    return 'video' // Default to video for unknown (e.g. blob) as it's a workout app
+  }
+
+  const mediaType = getMediaType(exercise?.media_url)
+
   return (
     <div className="absolute inset-0 z-20 bg-black text-white flex flex-col animate-in fade-in duration-300">
       {/* Header */}
@@ -45,8 +55,28 @@ export function PreviewActivity({
       <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-8 overflow-y-auto">
         {exercise ? (
           <>
-            <div className="w-24 h-24 rounded-full bg-primary/20 flex items-center justify-center mb-4 text-primary animate-pulse shrink-0">
-              <Clock className="h-10 w-10" />
+            <div className="w-full max-w-sm aspect-video rounded-2xl bg-zinc-900 overflow-hidden shadow-2xl shrink-0 border border-white/10 relative">
+              {mediaType === 'video' ? (
+                <video 
+                    src={exercise.media_url} 
+                    className="w-full h-full object-cover"
+                    autoPlay
+                    muted
+                    loop
+                    playsInline
+                    controls
+                />
+              ) : mediaType === 'image' ? (
+                <img 
+                    src={exercise.media_url} 
+                    alt={exercise.name}
+                    className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-primary/20">
+                    <Clock className="h-20 w-20" />
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">

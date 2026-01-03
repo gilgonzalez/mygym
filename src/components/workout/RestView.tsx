@@ -94,7 +94,7 @@ export function RestView({
         <div className="scale-125 transform transition-transform">
           <WorkoutTimer 
             key={`rest-${currentExerciseIndex}`}
-            duration={currentExercise?.rest || 30}
+            duration={currentExercise?.rest || 5}
             mode="rest"
             onComplete={onComplete}
             onSkip={onComplete}
