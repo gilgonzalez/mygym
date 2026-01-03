@@ -96,6 +96,12 @@ function CreateWorkoutContent() {
   const [uploadStatus, setUploadStatus] = useState('')
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
 
+  React.useLayoutEffect(() => {
+    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+        setShowPreview(false)
+    }
+  }, [])
+
   const { isLoading: isLoadingWorkout, data: loadedWorkout } = useQuery({
     queryKey: ['workout', workoutId],
     queryFn: async () => {
