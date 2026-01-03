@@ -1,13 +1,14 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { Activity, ChevronLeft, ChevronRight, Dumbbell, Zap, Swords, Shield, Brain, Footprints, BarChart2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
-import { supabase } from "@/lib/supabase"
+import { getWorkoutLogsAction } from "@/app/actions/user/getLogs"
+import { useQuery } from "@tanstack/react-query"
 
 type ActivityDay = {
   date: Date
@@ -30,73 +31,63 @@ export function ActivityHeatmap({ userId, attributes }: ActivityHeatmapProps) {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [selectedDay, setSelectedDay] = useState<ActivityDay | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [monthData, setMonthData] = useState<ActivityDay[]>([])
 
   const year = currentDate.getFullYear()
   const month = currentDate.getMonth()
 
-  useEffect(() => {
-    async function fetchWorkoutLogs() {
-      if (!userId) return
-
+  const { data: monthData = [] } = useQuery({
+    queryKey: ['workoutLogs', userId, year, month],
+    queryFn: async () => {
+      if (!userId) return []
       const startOfMonth = new Date(year, month, 1)
       const endOfMonth = new Date(year, month + 1, 0)
       
-      // Adjust to cover the full day in UTC/local correctly if needed, 
-      // but simple date comparison usually works if we stick to ISO strings.
-      // supabase timestamps are UTC.
-      
-      const { data, error } = await supabase
-        .from('workout_logs')
-        .select('*, workouts(name)')
-        .eq('user_id', userId)
-        .gte('completed_at', startOfMonth.toISOString())
-        .lte('completed_at', endOfMonth.toISOString())
+      const { success, data, error } = await getWorkoutLogsAction(
+        userId,
+        startOfMonth.toISOString(),
+        endOfMonth.toISOString()
+      )
+      console.log({queryData: data})
 
-      if (error) {
-        console.error("Error fetching logs:", error)
-        return
-      }
+      if (!success) throw new Error(error)
+      return data || []
+    },
+    enabled: !!userId,
+    select: (data) => {
+        const endOfMonth = new Date(year, month + 1, 0)
+        const daysInMonth = endOfMonth.getDate()
+        const newMonthData: ActivityDay[] = []
 
-      const daysInMonth = endOfMonth.getDate()
-      const newMonthData: ActivityDay[] = []
+        for (let i = 1; i <= daysInMonth; i++) {
+            const date = new Date(year, month, i)
+            const dayLogs = data.filter(log => {
+            const logDate = new Date(log.completed_at || '')
+            return logDate.getDate() === i && logDate.getMonth() === month && logDate.getFullYear() === year
+            })
 
-      for (let i = 1; i <= daysInMonth; i++) {
-        const date = new Date(year, month, i)
-        // Find logs for this day
-        // Note: simple date comparison ignoring time
-        const dayLogs = data?.filter(log => {
-          const logDate = new Date(log.completed_at || '')
-          return logDate.getDate() === i && logDate.getMonth() === month && logDate.getFullYear() === year
-        }) || []
+            let intensity = 0
+            let workoutTitle
+            let xpGained = 0
 
-        let intensity = 0
-        let workoutTitle
-        let xpGained = 0
+            if (dayLogs.length > 0) {
+                xpGained = dayLogs.reduce((sum, log) => sum + (log.xp_earned || 0), 0)
+                
+                if (xpGained > 200) intensity = 4
+                else if (xpGained > 100) intensity = 3
+                else if (xpGained > 50) intensity = 2
+                else intensity = 1
 
-        if (dayLogs.length > 0) {
-            // Aggregate data for the day
-            xpGained = dayLogs.reduce((sum, log) => sum + (log.xp_earned || 0), 0)
+                // @ts-ignore
+                workoutTitle = dayLogs[0].workouts?.title || "Workout Session"
+                if (dayLogs.length > 1) workoutTitle += ` (+${dayLogs.length - 1} more)`
+            }
             
-            // Determine intensity based on XP
-            if (xpGained > 200) intensity = 4
-            else if (xpGained > 100) intensity = 3
-            else if (xpGained > 50) intensity = 2
-            else intensity = 1
-
-            // Just take the first workout title for now
-            // @ts-ignore
-            workoutTitle = dayLogs[0].workouts?.name || "Workout Session"
-            if (dayLogs.length > 1) workoutTitle += ` (+${dayLogs.length - 1} more)`
+            newMonthData.push({ date, intensity, workoutTitle, xpGained })
         }
-        
-        newMonthData.push({ date, intensity, workoutTitle, xpGained })
-      }
-      setMonthData(newMonthData)
+        return newMonthData
     }
-
-    fetchWorkoutLogs()
-  }, [userId, year, month])
+  })
+  console.log({monthData})
   
   // Calculate offset for first day of month (0 = Sunday, 1 = Monday, etc.)
   const firstDayOfMonth = new Date(year, month, 1).getDay() 
