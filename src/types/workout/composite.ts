@@ -38,6 +38,7 @@ export interface Workout extends DbWorkout {
       rest?: number | null 
       duration?: number | null 
       media_url?: string | null
+      link_id?: string
     }>
   }>
   likes_count?: number

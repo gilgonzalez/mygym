@@ -17,6 +17,7 @@ export async function getWorkoutById(id: string): Promise<{ success: boolean, da
           sections(
             *,
             section_exercises(
+              id,
               order_index,
               reps,
               sets,
@@ -54,6 +55,7 @@ export async function getWorkoutById(id: string): Promise<{ success: boolean, da
             .sort((a: any, b: any) => a.order_index - b.order_index)
             .map((se: any) => ({
               ...se.exercises,
+              link_id: se.id,
               reps: se.reps ?? 0,
               sets: se.sets ?? 0,
               duration: se.duration ?? 0,

@@ -455,6 +455,10 @@ export type Database = {
         Args: { p_user_id: string; p_workout_data: Json }
         Returns: string
       }
+      update_complete_workout: {
+        Args: { p_user_id: string; p_workout_data: Json; p_workout_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never

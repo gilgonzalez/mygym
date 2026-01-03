@@ -45,6 +45,7 @@ import { Exercise } from '@/app/actions/exercises/list'
 // --- Schema Definition ---
 const exerciseSchema = z.object({
   id: z.string(),
+  db_id: z.string().optional(),
   name: z.string().min(1, "Required"),
   type: z.enum(['reps', 'time']).default('reps'),
   reps: z.coerce.number().optional(),
@@ -59,6 +60,7 @@ const exerciseSchema = z.object({
   muscle_groups: z.array(z.string()).optional(),
   equipment: z.array(z.string()).optional(),
   difficulty: z.enum(['beginner', 'intermediate', 'advanced']).optional(),
+  link_id: z.string().optional(),
 })
 
 const sectionSchema = z.object({
@@ -126,6 +128,7 @@ function CreateWorkoutContent() {
               orderType: (s.type as any) || 'single',
               exercises: s.exercises.map((e: any) => ({
                   id: e.id,
+                  db_id: e.id,
                   name: e.name,
                   type: (e.type as any) || 'reps',
                   reps: e.reps || 0,
@@ -139,7 +142,8 @@ function CreateWorkoutContent() {
                   description: e.description || '',
                   muscle_groups: e.muscle_group || [],
                   equipment: e.equipment || [],
-                  difficulty: e.difficulty || 'beginner'
+                  difficulty: e.difficulty || 'beginner',
+                  link_id: (e as any).link_id
               }))
           }))
       } as WorkoutFormValues
@@ -371,11 +375,13 @@ function CreateWorkoutContent() {
                 tags: data.tags,
                 cover: coverUrl,
                 audio: validAudioUrls,
-                sections: sectionsWithMedia.map(s => ({
+                sections: sectionsWithMedia.map((s) => ({
+                    id: s.id,
                     name: s.name,
                     orderType: s.orderType,
-                    exercises: s.exercises.map(e => ({
+                    exercises: s.exercises.map((e) => ({
                         ...e,
+                        id: e.db_id || undefined, // Use db_id if available (existing), else undefined (new)
                         media_url: e.media_url,
                         media_id: e.media_id,
                         filename: e.filename,
@@ -710,6 +716,7 @@ function CreateWorkoutContent() {
                                         placeholder="SECTION NAME" 
                                         className="bg-transparent border-none shadow-none font-black text-2xl tracking-tight focus-visible:ring-0 px-0 h-auto w-full placeholder:text-muted-foreground/20 uppercase"
                                     />
+                                    <input type="hidden" {...register(`sections.${index}.id` as const)} />
                                     {errors.sections?.[index]?.name && (
                                       <p className="text-red-500 text-xs font-medium mt-1">
                                         {errors.sections[index]?.name?.message}
@@ -886,6 +893,7 @@ function ExercisesFieldArray({ nestIndex, control, register, errors }: { nestInd
   const handleAddFromVault = (exercise: Exercise) => {
     append({
         id: `ex-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        db_id: exercise.id,
         name: exercise.name,
         type: (exercise.type === 'time' ? 'time' : 'reps'),
         reps: exercise.reps || 0,
@@ -945,6 +953,9 @@ function ExercisesFieldArray({ nestIndex, control, register, errors }: { nestInd
                                 placeholder="Exercise Name" 
                                 className="h-auto text-xl font-black bg-transparent border-none px-0 focus-visible:ring-0 placeholder:text-muted-foreground/30 tracking-tight"
                             />
+                            <input type="hidden" {...register(`sections.${nestIndex}.exercises.${k}.id`)} />
+                            <input type="hidden" {...register(`sections.${nestIndex}.exercises.${k}.db_id`)} />
+                            <input type="hidden" {...register(`sections.${nestIndex}.exercises.${k}.link_id`)} />
                             {errors.sections?.[nestIndex]?.exercises?.[k]?.name && (
                                 <p className="text-red-500 text-xs font-medium">
                                     {errors.sections[nestIndex].exercises[k].name.message}
