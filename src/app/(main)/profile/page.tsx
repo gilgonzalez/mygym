@@ -1,5 +1,3 @@
-
-
 'use client'
 
 import Link from 'next/link'
@@ -10,21 +8,87 @@ import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import { Progress } from '@/components/ui/progress'
 import { ActivityHeatmap } from '@/components/profile/ActivityHeatmap'
+import { useEffect, useState } from 'react'
 
-// --- MOCK DATA ---
-const MOCK_STATS = {
-  level: 5,
-  currentXp: 750,
-  nextLevelXp: 1000,
-  streak: 12,
-  totalWorkouts: 48,
-  totalHours: 32.5,
-  rank: "Gym Warrior"
+interface UserStats {
+    level: number
+    current_xp: number
+    next_level_xp: number
+    streak_current: number
+    total_workouts: number
+    total_minutes: number
+    rank_title: string
+    attributes: {
+        strength: number
+        agility: number
+        endurance: number
+        wisdom: number
+    }
 }
 
 export default function ProfilePage() {
   const { user, logout } = useAuthStore()
   const router = useRouter()
+  const [stats, setStats] = useState<UserStats | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function fetchStats() {
+      if (!user?.id) return
+      try {
+        const { data, error } = await supabase
+          .from('user_stats')
+          .select('*')
+          .eq('user_id', user.id)
+          .single()
+
+        if (error && error.code !== 'PGRST116') {
+            console.error('Error fetching stats:', error)
+        }
+
+        if (data) {
+            setStats({
+                level: data.level ?? 1,
+                current_xp: data.current_xp ?? 0,
+                next_level_xp: data.next_level_xp ?? 1000,
+                streak_current: data.streak_current ?? 0,
+                total_workouts: data.total_workouts ?? 0,
+                total_minutes: data.total_minutes ?? 0,
+                rank_title: data.rank_title ?? 'Novice',
+                // @ts-ignore - Supabase types return Json, but we know the structure
+                attributes: data.attributes || {
+                    strength: 0,
+                    agility: 0,
+                    endurance: 0,
+                    wisdom: 0
+                }
+            })
+        } else {
+            // Default stats if not found
+            setStats({
+                level: 1,
+                current_xp: 0,
+                next_level_xp: 1000,
+                streak_current: 0,
+                total_workouts: 0,
+                total_minutes: 0,
+                rank_title: 'Novice',
+                attributes: {
+                    strength: 0,
+                    agility: 0,
+                    endurance: 0,
+                    wisdom: 0
+                }
+            })
+        }
+      } catch (e) {
+        console.error(e)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchStats()
+  }, [user?.id])
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
@@ -62,7 +126,24 @@ export default function ProfilePage() {
     )
   }
 
-  const xpPercentage = (MOCK_STATS.currentXp / MOCK_STATS.nextLevelXp) * 100
+  const currentStats = stats || {
+      level: 1,
+      current_xp: 0,
+      next_level_xp: 1000,
+      streak_current: 0,
+      total_workouts: 0,
+      total_minutes: 0,
+      rank_title: 'Novice',
+      attributes: {
+          strength: 0,
+          agility: 0,
+          endurance: 0,
+          wisdom: 0
+      }
+  }
+
+  const xpPercentage = (currentStats.current_xp / currentStats.next_level_xp) * 100
+  const totalHours = (currentStats.total_minutes / 60).toFixed(1)
 
   return (
     <div className="max-w-5xl mx-auto p-4 space-y-8">
@@ -86,7 +167,7 @@ export default function ProfilePage() {
               )}
             </div>
             <div className="absolute -bottom-2 -right-2 bg-primary text-primary-foreground text-xs font-bold px-2 py-1 rounded-full shadow-md border-2 border-background flex items-center gap-1">
-              <span>Lvl {MOCK_STATS.level}</span>
+              <span>Lvl {currentStats.level}</span>
             </div>
           </div>
           
@@ -99,7 +180,7 @@ export default function ProfilePage() {
                  {/* NEW BADGE DESIGN */}
                  <div className="bg-gradient-to-r from-yellow-500 to-amber-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow-sm flex items-center gap-1.5 border border-yellow-400/50">
                     <Medal className="w-3 h-3 fill-yellow-200 text-yellow-100" />
-                    {MOCK_STATS.rank}
+                    {currentStats.rank_title}
                  </div>
               </div>
               <p className="text-muted-foreground">@{user.username || 'username'}</p>
@@ -109,9 +190,9 @@ export default function ProfilePage() {
               <div className="flex justify-between items-end text-xs font-medium">
                 
                     <span className="text-muted-foreground">
-                        <span className="text-foreground font-bold">{MOCK_STATS.currentXp}</span> 
+                        <span className="text-foreground font-bold">{currentStats.current_xp}</span> 
                         <span className="mx-1">/</span> 
-                        {MOCK_STATS.nextLevelXp} XP
+                        {currentStats.next_level_xp} XP
                     </span>
                 <div className="flex items-center justify-end flex-1 gap-2">
                     <div className="bg-indigo-500 text-white gap-1 px-1.5 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider shadow-sm flex items-center">
@@ -152,7 +233,7 @@ export default function ProfilePage() {
                     <Flame className="w-6 h-6" />
                 </div>
                 <div>
-                    <p className="text-2xl font-bold">{MOCK_STATS.streak}</p>
+                    <p className="text-2xl font-bold">{currentStats.streak_current}</p>
                     <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Day Streak</p>
                 </div>
             </div>
@@ -162,7 +243,7 @@ export default function ProfilePage() {
                     <Trophy className="w-6 h-6" />
                 </div>
                 <div>
-                    <p className="text-2xl font-bold">{MOCK_STATS.totalWorkouts}</p>
+                    <p className="text-2xl font-bold">{currentStats.total_workouts}</p>
                     <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Workouts</p>
                 </div>
             </div>
@@ -172,7 +253,7 @@ export default function ProfilePage() {
                     <Timer className="w-6 h-6" />
                 </div>
                 <div>
-                    <p className="text-2xl font-bold">{MOCK_STATS.totalHours}h</p>
+                    <p className="text-2xl font-bold">{totalHours}h</p>
                     <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Total Time</p>
                 </div>
             </div>
@@ -180,7 +261,10 @@ export default function ProfilePage() {
       </div>
 
       {/* 2. ACTIVITY HEATMAP (MONTHLY + RPG DETAILS) */}
-      <ActivityHeatmap />
+      <ActivityHeatmap 
+        userId={user.id} 
+        attributes={stats?.attributes} 
+      />
 
       {/* 3. CONTENT TABS (Workouts, etc) */}
       <div className="space-y-4">
@@ -200,4 +284,3 @@ export default function ProfilePage() {
     </div>
   )
 }
-

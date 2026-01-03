@@ -1,67 +1,102 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Activity, ChevronLeft, ChevronRight, Dumbbell, Zap, Swords, Shield, Brain, Footprints, BarChart2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
+import { supabase } from "@/lib/supabase"
 
-// --- MOCK DATA TYPES & GENERATOR ---
 type ActivityDay = {
   date: Date
   intensity: number // 0-4
   workoutTitle?: string
   xpGained?: number
-  stats?: {
-    strength?: number
-    agility?: number
-    endurance?: number
-    wisdom?: number
+}
+
+interface ActivityHeatmapProps {
+  userId?: string
+  attributes?: {
+    strength: number
+    agility: number
+    endurance: number
+    wisdom: number
   }
 }
 
-const generateMonthData = (year: number, month: number): ActivityDay[] => {
-  const daysInMonth = new Date(year, month + 1, 0).getDate()
-  const data: ActivityDay[] = []
-
-  for (let i = 1; i <= daysInMonth; i++) {
-    const date = new Date(year, month, i)
-    // Random mock data
-    const rand = Math.random()
-    let intensity = 0
-    let workoutTitle
-    let xpGained
-    let stats
-
-    if (rand > 0.7) {
-        intensity = Math.floor(Math.random() * 4) + 1
-        workoutTitle = ["Leg Day Destruction", "Upper Body Power", "Cardio Blast", "Zen Yoga"][Math.floor(Math.random() * 4)]
-        xpGained = Math.floor(Math.random() * 100) + 50
-        stats = {
-            strength: Math.random() > 0.5 ? 1 : 0,
-            agility: Math.random() > 0.5 ? 1 : 0,
-            endurance: Math.random() > 0.5 ? 1 : 0,
-            wisdom: Math.random() > 0.8 ? 1 : 0
-        }
-    }
-    
-    data.push({ date, intensity, workoutTitle, xpGained, stats })
-  }
-  return data
-}
-
-export function ActivityHeatmap() {
+export function ActivityHeatmap({ userId, attributes }: ActivityHeatmapProps) {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [selectedDay, setSelectedDay] = useState<ActivityDay | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [monthData, setMonthData] = useState<ActivityDay[]>([])
 
   const year = currentDate.getFullYear()
   const month = currentDate.getMonth()
-  
-  // Generate data for current view
-  const monthData = generateMonthData(year, month)
+
+  useEffect(() => {
+    async function fetchWorkoutLogs() {
+      if (!userId) return
+
+      const startOfMonth = new Date(year, month, 1)
+      const endOfMonth = new Date(year, month + 1, 0)
+      
+      // Adjust to cover the full day in UTC/local correctly if needed, 
+      // but simple date comparison usually works if we stick to ISO strings.
+      // supabase timestamps are UTC.
+      
+      const { data, error } = await supabase
+        .from('workout_logs')
+        .select('*, workouts(name)')
+        .eq('user_id', userId)
+        .gte('completed_at', startOfMonth.toISOString())
+        .lte('completed_at', endOfMonth.toISOString())
+
+      if (error) {
+        console.error("Error fetching logs:", error)
+        return
+      }
+
+      const daysInMonth = endOfMonth.getDate()
+      const newMonthData: ActivityDay[] = []
+
+      for (let i = 1; i <= daysInMonth; i++) {
+        const date = new Date(year, month, i)
+        // Find logs for this day
+        // Note: simple date comparison ignoring time
+        const dayLogs = data?.filter(log => {
+          const logDate = new Date(log.completed_at || '')
+          return logDate.getDate() === i && logDate.getMonth() === month && logDate.getFullYear() === year
+        }) || []
+
+        let intensity = 0
+        let workoutTitle
+        let xpGained = 0
+
+        if (dayLogs.length > 0) {
+            // Aggregate data for the day
+            xpGained = dayLogs.reduce((sum, log) => sum + (log.xp_earned || 0), 0)
+            
+            // Determine intensity based on XP
+            if (xpGained > 200) intensity = 4
+            else if (xpGained > 100) intensity = 3
+            else if (xpGained > 50) intensity = 2
+            else intensity = 1
+
+            // Just take the first workout title for now
+            // @ts-ignore
+            workoutTitle = dayLogs[0].workouts?.name || "Workout Session"
+            if (dayLogs.length > 1) workoutTitle += ` (+${dayLogs.length - 1} more)`
+        }
+        
+        newMonthData.push({ date, intensity, workoutTitle, xpGained })
+      }
+      setMonthData(newMonthData)
+    }
+
+    fetchWorkoutLogs()
+  }, [userId, year, month])
   
   // Calculate offset for first day of month (0 = Sunday, 1 = Monday, etc.)
   const firstDayOfMonth = new Date(year, month, 1).getDay() 
@@ -83,13 +118,52 @@ export function ActivityHeatmap() {
 
   const monthName = currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })
 
-  // Mock Total Attributes for the stats column
-  // "Points" are used to level up specific attributes
+  // Map real attributes to display format
   const USER_ATTRIBUTES = [
-    { name: "Strength", level: 12, currentPoints: 850, maxPoints: 1200, icon: Swords, color: "text-red-600", bg: "bg-red-100 dark:bg-red-900/30", bar: "bg-red-500", border: "border-red-200 dark:border-red-800" },
-    { name: "Agility", level: 8, currentPoints: 320, maxPoints: 800, icon: Footprints, color: "text-blue-600", bg: "bg-blue-100 dark:bg-blue-900/30", bar: "bg-blue-500", border: "border-blue-200 dark:border-blue-800" },
-    { name: "Endurance", level: 15, currentPoints: 1450, maxPoints: 2000, icon: Shield, color: "text-green-600", bg: "bg-green-100 dark:bg-green-900/30", bar: "bg-green-500", border: "border-green-200 dark:border-green-800" },
-    { name: "Wisdom", level: 5, currentPoints: 450, maxPoints: 600, icon: Brain, color: "text-purple-600", bg: "bg-purple-100 dark:bg-purple-900/30", bar: "bg-purple-500", border: "border-purple-200 dark:border-purple-800" },
+    { 
+      name: "Strength", 
+      level: attributes?.strength || 0, 
+      currentPoints: (attributes?.strength || 0) * 10, // Visual filler
+      maxPoints: ((attributes?.strength || 0) + 1) * 10, 
+      icon: Swords, 
+      color: "text-red-600", 
+      bg: "bg-red-100 dark:bg-red-900/30", 
+      bar: "bg-red-500", 
+      border: "border-red-200 dark:border-red-800" 
+    },
+    { 
+      name: "Agility", 
+      level: attributes?.agility || 0, 
+      currentPoints: (attributes?.agility || 0) * 10, 
+      maxPoints: ((attributes?.agility || 0) + 1) * 10, 
+      icon: Footprints, 
+      color: "text-blue-600", 
+      bg: "bg-blue-100 dark:bg-blue-900/30", 
+      bar: "bg-blue-500", 
+      border: "border-blue-200 dark:border-blue-800" 
+    },
+    { 
+      name: "Endurance", 
+      level: attributes?.endurance || 0, 
+      currentPoints: (attributes?.endurance || 0) * 10, 
+      maxPoints: ((attributes?.endurance || 0) + 1) * 10, 
+      icon: Shield, 
+      color: "text-green-600", 
+      bg: "bg-green-100 dark:bg-green-900/30", 
+      bar: "bg-green-500", 
+      border: "border-green-200 dark:border-green-800" 
+    },
+    { 
+      name: "Wisdom", 
+      level: attributes?.wisdom || 0, 
+      currentPoints: (attributes?.wisdom || 0) * 10, 
+      maxPoints: ((attributes?.wisdom || 0) + 1) * 10, 
+      icon: Brain, 
+      color: "text-purple-600", 
+      bg: "bg-purple-100 dark:bg-purple-900/30", 
+      bar: "bg-purple-500", 
+      border: "border-purple-200 dark:border-purple-800" 
+    },
   ]
 
   return (
@@ -248,30 +322,6 @@ export function ActivityHeatmap() {
 
                     {/* Right Side: Stats (Top) & XP (Bottom) */}
                     <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-2 sm:gap-1.5 w-full sm:w-auto mt-2 sm:mt-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-border/50">
-                        {/* Stats Row */}
-                        <div className="flex items-center gap-1.5 flex-wrap justify-end">
-                            {selectedDay?.stats?.strength ? (
-                                <Badge variant="outline" className="text-[10px] px-2 py-0.5 bg-red-50 text-red-700 border-red-200 shadow-sm">
-                                    +1 Strength
-                                </Badge>
-                            ) : null}
-                            {selectedDay?.stats?.agility ? (
-                                <Badge variant="outline" className="text-[10px] px-2 py-0.5 bg-blue-50 text-blue-700 border-blue-200 shadow-sm">
-                                    +1 Agility
-                                </Badge>
-                            ) : null}
-                            {selectedDay?.stats?.endurance ? (
-                                <Badge variant="outline" className="text-[10px] px-2 py-0.5 bg-green-50 text-green-700 border-green-200 shadow-sm">
-                                    +1 Endurance
-                                </Badge>
-                            ) : null}
-                            {selectedDay?.stats?.wisdom ? (
-                                <Badge variant="outline" className="text-[10px] px-2 py-0.5 bg-purple-50 text-purple-700 border-purple-200 shadow-sm">
-                                    +1 Wisdom
-                                </Badge>
-                            ) : null}
-                        </div>
-
                         {/* XP Badge */}
                         <Badge variant="secondary" className="text-[10px] px-2.5 py-0.5 bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800 gap-1.5 shadow-sm">
                             <Zap className="w-3 h-3 fill-amber-500 text-amber-500" />

@@ -16,11 +16,14 @@ type ExerciseInput = Omit<DbExercise, 'id' | 'created_at' | 'created_by' | 'medi
 }
 
 type SectionInput = Omit<DbSection, 'id' | 'created_at'> & {
+    id?: string
     orderType: DbSection['type'] 
     exercises: ExerciseInput[]
 }
-export type WorkoutInput = Omit<DbWorkout, 'id' | 'created_at' | 'updated_at' | 'user_id' | 'audio'> & {
+export type WorkoutInput = Omit<DbWorkout, 'id' | 'created_at' | 'updated_at' | 'user_id' | 'audio' | 'is_public'> & {
     audio?: string[]
+    exp_earned?: number
+    stats?: Record<string, number>
     sections: SectionInput[]
 }
 

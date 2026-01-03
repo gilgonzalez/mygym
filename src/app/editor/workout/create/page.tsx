@@ -6,7 +6,7 @@ import { useMutation, useQuery } from '@tanstack/react-query'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd'
-import { Plus, Trash2, GripVertical, Save,  ArrowLeft, Eye, Play, Smartphone, Monitor, Tag, Image as ImageIcon,  Music, X, Upload, Mic, Square, Camera, Circle, Dna, Activity, Zap, Repeat, List, RotateCw, Library, Package, Globe } from 'lucide-react'
+import { Plus, Trash2, GripVertical, Save,  ArrowLeft, Eye, Play, Smartphone, Monitor, Tag, Image as ImageIcon,  Music, X, Upload, Mic, Square, Camera, Circle, Dna, Activity, Zap, Repeat, List, RotateCw, Library, Package, Globe, Lock, FileText } from 'lucide-react'
 import { 
   Select,
   SelectContent,
@@ -22,7 +22,6 @@ import {
 import Link from 'next/link'
 
 import { Button } from '@/components/Button'
-import { Switch } from '@/components/Switch'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/form/TextArea'
 import { Badge } from '@/components/ui/badge'
@@ -38,8 +37,11 @@ import { updateWorkoutAction } from '@/app/actions/workout/update'
 import { uploadFile } from '@/services/uploadFile'
 import { MediaSelectionDialog } from '../components/MediaSelectionDialog'
 import { PreviewWorkout } from '../components/PreviewWorkout'
-import { Exercise } from '@/app/actions/exercises/list'
+import { TAG_STATS_WEIGHTS, StatType } from '@/constants/tag-stats'
+import { WorkoutTag } from '@/constants/workout-tags'
 import { ExercisesVault } from '../components/ExercisesVault'
+import { WorkoutTagSelector } from '@/components/ui/workout-tag-selector'
+import { Exercise } from '@/app/actions/exercises/list'
 
 // --- Schema Definition ---
 const exerciseSchema = z.object({
@@ -74,7 +76,7 @@ const workoutSchema = z.object({
   cover: z.string().optional(),
   tags: z.array(z.string()).optional(),
   difficulty: z.enum(['beginner', 'intermediate', 'advanced']).optional(),
-  is_public: z.boolean().default(false).optional(),
+  visibility: z.enum(['draft', 'public', 'private']).default('private'),
   audio: z.array(z.string()).optional(),
   sections: z.array(sectionSchema),
 })
@@ -112,7 +114,7 @@ function CreateWorkoutContent() {
           cover: w.cover || '',
           tags: w.tags || [],
           difficulty: (w.difficulty as any) || 'beginner',
-          is_public: w.is_public || false,
+          visibility: w.visibility || 'private',
           audio: w.audio || [],
           sections: w.sections.map((s: any) => ({
               id: s.id,
@@ -148,7 +150,7 @@ function CreateWorkoutContent() {
       title: '',
       description: '',
       cover: '',
-      is_public: false,
+      visibility: 'private',
       audio: [],
       sections: [
         {
@@ -291,12 +293,90 @@ function CreateWorkoutContent() {
 
             setUploadStatus('Finalizing workout...')
 
+            // Calculate estimated time (in seconds)
+            const estimatedTime = data.sections.reduce((total, section) => {
+                return total + section.exercises.reduce((secTotal, ex) => {
+                    const sets = ex.sets || 1
+                    const rest = ex.rest || 0
+                    const duration = ex.duration || 0
+                    const reps = ex.reps || 0
+                    
+                    // Time for execution
+                    let executionTime = 0
+                    if (ex.type === 'time') {
+                        executionTime = duration * sets
+                    } else {
+                        // Estimate 3 seconds per rep
+                        executionTime = reps * 3 * sets
+                    }
+                    
+                    // Time for rest (between sets)
+                    const restTime = rest * sets
+                    
+                    return secTotal + executionTime + restTime
+                }, 0)
+            }, 0)
+
+            // Calculate EXP based on time and difficulty
+            // Formula: 10 XP per minute * Difficulty Multiplier
+            const difficultyMultiplier = {
+                'beginner': 1,
+                'intermediate': 1.5,
+                'advanced': 2
+            }[data.difficulty || 'beginner'] || 1
+
+            const expEarned = Math.round((estimatedTime / 60) * 10 * difficultyMultiplier)
+
+            // Calculate Stats Distribution
+            // 1. Sum up all weights from tags
+            const rawStats: Record<StatType, number> = {
+                strength: 0,
+                cardio: 0,
+                flexibility: 0,
+                agility: 0,
+                mind: 0
+            }
+            
+            let totalWeight = 0
+            const tags = data.tags || []
+            
+            tags.forEach(tag => {
+                const weights = TAG_STATS_WEIGHTS[tag as WorkoutTag]
+                if (weights) {
+                    Object.entries(weights).forEach(([stat, weight]) => {
+                        rawStats[stat as StatType] += weight
+                        totalWeight += weight
+                    })
+                }
+            })
+
+            // If no tags or no weights, default to balanced distribution
+            if (totalWeight === 0) {
+                 rawStats.strength = 1
+                 rawStats.cardio = 1
+                 rawStats.flexibility = 1
+                 rawStats.agility = 1
+                 rawStats.mind = 1
+                 totalWeight = 5
+            }
+
+            // 2. Distribute Total EXP according to weights
+            const finalStats: Record<string, number> = {}
+            Object.entries(rawStats).forEach(([stat, weight]) => {
+                if (weight > 0) {
+                    finalStats[stat] = Math.round((weight / totalWeight) * expEarned)
+                }
+            })
+
             // Prepare clean data for server action
             const cleanData: WorkoutInput = {
                 title: data.title,
                 description: data.description,
                 difficulty: data.difficulty,
-                is_public: data.is_public,
+                visibility: data.visibility,
+                estimated_time: estimatedTime,
+                exp_earned: expEarned,
+                stats: finalStats,
                 tags: data.tags,
                 cover: coverUrl,
                 audio: validAudioUrls,
@@ -557,11 +637,9 @@ function CreateWorkoutContent() {
                         control={control}
                         name="tags"
                         render={({ field }) => (
-                            <TagInput 
+                            <WorkoutTagSelector 
                                 value={field.value || []} 
                                 onChange={field.onChange}
-                                placeholder="Cardio, HIIT, Strength..."
-                                icon={<Tag className="h-4 w-4" />}
                             />
                         )}
                     />
@@ -572,7 +650,7 @@ function CreateWorkoutContent() {
                         control={control}
                         name="difficulty"
                         render={({ field }) => (
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <Select onValueChange={field.onChange} value={field.value}>
                                 <SelectTrigger className="w-full h-10 rounded-xl bg-background border-border/50 focus:ring-primary/20 font-medium">
                                     <SelectValue placeholder="Select difficulty level" />
                                 </SelectTrigger>
@@ -607,23 +685,40 @@ function CreateWorkoutContent() {
                         <Globe className="h-3 w-3 text-muted-foreground" />
                         <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Visibility</label>
                     </div>
-                    <div className="flex items-center gap-3 px-1 h-10">
-                         <Controller
-                            control={control}
-                            name="is_public"
-                            render={({ field }) => (
-                                <>
-                                    <Switch
-                                        checked={field.value}
-                                        onCheckedChange={field.onChange}
-                                    />
-                                    <span className="text-sm font-medium text-muted-foreground">
-                                        {field.value ? 'Public Workout' : 'Private Draft'}
-                                    </span>
-                                </>
-                            )}
-                        />
-                    </div>
+                    <Controller
+                        control={control}
+                        name="visibility"
+                        render={({ field }) => (
+                            <Select onValueChange={field.onChange} value={field.value}>
+                                <SelectTrigger className="w-full h-10 rounded-xl bg-background border-border/50 focus:ring-primary/20 font-medium">
+                                    <SelectValue placeholder="Select visibility" />
+                                </SelectTrigger>
+                                <SelectContent className="rounded-xl border-border/50 shadow-xl">
+                                    <SelectItem value="draft" className="rounded-lg my-1 cursor-pointer focus:bg-primary/5 focus:text-primary font-medium">
+                                        <div className="flex items-center gap-2">
+                                            <FileText className="h-4 w-4 text-slate-500" />
+                                            <span>Draft</span>
+                                            <span className="ml-auto text-xs text-muted-foreground">Only you</span>
+                                        </div>
+                                    </SelectItem>
+                                    <SelectItem value="private" className="rounded-lg my-1 cursor-pointer focus:bg-primary/5 focus:text-primary font-medium">
+                                        <div className="flex items-center gap-2">
+                                            <Lock className="h-4 w-4 text-rose-500" />
+                                            <span>Private</span>
+                                            <span className="ml-auto text-xs text-muted-foreground">Followers only</span>
+                                        </div>
+                                    </SelectItem>
+                                    <SelectItem value="public" className="rounded-lg my-1 cursor-pointer focus:bg-primary/5 focus:text-primary font-medium">
+                                        <div className="flex items-center gap-2">
+                                            <Globe className="h-4 w-4 text-emerald-500" />
+                                            <span>Public</span>
+                                            <span className="ml-auto text-xs text-muted-foreground">Everyone</span>
+                                        </div>
+                                    </SelectItem>
+                                </SelectContent>
+                            </Select>
+                        )}
+                    />
                  </div>
               </div>
             </div>
@@ -1232,7 +1327,9 @@ function MediaInput({ value, onChange, placeholder, type = 'media', variant = 'd
         const file = e.target.files?.[0]
         if (file) {
             const url = URL.createObjectURL(file)
-            onChange(url)
+            // Append type hint to URL hash so we can distinguish blob types
+            const type = file.type.split('/')[0] // 'image', 'video', 'audio'
+            onChange(`${url}#${type}`)
         }
     }
 
@@ -1251,7 +1348,7 @@ function MediaInput({ value, onChange, placeholder, type = 'media', variant = 'd
             recorder.onstop = () => {
                 const blob = new Blob(chunksRef.current, { type: 'audio/webm' })
                 const url = URL.createObjectURL(blob)
-                onChange(url)
+                onChange(`${url}#audio`)
                 stream.getTracks().forEach(track => track.stop())
                 if (timerRef.current) clearInterval(timerRef.current)
                 setRecordingTime(0)
@@ -1320,7 +1417,7 @@ function MediaInput({ value, onChange, placeholder, type = 'media', variant = 'd
         recorder.onstop = () => {
             const blob = new Blob(chunksRef.current, { type: 'video/webm' })
             const url = URL.createObjectURL(blob)
-            onChange(url)
+            onChange(`${url}#video`)
             closeVideoRecorder()
         }
 
@@ -1376,6 +1473,9 @@ function MediaInput({ value, onChange, placeholder, type = 'media', variant = 'd
     const Icon = type === 'audio' ? Music : ImageIcon
 
     if (variant === 'thumbnail') {
+        const isVideo = value?.match(/\.(mp4|webm|mov)$/i) || value?.includes('#video') || (value?.startsWith('blob:') && !value?.includes('#image') && !value?.includes('#audio'))
+        const isAudio = type === 'audio' || value?.match(/\.(mp3|wav|ogg)$/i) || value?.includes('#audio')
+        
         return (
             <div className="w-full h-full relative group bg-muted/20">
                 <input 
@@ -1462,9 +1562,9 @@ function MediaInput({ value, onChange, placeholder, type = 'media', variant = 'd
                 {value ? (
                     isPlaying ? (
                         <div className="w-full h-full relative bg-black flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
-                            {value.match(/\.(mp4|webm|mov)$/i) || value.startsWith('blob:') ? (
+                            {isVideo ? (
                                 <video ref={playbackVideoRef} src={value} className="w-full h-full object-contain" controls autoPlay onEnded={() => setIsPlaying(false)} />
-                            ) : type === 'audio' || value.match(/\.(mp3|wav|ogg)$/i) ? (
+                            ) : isAudio ? (
                                 <div className="w-full h-full flex flex-col items-center justify-center bg-zinc-900 gap-2 p-4">
                                     <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg animate-pulse">
                                         <Music className="h-6 w-6 text-white" />
@@ -1488,9 +1588,9 @@ function MediaInput({ value, onChange, placeholder, type = 'media', variant = 'd
                     ) : (
                         <div className="w-full h-full relative group">
                             {/* Preview (Thumbnail) */}
-                            {value.match(/\.(mp4|webm|mov)$/i) || value.startsWith('blob:') ? (
+                            {isVideo ? (
                                  <video src={value} className="w-full h-full object-cover" muted loop playsInline />
-                            ) : type === 'audio' || value.match(/\.(mp3|wav|ogg)$/i) ? (
+                            ) : isAudio ? (
                                  <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-indigo-500/20 to-purple-600/20">
                                      <Music className="h-8 w-8 text-indigo-500" />
                                  </div>
@@ -1507,12 +1607,20 @@ function MediaInput({ value, onChange, placeholder, type = 'media', variant = 'd
                                  </Button>
                             </div>
                             <div className="absolute bottom-1 right-1 px-1.5 py-0.5 bg-black/50 backdrop-blur rounded text-[8px] font-bold text-white uppercase pointer-events-none">
-                                {value.match(/\.(mp4|webm|mov)$/i) || value.startsWith('blob:') ? 'Video' : type === 'audio' ? 'Audio' : 'Image'}
+                                {isVideo ? 'Video' : isAudio ? 'Audio' : 'Image'}
                             </div>
                         </div>
                     )
                 ) : (
                     <div className="w-full h-full flex flex-col items-stretch divide-y divide-border/10">
+                        <div className="p-2">
+                            <Input 
+                                placeholder="Paste URL..." 
+                                className="h-8 text-xs bg-background/50 border-none shadow-sm"
+                                value={value || ''}
+                                onChange={(e) => onChange(e.target.value)}
+                            />
+                        </div>
                         <button 
                             type="button"
                             className="flex-1 flex flex-col items-center justify-center gap-1 hover:bg-black/5 transition-colors text-muted-foreground hover:text-emerald-500"

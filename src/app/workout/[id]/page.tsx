@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Loader2 } from 'lucide-react'
 import { WorkoutOverview } from '@/components/workout/WorkoutOverview'
@@ -10,9 +10,13 @@ import { LocalWorkout } from '@/types/workout/viewTypes'
 import { useWorkoutStore } from '@/store/workOutStore'
 import { useQuery } from '@tanstack/react-query'
 import { getWorkoutById } from '@/app/actions/workout/get'
+import { useAuthStore } from '@/store/authStore'
+import { supabase } from '@/lib/supabase'
 
 export default function WorkoutSessionPage({ params }: { params: { id: string } }) {
   const router = useRouter()
+  const { user } = useAuthStore()
+  const hasLoggedRef = useRef(false)
   
   // Zustand Store
   const { 
@@ -82,6 +86,50 @@ export default function WorkoutSessionPage({ params }: { params: { id: string } 
       initializeWorkout(workout)
     }
   }, [workout, activeWorkout, initializeWorkout])
+
+  // Handle Workout Completion (Log Stats)
+  useEffect(() => {
+    if (isCompleted && activeWorkout && user && !hasLoggedRef.current) {
+        hasLoggedRef.current = true
+        
+        // Calculate total duration (estimate)
+        // Sum of all exercises duration + rest + sets
+        let totalSeconds = 0
+        activeWorkout.sections.forEach(section => {
+            section.exercises.forEach(ex => {
+                const sets = ex.sets || 1
+                const duration = ex.duration || 0
+                const rest = ex.rest || 0
+                // Rough estimate: (duration + rest) * sets
+                // If reps based, assume 45s per set?
+                const timePerSet = duration > 0 ? duration : 45 
+                totalSeconds += (timePerSet + rest) * sets
+            })
+        })
+        
+        const durationMinutes = Math.ceil(totalSeconds / 60)
+        const xpEarned = Math.ceil(durationMinutes * 5) + 50 // Base 50 + 5 per minute
+
+        // Call RPC
+        supabase.rpc('complete_workout_session', {
+            p_user_id: user.id,
+            p_workout_id: activeWorkout.id,
+            p_duration_minutes: durationMinutes,
+            p_xp_earned: xpEarned
+        }).then(({ data, error }) => {
+            if (error) {
+                console.error('Error logging workout stats:', error)
+            } else {
+                console.log('Workout logged successfully:', data)
+            }
+        })
+    }
+
+    // Reset ref if workout is restarted
+    if (!isCompleted) {
+        hasLoggedRef.current = false
+    }
+  }, [isCompleted, activeWorkout, user])
 
 
   // Helper to determine if we have a session in progress

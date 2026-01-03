@@ -1,7 +1,6 @@
 'use server'
 
 import { createClient } from "@/lib/supabase/server"
-import { Database } from "@/types/database"
 import { WorkoutInput } from "./create"
 
 export async function updateWorkoutAction(workoutId: string, data: WorkoutInput) {
@@ -31,6 +30,10 @@ export async function updateWorkoutAction(workoutId: string, data: WorkoutInput)
             tags: data.tags,
             cover: data.cover,
             audio: data.audio,
+            visibility: data.visibility,
+            estimated_time: data.estimated_time,
+            exp_earned: data.exp_earned,
+            stats: data.stats,
             updated_at: new Date().toISOString()
         })
         .eq('id', workoutId)
@@ -38,93 +41,107 @@ export async function updateWorkoutAction(workoutId: string, data: WorkoutInput)
     if (updateError) throw updateError
 
     // 3. Handle Sections & Structure
-    // Get existing sections to determine what to delete/update/create
-    const { data: currentSections } = await supabase
+    
+    // A. Identify Sections to Keep vs Delete
+    // Fetch current sections linked to this workout
+    const { data: currentLinks } = await supabase
         .from('workout_sections')
-        .select('section_id, order_index, sections(id, name, type)')
+        .select('id, section_id')
         .eq('workout_id', workoutId)
-        .order('order_index')
 
-    const currentSectionIds = currentSections?.map(cs => cs.section_id) || []
-    const incomingSectionIds = data.sections.map(s => s.id).filter(id => id && id.length > 30) // Filter valid UUIDs
+    const currentSectionIds = currentLinks?.map(l => l.section_id) || []
+    const incomingSectionIds = data.sections
+        .map(s => s.id)
+        .filter(id => id && id.length > 30) // Valid UUIDs only
 
-    // A. Delete removed sections
-    const sectionsToDelete = currentSectionIds.filter(id => !incomingSectionIds.includes(id))
-    if (sectionsToDelete.length > 0) {
-        // Delete relationships first
-        await supabase.from('workout_sections').delete().in('section_id', sectionsToDelete)
-        await supabase.from('section_exercises').delete().in('section_id', sectionsToDelete)
-        await supabase.from('sections').delete().in('id', sectionsToDelete)
+    // Calculate sections to remove (those in DB but not in incoming list)
+    const sectionIdsToDelete = currentSectionIds.filter(id => !incomingSectionIds.includes(id))
+
+    if (sectionIdsToDelete.length > 0) {
+        // Cleanup removed sections
+        // Note: cascading deletes might handle this, but being explicit is safer
+        await supabase.from('workout_sections').delete().in('section_id', sectionIdsToDelete)
+        // Only delete the actual section definition if it's not used elsewhere? 
+        // Assuming strict composition for now as per previous logic:
+        await supabase.from('sections').delete().in('id', sectionIdsToDelete)
     }
 
-    // B. Process all sections (Update or Create)
+    // B. Process Incoming Sections
     for (let i = 0; i < data.sections.length; i++) {
         const sectionData = data.sections[i]
         let sectionId = sectionData.id
 
-        // Check if it's an existing section (UUID) or new
-        if (sectionId && sectionId.length > 30 && currentSectionIds.includes(sectionId)) {
-            // UPDATE existing section
-            const { error: updateError } = await supabase
+        // 1. Upsert Section Definition
+        if (sectionId && sectionId.length > 30) {
+            // Update existing
+            const { error: secUpdateErr } = await supabase
                 .from('sections')
                 .update({ name: sectionData.name, type: sectionData.orderType })
                 .eq('id', sectionId)
-            
-            if (updateError) throw updateError
+            if (secUpdateErr) throw secUpdateErr
         } else {
-            // CREATE new section
-            const { data: newSection, error: createError } = await supabase
+            // Create new
+            const { data: newSection, error: secCreateErr } = await supabase
                 .from('sections')
                 .insert({ name: sectionData.name, type: sectionData.orderType })
                 .select()
                 .single()
-            
-            if (createError) throw createError
+            if (secCreateErr) throw secCreateErr
             sectionId = newSection.id
         }
 
-        // C. Update Workout Link (Order)
-        // We upsert to update the order_index
-        await supabase.from('workout_sections').upsert({
-            workout_id: workoutId,
-            section_id: sectionId,
-            order_index: i
-        }, { onConflict: 'workout_id, section_id' })
+        // 2. Manage Workout-Section Link
+        // Ensure link exists and update order
+        const { data: existingLink } = await supabase
+            .from('workout_sections')
+            .select('id')
+            .eq('workout_id', workoutId)
+            .eq('section_id', sectionId)
+            .maybeSingle()
 
+        if (existingLink) {
+            await supabase
+                .from('workout_sections')
+                .update({ order_index: i })
+                .eq('id', existingLink.id)
+        } else {
+            await supabase
+                .from('workout_sections')
+                .insert({
+                    workout_id: workoutId,
+                    section_id: sectionId,
+                    order_index: i
+                })
+        }
 
-        // D. Handle Exercises for this Section
-        // 1. Clear existing links for this section to rewrite them (easiest way to handle reordering)
-        // Note: This doesn't delete the exercises themselves, just the association to the section
+        // 3. Handle Exercises for this Section
+        // Strategy: "Replace All Links". 
+        // This is the most robust way to handle reordering and removals within a section without complex diffing.
+        // It deletes the *relationships* (section_exercises), not the exercise definitions.
+        
         await supabase.from('section_exercises').delete().eq('section_id', sectionId)
 
         for (let j = 0; j < sectionData.exercises.length; j++) {
             const exData = sectionData.exercises[j]
             
-            // Prepare payload for Exercise Definition
+            // 3.1 Upsert Exercise Definition
             const exercisePayload: any = {
                 name: exData.name,
                 type: exData.type,
-                reps: exData.reps,
-                sets: exData.sets,
-                duration: exData.duration,
-                rest: exData.rest,
                 description: exData.description,
                 muscle_group: exData.muscle_group,
                 equipment: exData.equipment,
                 difficulty: exData.difficulty,
                 media_id: exData.media_id,
-                created_by: user.id
+                user_id: user.id, // Ensure ownership/attribution
             }
 
-            // Handle Exercise ID
+            // Only attach ID if it's a real UUID (updates existing)
             if (exData.id && exData.id.length > 30) {
                 exercisePayload.id = exData.id
-            } else {
-                delete exercisePayload.id // Ensure no temp IDs pass through
             }
 
-            // Upsert Exercise Definition
-            // This updates the exercise if it exists (and we own it/have rights), or creates new
+            // Perform Upsert on Definition
             const { data: exercise, error: exError } = await supabase
                 .from('exercises')
                 .upsert(exercisePayload)
@@ -133,7 +150,7 @@ export async function updateWorkoutAction(workoutId: string, data: WorkoutInput)
 
             if (exError) throw exError
 
-            // Create Link
+            // 3.2 Create Link
             await supabase.from('section_exercises').insert({
                 section_id: sectionId,
                 exercise_id: exercise.id,
@@ -142,7 +159,7 @@ export async function updateWorkoutAction(workoutId: string, data: WorkoutInput)
                 reps: exData.reps,
                 rest: exData.rest,
                 duration: exData.duration,
-                weight_kg: 0
+                weight_kg: 0 // Default or from form if available
             })
         }
     }

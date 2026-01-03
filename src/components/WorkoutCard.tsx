@@ -1,7 +1,7 @@
 'use client'
 import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
-import { Heart, Clock, BarChart, User, Play, MoreVertical, Edit, Trash2, Loader2 } from 'lucide-react'
+import { Heart, Clock, BarChart, User, Play, MoreVertical, Edit, Trash2, Loader2, Zap,  Brain, Footprints, Swords, Shield } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
 import { Workout } from '../types/workout/composite'
 import { Card } from './Card'
@@ -28,6 +28,26 @@ export default function WorkoutCard({ workout }: WorkoutCardProps) {
   const menuRef = useRef<HTMLDivElement>(null)
 
   const isOwner = user?.id === workout.user_id
+
+  // Calculate Stats & Rewards
+  // @ts-ignore - estimated_time exists in DB but might be missing in type
+  const duration = Math.ceil((workout.estimated_time || 0) / 60) || 45
+  const xpEarned = Math.ceil(duration * 5) + 50
+
+  const getAttributes = (tags: string[] = []) => {
+      let strength = 0, agility = 0, endurance = 0, wisdom = 0
+      
+      if (tags.some(t => ['Strength', 'Barbell', 'Dumbbell'].includes(t))) strength += 2
+      if (tags.some(t => ['Cardio', 'HIIT', 'Run'].includes(t))) endurance += 2
+      if (tags.some(t => ['Yoga', 'Mobility'].includes(t))) { agility += 2; wisdom += 1 }
+      
+      if (strength === 0 && agility === 0 && endurance === 0 && wisdom === 0) {
+          strength = 1; endurance = 1
+      }
+      
+      return { strength, agility, endurance, wisdom }
+  }
+  const attributes = getAttributes(workout.tags || [])
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -84,9 +104,9 @@ export default function WorkoutCard({ workout }: WorkoutCardProps) {
   }
 
   return (
-    <Card className="group overflow-hidden border-border/50 bg-card/50 backdrop-blur-sm glow-card hover:border-primary/50 transition-all duration-300 w-full md:aspect-[2/1] flex flex-col md:flex-row">
+    <Card className="group overflow-hidden border-border/50 bg-card/50 backdrop-blur-sm glow-card hover:border-primary/50 transition-all duration-300 w-full flex flex-col md:flex-row">
       {/* Left Column: Info & Details (60%) */}
-      <div className="flex flex-col justify-between p-6 md:w-3/5 h-full relative z-10">
+      <div className="flex flex-col justify-between p-6 md:w-3/5 relative z-10">
         <div>
            {/* User Header */}
            <div className="flex items-center justify-between mb-4">
@@ -160,32 +180,68 @@ export default function WorkoutCard({ workout }: WorkoutCardProps) {
                 <span className={`px-2.5 py-1 rounded-md text-[11px] font-medium uppercase tracking-wider border ${getDifficultyColor(workout.difficulty || 'beginner')}`}>
                   {workout.difficulty}
                 </span>
-                <span className={`px-2.5 py-1 rounded-md text-[11px] font-medium uppercase tracking-wider border ${getCategoryColor('cardio')}`}>
-                  {workout.tags?.join(', ') || 'No tags'}
-                </span>
+                {workout.tags?.map(tag => (
+                   <span key={tag} className="px-2.5 py-1 rounded-md text-[11px] font-medium uppercase tracking-wider border text-muted-foreground bg-muted border-muted-foreground/20">
+                     {tag}
+                   </span>
+                ))}
               </div>
            </div>
         </div>
 
         {/* Footer Info */}
-        <div className="flex items-center gap-6 text-sm text-muted-foreground pt-6 mt-auto">
-            <button onClick={handleLike} className={`flex items-center gap-2 transition-colors group/like ${isLiked ? 'text-red-500' : 'hover:text-red-500'}`}>
-              <Heart className={`w-5 h-5 ${isLiked ? 'fill-current' : 'group-hover/like:scale-110 transition-transform'}`} />
-              <span className="font-medium">{likesCount}</span>
-            </button>
-            <div className="flex items-center gap-2">
-              <Clock className="w-5 h-5" />
-              <span>45 min</span>
+        <div className="mt-auto pt-6 space-y-4">
+            {/* Attributes Row */}
+            <div className="flex flex-wrap gap-2">
+                 {attributes.strength > 0 && (
+                    <div className="flex items-center gap-1.5 text-rose-500 bg-rose-500/10 px-2 py-1 rounded-md border border-rose-500/20" title="Strength">
+                        <Swords className="w-3.5 h-3.5" />
+                        <span className="text-xs font-bold">+{attributes.strength} STR</span>
+                    </div>
+                 )}
+                 {attributes.endurance > 0 && (
+                    <div className="flex items-center gap-1.5 text-sky-500 bg-sky-500/10 px-2 py-1 rounded-md border border-sky-500/20" title="Endurance">
+                        <Shield className="w-3.5 h-3.5" />
+                        <span className="text-xs font-bold">+{attributes.endurance} END</span>
+                    </div>
+                 )}
+                 {attributes.agility > 0 && (
+                    <div className="flex items-center gap-1.5 text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded-md border border-emerald-500/20" title="Agility">
+                        <Footprints className="w-3.5 h-3.5" />
+                        <span className="text-xs font-bold">+{attributes.agility} AGI</span>
+                    </div>
+                 )}
+                 {attributes.wisdom > 0 && (
+                    <div className="flex items-center gap-1.5 text-violet-500 bg-violet-500/10 px-2 py-1 rounded-md border border-violet-500/20" title="Wisdom">
+                        <Brain className="w-3.5 h-3.5" />
+                        <span className="text-xs font-bold">+{attributes.wisdom} WIS</span>
+                    </div>
+                 )}
             </div>
-            <div className="flex items-center gap-2">
-               <BarChart className="w-5 h-5 rotate-90" />
-               <span>Stats</span>
+
+            {/* Meta Row */}
+            <div className="flex items-center justify-between text-sm text-muted-foreground border-t border-border/50 pt-3">
+                <div className="flex items-center gap-4">
+                    <button onClick={handleLike} className={`flex items-center gap-2 transition-colors group/like ${isLiked ? 'text-red-500' : 'hover:text-red-500'}`}>
+                      <Heart className={`w-4 h-4 ${isLiked ? 'fill-current' : 'group-hover/like:scale-110 transition-transform'}`} />
+                      <span className="font-medium text-xs">{likesCount}</span>
+                    </button>
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-4 h-4" />
+                      <span className="text-xs">{duration} min</span>
+                    </div>
+                </div>
+                
+                <div className="flex items-center gap-1.5 text-amber-500">
+                    <Zap className="w-3.5 h-3.5 fill-current" />
+                    <span className="text-xs font-bold">{xpEarned} XP</span>
+                </div>
             </div>
         </div>
       </div>
 
       {/* Right Column: Preview & Action (40%) */}
-      <div className="md:w-2/5 bg-secondary/30 border-l border-border/50 p-6 flex flex-col h-full relative overflow-hidden">
+      <div className="md:w-2/5 bg-secondary/30 border-l border-border/50 p-6 flex flex-col relative overflow-hidden">
          <div className="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-primary/5 pointer-events-none" />
          
          <div className="relative z-10 flex-1 flex flex-col">

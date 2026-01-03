@@ -17,7 +17,6 @@ export type Database = {
       exercises: {
         Row: {
           created_at: string | null
-          created_by: string | null
           description: string | null
           difficulty: string | null
           duration: number | null
@@ -31,10 +30,10 @@ export type Database = {
           rest: number | null
           sets: number | null
           type: string | null
+          user_id: string | null
         }
         Insert: {
           created_at?: string | null
-          created_by?: string | null
           description?: string | null
           difficulty?: string | null
           duration?: number | null
@@ -48,10 +47,10 @@ export type Database = {
           rest?: number | null
           sets?: number | null
           type?: string | null
+          user_id?: string | null
         }
         Update: {
           created_at?: string | null
-          created_by?: string | null
           description?: string | null
           difficulty?: string | null
           duration?: number | null
@@ -65,20 +64,21 @@ export type Database = {
           rest?: number | null
           sets?: number | null
           type?: string | null
+          user_id?: string | null
         }
         Relationships: [
-          {
-            foreignKeyName: "exercises_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "exercises_media_id_fkey"
             columns: ["media_id"]
             isOneToOne: false
             referencedRelation: "media"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exercises_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
@@ -199,6 +199,62 @@ export type Database = {
         }
         Relationships: []
       }
+      user_stats: {
+        Row: {
+          attributes: Json | null
+          created_at: string
+          current_xp: number | null
+          last_activity_date: string | null
+          level: number | null
+          next_level_xp: number | null
+          rank_title: string | null
+          streak_current: number | null
+          streak_longest: number | null
+          total_minutes: number | null
+          total_workouts: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          attributes?: Json | null
+          created_at?: string
+          current_xp?: number | null
+          last_activity_date?: string | null
+          level?: number | null
+          next_level_xp?: number | null
+          rank_title?: string | null
+          streak_current?: number | null
+          streak_longest?: number | null
+          total_minutes?: number | null
+          total_workouts?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          attributes?: Json | null
+          created_at?: string
+          current_xp?: number | null
+          last_activity_date?: string | null
+          level?: number | null
+          next_level_xp?: number | null
+          rank_title?: string | null
+          streak_current?: number | null
+          streak_longest?: number | null
+          total_minutes?: number | null
+          total_workouts?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_stats_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       users: {
         Row: {
           avatar_url: string | null
@@ -231,6 +287,57 @@ export type Database = {
           username?: string
         }
         Relationships: []
+      }
+      workout_logs: {
+        Row: {
+          completed_at: string | null
+          duration_seconds: number | null
+          id: string
+          notes: string | null
+          rating: number | null
+          started_at: string
+          user_id: string | null
+          workout_id: string | null
+          xp_earned: number | null
+        }
+        Insert: {
+          completed_at?: string | null
+          duration_seconds?: number | null
+          id?: string
+          notes?: string | null
+          rating?: number | null
+          started_at?: string
+          user_id?: string | null
+          workout_id?: string | null
+          xp_earned?: number | null
+        }
+        Update: {
+          completed_at?: string | null
+          duration_seconds?: number | null
+          id?: string
+          notes?: string | null
+          rating?: number | null
+          started_at?: string
+          user_id?: string | null
+          workout_id?: string | null
+          xp_earned?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workout_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workout_logs_workout_id_fkey"
+            columns: ["workout_id"]
+            isOneToOne: false
+            referencedRelation: "workouts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       workout_sections: {
         Row: {
@@ -278,12 +385,15 @@ export type Database = {
           created_at: string | null
           description: string | null
           difficulty: string | null
+          estimated_time: number | null
+          exp_earned: number | null
           id: string
-          is_public: boolean | null
+          stats: Json | null
           tags: string[] | null
           title: string
           updated_at: string | null
           user_id: string
+          visibility: string | null
         }
         Insert: {
           audio?: string[] | null
@@ -291,12 +401,15 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           difficulty?: string | null
+          estimated_time?: number | null
+          exp_earned?: number | null
           id?: string
-          is_public?: boolean | null
+          stats?: Json | null
           tags?: string[] | null
           title: string
           updated_at?: string | null
           user_id: string
+          visibility?: string | null
         }
         Update: {
           audio?: string[] | null
@@ -304,12 +417,15 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           difficulty?: string | null
+          estimated_time?: number | null
+          exp_earned?: number | null
           id?: string
-          is_public?: boolean | null
+          stats?: Json | null
           tags?: string[] | null
           title?: string
           updated_at?: string | null
           user_id?: string
+          visibility?: string | null
         }
         Relationships: [
           {
@@ -326,6 +442,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      complete_workout_session: {
+        Args: {
+          p_duration_minutes: number
+          p_user_id: string
+          p_workout_id: string
+          p_xp_earned: number
+        }
+        Returns: Json
+      }
       create_complete_workout: {
         Args: { p_user_id: string; p_workout_data: Json }
         Returns: string

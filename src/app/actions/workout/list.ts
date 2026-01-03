@@ -19,7 +19,7 @@ export async function getWorkoutsAction(): Promise<{ success: boolean, data?: Wo
           )
         )
       `)
-      .eq('is_public', true)
+      .eq('visibility', 'public')
       .order('created_at', { ascending: false })
 
     if (error) throw error
