@@ -200,9 +200,9 @@ export function ActivityHeatmap({ userId, attributes }: ActivityHeatmapProps) {
                                     onClick={() => handleDayClick(day)}
                                     disabled={day.intensity === 0}
                                     className={cn(
-                                        "w-full aspect-square rounded-md sm:rounded-lg transition-all duration-200 border border-transparent",
-                                        day.intensity === 0 && "bg-secondary/20",
-                                        day.intensity > 0 && "cursor-pointer hover:scale-110 hover:shadow-md hover:z-10 relative",
+                                        "w-full aspect-square rounded-md sm:rounded-lg transition-all duration-200 border",
+                                        day.intensity === 0 && "bg-secondary/10 border-border/30",
+                                        day.intensity > 0 && "border-transparent cursor-pointer hover:scale-110 hover:shadow-md hover:z-10 relative",
                                         day.intensity === 1 && "bg-green-100 dark:bg-green-900/30 text-green-700",
                                         day.intensity === 2 && "bg-green-300 dark:bg-green-700/60 text-green-800",
                                         day.intensity === 3 && "bg-green-400 dark:bg-green-600/80 text-green-900",
