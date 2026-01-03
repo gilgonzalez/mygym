@@ -11,7 +11,6 @@ export async function getWorkoutLogsAction(userId: string, startDate: string, en
       .eq('user_id', userId)
       .gte('completed_at', startDate)
       .lte('completed_at', endDate)
-    console.log({supabaseData: data})
     if (error) throw error
 
     return { success: true, data }

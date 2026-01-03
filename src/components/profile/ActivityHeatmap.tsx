@@ -47,7 +47,6 @@ export function ActivityHeatmap({ userId, attributes }: ActivityHeatmapProps) {
         startOfMonth.toISOString(),
         endOfMonth.toISOString()
       )
-      console.log({queryData: data})
 
       if (!success) throw new Error(error)
       return data || []
@@ -87,7 +86,6 @@ export function ActivityHeatmap({ userId, attributes }: ActivityHeatmapProps) {
         return newMonthData
     }
   })
-  console.log({monthData})
   
   // Calculate offset for first day of month (0 = Sunday, 1 = Monday, etc.)
   const firstDayOfMonth = new Date(year, month, 1).getDay() 
