@@ -12,6 +12,10 @@ interface WorkoutState {
   currentSet: number
   isResting: boolean
   
+  // Time Tracking
+  startTime: number | null
+  endTime: number | null
+
   // Voice State
   isSpeaking: boolean
   setSpeaking: (speaking: boolean) => void
@@ -34,6 +38,8 @@ export const useWorkoutStore = create<WorkoutState>((set, get) => ({
   currentExerciseIndex: 0,
   currentSet: 1,
   isResting: false,
+  startTime: null,
+  endTime: null,
   isSpeaking: false,
 
   setSpeaking: (speaking) => set({ isSpeaking: speaking }),
@@ -46,13 +52,15 @@ export const useWorkoutStore = create<WorkoutState>((set, get) => ({
       currentSectionIndex: 0,
       currentExerciseIndex: 0,
       currentSet: 1,
-      isResting: false
+      isResting: false,
+      startTime: null,
+      endTime: null
     })
   },
 
-  startSession: () => set({ hasStarted: true }),
+  startSession: () => set({ hasStarted: true, startTime: Date.now(), endTime: null }),
 
-  endSession: () => set({ hasStarted: false }),
+  endSession: () => set({ hasStarted: false }), // Does not reset time, just pauses/stops UI
 
   restartWorkout: () => set({
     hasStarted: true,
@@ -60,7 +68,9 @@ export const useWorkoutStore = create<WorkoutState>((set, get) => ({
     currentSectionIndex: 0,
     currentExerciseIndex: 0,
     currentSet: 1,
-    isResting: false
+    isResting: false,
+    startTime: Date.now(),
+    endTime: null
   }),
 
   jumpToStep: (sectionIndex, exerciseIndex) => set({
@@ -69,7 +79,9 @@ export const useWorkoutStore = create<WorkoutState>((set, get) => ({
     currentSectionIndex: sectionIndex,
     currentExerciseIndex: exerciseIndex,
     currentSet: 1,
-    isResting: false
+    isResting: false,
+    // Keep original start time if exists, otherwise set it? 
+    // Usually jumpToStep implies we are in a session.
   }),
 
   prevStep: () => {
@@ -160,7 +172,7 @@ export const useWorkoutStore = create<WorkoutState>((set, get) => ({
           })
         } else {
           // Workout Complete
-          set({ isCompleted: true, hasStarted: false })
+          set({ isCompleted: true, hasStarted: false, endTime: Date.now() })
         }
       } else {
         // Linear/Circuit behavior: Move to next exercise immediately
@@ -218,7 +230,7 @@ export const useWorkoutStore = create<WorkoutState>((set, get) => ({
                 currentSet: 1
              })
         } else {
-             set({ isCompleted: true, hasStarted: false })
+             set({ isCompleted: true, hasStarted: false, endTime: Date.now() })
         }
       }
     } else {
@@ -260,7 +272,7 @@ export const useWorkoutStore = create<WorkoutState>((set, get) => ({
 
       if (isFinished) {
         // Immediately finish if it's the last set of the last exercise of the last section
-        set({ isCompleted: true, hasStarted: false })
+        set({ isCompleted: true, hasStarted: false, endTime: Date.now() })
       } else {
         // Go to rest mode
         set({ isResting: true })

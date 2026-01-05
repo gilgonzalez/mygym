@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Loader2 } from 'lucide-react'
 import { WorkoutOverview } from '@/components/workout/WorkoutOverview'
@@ -17,6 +17,8 @@ export default function WorkoutSessionPage({ params }: { params: { id: string } 
   const router = useRouter()
   const { user } = useAuthStore()
   const hasLoggedRef = useRef(false)
+  const [currentLogId, setCurrentLogId] = useState<string | null>(null)
+  const [xpEarnedState, setXpEarnedState] = useState<number>(0)
   
   // Zustand Store
   const { 
@@ -109,6 +111,7 @@ export default function WorkoutSessionPage({ params }: { params: { id: string } 
         
         const durationMinutes = Math.ceil(totalSeconds / 60)
         const xpEarned = Math.ceil(durationMinutes * 5) + 50 // Base 50 + 5 per minute
+        setXpEarnedState(xpEarned)
 
         // Call RPC
         supabase.rpc('complete_workout_session', {
@@ -121,6 +124,9 @@ export default function WorkoutSessionPage({ params }: { params: { id: string } 
                 console.error('Error logging workout stats:', error)
             } else {
                 console.log('Workout logged successfully:', data)
+                if (data && typeof data === 'object' && 'log_id' in data) {
+                    setCurrentLogId((data as any).log_id)
+                }
             }
         })
     }
@@ -128,6 +134,8 @@ export default function WorkoutSessionPage({ params }: { params: { id: string } 
     // Reset ref if workout is restarted
     if (!isCompleted) {
         hasLoggedRef.current = false
+        setCurrentLogId(null)
+        setXpEarnedState(0)
     }
   }, [isCompleted, activeWorkout, user])
 
@@ -153,6 +161,8 @@ export default function WorkoutSessionPage({ params }: { params: { id: string } 
       <WorkoutCompleted 
         workout={activeWorkout} 
         onRestart={restartWorkout} 
+        initialLogId={currentLogId}
+        xpEarned={xpEarnedState}
       />
     )
   }

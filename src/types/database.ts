@@ -292,6 +292,7 @@ export type Database = {
         Row: {
           completed_at: string | null
           duration_seconds: number | null
+          feeling: string | null
           id: string
           notes: string | null
           rating: number | null
@@ -303,6 +304,7 @@ export type Database = {
         Insert: {
           completed_at?: string | null
           duration_seconds?: number | null
+          feeling?: string | null
           id?: string
           notes?: string | null
           rating?: number | null
@@ -314,6 +316,7 @@ export type Database = {
         Update: {
           completed_at?: string | null
           duration_seconds?: number | null
+          feeling?: string | null
           id?: string
           notes?: string | null
           rating?: number | null
