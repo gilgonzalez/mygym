@@ -54,6 +54,14 @@ export function WorkoutOverview({
     if (onResume) onResume()
   }
 
+  const handleExerciseClick = (sectionIndex: number, exerciseIndex: number) => {
+    if (!isAuthenticated) {
+      setShowLoginDialog(true)
+      return
+    }
+    onExerciseClick(sectionIndex, exerciseIndex)
+  }
+
   return (
     <div className="min-h-screen bg-background flex flex-col pb-24 relative">
       <Dialog open={showLoginDialog} onOpenChange={setShowLoginDialog}>
@@ -165,9 +173,20 @@ export function WorkoutOverview({
                  {section.exercises.map((ex, exIdx) => (
                    <div 
                      key={exIdx} 
-                     className="group relative flex items-center gap-4 p-4 rounded-xl bg-card border border-border/50 hover:border-primary/50 hover:shadow-md transition-all duration-300 cursor-pointer"
-                     onClick={() => onExerciseClick(idx, exIdx)}
+                     className={`group relative flex items-center gap-4 p-4 rounded-xl border transition-all duration-300 cursor-pointer overflow-hidden ${
+                       !isAuthenticated 
+                         ? 'bg-card/40 border-border/30 opacity-60' 
+                         : 'bg-card border-border/50 hover:border-primary/50 hover:shadow-md'
+                     }`}
+                     onClick={() => handleExerciseClick(idx, exIdx)}
                    >
+                     {!isAuthenticated && (
+                       <div className="absolute inset-0 z-20 flex items-center justify-center bg-background/10 backdrop-blur-[1px]">
+                         <div className="bg-background/90 p-2 rounded-full shadow-lg border border-border/50">
+                           <Lock className="w-5 h-5 text-muted-foreground" />
+                         </div>
+                       </div>
+                     )}
                      <div className="w-16 h-16 rounded-lg bg-muted overflow-hidden shrink-0 border border-border/30">
                       {ex.media_url ? (
                         /\.(mp4|webm|ogg|mov)($|\?)/i.test(ex.media_url) ? (
@@ -209,11 +228,29 @@ export function WorkoutOverview({
       <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-background via-background/95 to-transparent z-50 pb-8">
          <div className="max-w-md mx-auto w-full flex gap-3">
            <Button 
-             className="flex-1 h-14 text-lg font-bold shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all rounded-2xl" 
+             className={`flex-1 h-14 shadow-xl transition-all rounded-2xl relative overflow-hidden group ${
+               !isAuthenticated 
+                 ? 'shadow-primary/20 hover:shadow-primary/30 hover:scale-[1.02] active:scale-[0.98]' 
+                 : 'shadow-primary/20 hover:scale-[1.02] active:scale-[0.98]'
+             }`}
              onClick={handleStart}
            >
-             <Play className="w-6 h-6 mr-2 fill-current" /> 
-             {hasActiveSession ? 'Restart Workout' : 'Start Workout'}
+             {!isAuthenticated ? (
+               <div className="flex items-center gap-3">
+                 <div className="relative flex h-8 w-8 items-center justify-center rounded-full bg-white/20 ring-1 ring-white/30 backdrop-blur-sm transition-transform duration-500 group-hover:rotate-12">
+                   <Lock className="h-4 w-4" />
+                 </div>
+                 <div className="flex flex-col items-start leading-none gap-0.5">
+                   <span className="text-base font-bold">Login to Start</span>
+                   <span className="text-[10px] font-medium opacity-90 uppercase tracking-wider">Track your progress</span>
+                 </div>
+               </div>
+             ) : (
+               <>
+                 <Play className="w-6 h-6 mr-2 fill-current" /> 
+                 <span className="text-lg font-bold">{hasActiveSession ? 'Restart Workout' : 'Start Workout'}</span>
+               </>
+             )}
            </Button>
 
            {hasActiveSession && onResume && (
