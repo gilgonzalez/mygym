@@ -7,6 +7,12 @@ export async function getWorkoutById(id: string): Promise<{ success: boolean, da
   try {
     const supabase = await createClient()
 
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
+        return { success: false, error: 'Unauthorized' }
+    }
+
     const { data, error } = await supabase
       .from('workouts')
       .select(`
