@@ -5,6 +5,11 @@ import { createClient } from '@/lib/supabase/server'
 export async function getWorkoutLogsAction(userId: string, startDate: string, endDate: string) {
   try {
     const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
+        return { error: 'Unauthorized' }
+    }
     const { data, error } = await supabase
       .from('workout_logs')
       .select('*, workouts(title)')

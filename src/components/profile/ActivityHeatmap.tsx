@@ -35,7 +35,7 @@ export function ActivityHeatmap({ userId, attributes }: ActivityHeatmapProps) {
   const year = currentDate.getFullYear()
   const month = currentDate.getMonth()
 
-  const { data: monthData = [] } = useQuery({
+  const { data: monthData = [], error: queryError } = useQuery({
     queryKey: ['workoutLogs', userId, year, month],
     queryFn: async () => {
       if (!userId) return []
@@ -48,7 +48,11 @@ export function ActivityHeatmap({ userId, attributes }: ActivityHeatmapProps) {
         endOfMonth.toISOString()
       )
 
-      if (!success) throw new Error(error)
+      if (!success) {
+        console.error('Error fetching logs:', error)
+        throw new Error(error)
+      }
+      console.log('Logs fetched:', data?.length)
       return data || []
     },
     enabled: !!userId,
@@ -86,6 +90,10 @@ export function ActivityHeatmap({ userId, attributes }: ActivityHeatmapProps) {
         return newMonthData
     }
   })
+  
+  if (queryError) {
+    console.error('Query error in ActivityHeatmap:', queryError)
+  }
   
   // Calculate offset for first day of month (0 = Sunday, 1 = Monday, etc.)
   const firstDayOfMonth = new Date(year, month, 1).getDay() 
