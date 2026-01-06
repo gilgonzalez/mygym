@@ -104,50 +104,55 @@ function CreateWorkoutContent() {
     }
   }, [])
 
-  const { isLoading: isLoadingWorkout, data: loadedWorkout } = useQuery({
+  const { isLoading: isLoadingWorkout, isError: isWorkoutError, data: loadedWorkout } = useQuery({
     queryKey: ['workout', workoutId],
     queryFn: async () => {
       if (!workoutId) return null
-      const res = await getWorkoutById(workoutId)
-      if (!res.success || !res.data) throw new Error(res.error)
-      
-      const w = res.data
-      // Map DB response to Form Schema
-      return {
-          id: w.id,
-          title: w.title,
-          description: w.description || '',
-          cover: w.cover || '',
-          tags: w.tags || [],
-          difficulty: (w.difficulty as any) || 'beginner',
-          visibility: w.visibility || 'private',
-          audio: w.audio || [],
-          sections: w.sections.map((s: any) => ({
-              id: s.id,
-              name: s.name,
-              orderType: (s.type as any) || 'single',
-              exercises: s.exercises.map((e: any) => ({
-                  id: e.id,
-                  db_id: e.id,
-                  name: e.name,
-                  type: (e.type as any) || 'reps',
-                  reps: e.reps || 0,
-                  sets: e.sets || 0,
-                  duration: e.duration || 0,
-                  rest: e.rest || 0,
-                  media_url: e.media_url,
-                  media_id: e.media_id,
-                  filename: e.filename,
-                  bucket_path: e.bucket_path,
-                  description: e.description || '',
-                  muscle_groups: e.muscle_group || [],
-                  equipment: e.equipment || [],
-                  difficulty: e.difficulty || 'beginner',
-                  link_id: (e as any).link_id
-              }))
-          }))
-      } as WorkoutFormValues
+      const timeout = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Timeout cargando el workout')), 20000)
+      )
+      const fetch = (async () => {
+        const res = await getWorkoutById(workoutId)
+        if (!res.success || !res.data) throw new Error(res.error || 'Failed to fetch workout')
+        const w = res.data
+        return {
+            id: w.id,
+            title: w.title,
+            description: w.description || '',
+            cover: w.cover || '',
+            tags: w.tags || [],
+            difficulty: (w.difficulty as any) || 'beginner',
+            visibility: w.visibility || 'private',
+            audio: w.audio || [],
+            sections: w.sections.map((s: any) => ({
+                id: s.id,
+                name: s.name,
+                orderType: (s.type as any) || 'single',
+                exercises: s.exercises.map((e: any) => ({
+                    id: e.id,
+                    db_id: e.id,
+                    name: e.name,
+                    type: (e.type as any) || 'reps',
+                    reps: e.reps || 0,
+                    sets: e.sets || 0,
+                    duration: e.duration || 0,
+                    rest: e.rest || 0,
+                    media_url: e.media_url,
+                    media_id: e.media_id,
+                    filename: e.filename,
+                    bucket_path: e.bucket_path,
+                    description: e.description || '',
+                    muscle_groups: e.muscle_group || [],
+                    equipment: e.equipment || [],
+                    difficulty: e.difficulty || 'beginner',
+                    link_id: (e as any).link_id
+                }))
+            }))
+        } as WorkoutFormValues
+      })()
+      return Promise.race([fetch, timeout])
     },
+    retry: 1,
     enabled: !!workoutId,
     refetchOnWindowFocus: false
   })
@@ -437,8 +442,23 @@ function CreateWorkoutContent() {
     }
   }, [user, isLoading, router])
 
-  if (isLoading) {
-    return <div className="flex items-center justify-center min-h-screen">Loading...</div>
+  if (isLoading || isLoadingWorkout) {
+    return (
+      <div className="min-h-screen p-8">
+        <div className="animate-pulse space-y-8">
+          <div className="h-6 w-48 bg-muted rounded" />
+          <div className="h-10 w-full bg-muted rounded" />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="h-48 bg-muted rounded" />
+            <div className="h-48 bg-muted rounded" />
+          </div>
+          <div className="h-96 bg-muted rounded" />
+        </div>
+        <div className="mt-6 text-sm text-muted-foreground">
+          Cargando el editor... Si tarda demasiado, recarga la página.
+        </div>
+      </div>
+    )
   }
 
   if (!user) {
