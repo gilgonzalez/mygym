@@ -6,11 +6,11 @@ import { createClient } from '@/lib/supabase/server'
 
 
 // Función para iniciar sesión con proveedores externos
-export const signInWithProvider = async (provider: "google" | "github") => {
+export const signInWithProvider = async (provider: "google" | "github", next?: string) => {
   const headersList = headers();
   const referer = (await headersList).get("referer") ?? "";
   const url = new URL(referer);
-  const redirectParam = url.searchParams.get("redirect");
+  const redirectParam = next || url.searchParams.get("redirect");
 
   // Determine the base URL dynamically
   let siteUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXT_PUBLIC_VERCEL_URL || 'http://localhost:3000';

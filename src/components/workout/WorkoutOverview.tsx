@@ -1,6 +1,18 @@
+import { useState } from 'react'
+import { useRouter, usePathname } from 'next/navigation'
 import { Button } from '@/components/Button'
 import { LocalWorkout } from '@/types/workout/viewTypes'
-import { ChevronLeft, Dumbbell, Info, Play, TimerIcon } from 'lucide-react'
+import { ChevronLeft, Dumbbell, Info, Play, TimerIcon, Lock } from 'lucide-react'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+
+import { GoogleAuthButton } from '@/components/auth/GoogleAuthButton'
 
 interface WorkoutOverviewProps {
   workout: LocalWorkout
@@ -9,13 +21,90 @@ interface WorkoutOverviewProps {
   onBack: () => void
   hasActiveSession?: boolean
   onExerciseClick: (sectionIndex: number, exerciseIndex: number) => void
+  isAuthenticated?: boolean
 }
 
-export function WorkoutOverview({ workout, onStart, onResume, onBack, hasActiveSession, onExerciseClick }: WorkoutOverviewProps) {
+export function WorkoutOverview({ 
+  workout, 
+  onStart, 
+  onResume, 
+  onBack, 
+  hasActiveSession, 
+  onExerciseClick,
+  isAuthenticated = false 
+}: WorkoutOverviewProps) {
+  const router = useRouter()
+  const pathname = usePathname()
   const heroImage = workout.cover
+  const [showLoginDialog, setShowLoginDialog] = useState(false)
+
+  const handleStart = () => {
+    if (!isAuthenticated) {
+      setShowLoginDialog(true)
+      return
+    }
+    onStart()
+  }
+
+  const handleResume = () => {
+    if (!isAuthenticated) {
+      setShowLoginDialog(true)
+      return
+    }
+    if (onResume) onResume()
+  }
 
   return (
     <div className="min-h-screen bg-background flex flex-col pb-24 relative">
+      <Dialog open={showLoginDialog} onOpenChange={setShowLoginDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-center text-2xl font-bold">Join to Start Training</DialogTitle>
+            <DialogDescription className="text-center text-base mt-2">
+              Create an account or log in to track your progress, earn XP, and save your workout history.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="flex flex-col gap-4 py-4">
+            <GoogleAuthButton 
+                text="Continue with Google" 
+                className="w-full h-12 text-base"
+                next={pathname}
+            />
+            
+            <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-background px-2 text-muted-foreground">Or continue with email</span>
+                </div>
+            </div>
+
+            <Button 
+                className="w-full h-12 text-base font-semibold" 
+                onClick={() => router.push(`/auth/login?redirect=${pathname}`)}
+            >
+              Log In
+            </Button>
+            
+            <Button 
+                variant="outline" 
+                className="w-full h-12 text-base"
+                onClick={() => router.push(`/auth/register?redirect=${pathname}`)}
+            >
+              Create Account
+            </Button>
+          </div>
+
+          <DialogFooter className="sm:justify-center">
+             <Button variant="ghost" size="sm" onClick={() => setShowLoginDialog(false)} className="text-muted-foreground">
+              Maybe later
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <div className="relative h-[45vh] min-h-[350px] w-full overflow-hidden">
          <div className="absolute top-4 left-4 z-50">
            <Button 
@@ -121,7 +210,7 @@ export function WorkoutOverview({ workout, onStart, onResume, onBack, hasActiveS
          <div className="max-w-md mx-auto w-full flex gap-3">
            <Button 
              className="flex-1 h-14 text-lg font-bold shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all rounded-2xl" 
-             onClick={onStart}
+             onClick={handleStart}
            >
              <Play className="w-6 h-6 mr-2 fill-current" /> 
              {hasActiveSession ? 'Restart Workout' : 'Start Workout'}
@@ -130,7 +219,7 @@ export function WorkoutOverview({ workout, onStart, onResume, onBack, hasActiveS
            {hasActiveSession && onResume && (
              <Button 
                className="flex-1 h-14 text-lg font-bold shadow-xl shadow-orange-500/20 bg-orange-500 hover:bg-orange-600 hover:scale-[1.02] active:scale-[0.98] transition-all rounded-2xl text-white" 
-               onClick={onResume}
+               onClick={handleResume}
              >
                <Play className="w-6 h-6 mr-2 fill-current" /> 
                Resume

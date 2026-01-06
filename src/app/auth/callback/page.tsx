@@ -73,7 +73,7 @@ function AuthCallbackContent() {
             setUser(tempUser as any)
         }
         
-        const next = searchParams.get('next')
+        const next = searchParams.get('redirect') || searchParams.get('next')
         router.push(next || ('/' as any))
         router.refresh()
 

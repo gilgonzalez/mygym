@@ -6,6 +6,7 @@ import { Loader2 } from 'lucide-react'
 import { WorkoutOverview } from '@/components/workout/WorkoutOverview'
 import { ActiveSession } from '@/components/workout/ActiveSession'
 import { WorkoutCompleted } from '@/components/workout/WorkoutCompleted'
+import { WorkoutError } from '@/components/workout/WorkoutError'
 import { LocalWorkout } from '@/types/workout/viewTypes'
 import { useWorkoutStore } from '@/store/workOutStore'
 import { useQuery } from '@tanstack/react-query'
@@ -38,7 +39,7 @@ export default function WorkoutSessionPage({ params }: { params: { id: string } 
   } = useWorkoutStore()
   
   // Fetch Workout Data
-  const { data: workoutData, isLoading, isError } = useQuery({
+  const { data: workoutData, isLoading, isError, refetch } = useQuery({
     queryKey: ['workout', params.id],
     queryFn: async () => {
       const result = await getWorkoutById(params.id)
@@ -153,7 +154,9 @@ export default function WorkoutSessionPage({ params }: { params: { id: string } 
     )
   }
   
-  if (isError || !workout) return <div className="flex h-screen items-center justify-center text-red-500">Error loading workout</div>
+  if (isError || (!isLoading && !workout)) {
+    return <WorkoutError onRetry={() => refetch()} />
+  }
 
   // 1. Completion View
   if (isCompleted && activeWorkout) {
@@ -177,6 +180,7 @@ export default function WorkoutSessionPage({ params }: { params: { id: string } 
         onBack={() => router.push('/')}
         hasActiveSession={hasActiveSession}
         onExerciseClick={jumpToStep}
+        isAuthenticated={!!user}
       />
     )
   }

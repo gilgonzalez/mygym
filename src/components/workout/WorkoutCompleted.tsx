@@ -137,12 +137,12 @@ export function WorkoutCompleted({ workout, onRestart, initialLogId, xpEarned }:
                           className={cn(
                               "flex flex-col items-center justify-center w-12 h-12 rounded-2xl transition-all duration-300",
                               feeling === item.value 
-                                  ? "bg-background shadow-lg scale-110 ring-2 ring-primary ring-offset-2 ring-offset-background" 
-                                  : "hover:bg-secondary/50 opacity-50 hover:opacity-100 hover:scale-105"
+                                  ? "bg-primary/5 shadow-md scale-110 ring-2 ring-primary ring-offset-2 ring-offset-background" 
+                                  : "hover:bg-secondary/30 hover:scale-105 opacity-80 hover:opacity-100"
                           )}
                           title={item.label}
                       >
-                          <item.icon className={cn("w-7 h-7", item.color, feeling === item.value && "fill-current/10")} />
+                          <item.icon className={cn("w-8 h-8", item.color, feeling === item.value && "fill-current/20")} />
                       </button>
                   ))}
               </div>
