@@ -48,7 +48,7 @@ function LoginForm() {
 
   useEffect(() => {
     if (searchParams?.get('registered') === 'true') {
-      setSuccessMessage('Account created successfully! Please sign in.')
+      setSuccessMessage('Cuenta creada correctamente. Por favor, ve a tu bandeja de entrada o spam y verifica el mail.')
     }
   }, [searchParams])
 
@@ -96,7 +96,11 @@ function LoginForm() {
         router.refresh()
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to sign in')
+      if (err.message === 'Email not confirmed') {
+        setError('Por favor, ve a tu bandeja de entrada o spam y verifica el mail')
+      } else {
+        setError(err.message || 'Failed to sign in')
+      }
     } finally {
       setIsLoading(false)
     }

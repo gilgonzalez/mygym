@@ -3,12 +3,15 @@
 import Link from 'next/link'
 import { useAuthStore } from '@/store/authStore'
 import { Button } from '@/components/Button'
-import { User, LogIn, UserPlus, LogOut, Settings, Flame, Trophy, Timer, Dumbbell, Medal, Zap } from 'lucide-react'
+import { User, LogIn, UserPlus, LogOut, Settings, Flame, Trophy, Timer, Dumbbell, Medal, Zap, FileEdit } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import { Progress } from '@/components/ui/progress'
 import { ActivityHeatmap } from '@/components/profile/ActivityHeatmap'
 import { useEffect, useState } from 'react'
+import { getUserWorkoutsAction } from '@/app/actions/workout/list'
+import { Workout } from '@/types/workout/composite'
+import SimplifiedWorkoutCard from '@/components/SimplifiedWorkoutCard'
 
 interface UserStats {
     level: number
@@ -31,6 +34,26 @@ export default function ProfilePage() {
   const router = useRouter()
   const [stats, setStats] = useState<UserStats | null>(null)
   const [loading, setLoading] = useState(true)
+  const [workouts, setWorkouts] = useState<Workout[]>([])
+  const [workoutsLoading, setWorkoutsLoading] = useState(true)
+  const [filter, setFilter] = useState<'all' | 'public' | 'private' | 'draft'>('all')
+
+  useEffect(() => {
+    async function fetchWorkouts() {
+        if (!user?.id) return
+        try {
+            const res = await getUserWorkoutsAction(user.id)
+            if (res.success && res.data) {
+                setWorkouts(res.data)
+            }
+        } catch (error) {
+            console.error(error)
+        } finally {
+            setWorkoutsLoading(false)
+        }
+    }
+    fetchWorkouts()
+  }, [user?.id])
 
   useEffect(() => {
     async function fetchStats() {
@@ -144,6 +167,11 @@ export default function ProfilePage() {
 
   const xpPercentage = (currentStats.current_xp / currentStats.next_level_xp) * 100
   const totalHours = (currentStats.total_minutes / 60).toFixed(1)
+
+  const filteredWorkouts = workouts.filter(w => {
+    if (filter === 'all') return true
+    return w.visibility === filter
+  })
 
   return (
     <div className="max-w-5xl mx-auto p-4 space-y-8">
@@ -266,20 +294,62 @@ export default function ProfilePage() {
         attributes={stats?.attributes} 
       />
 
-      {/* 3. CONTENT TABS (Workouts, etc) */}
-      <div className="space-y-4">
-        <h2 className="text-xl font-semibold flex items-center gap-2">
-            <Dumbbell className="w-5 h-5" />
-            My Workouts
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div className="border rounded-lg p-8 text-center text-muted-foreground bg-muted/30 border-dashed">
-                <p>No workouts created yet.</p>
-                <Link href="/editor/workout/create" className="text-primary hover:underline mt-2 inline-block">
-                    Create your first workout
+      {/* 2. WORKOUTS FEED */}
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-bold flex items-center gap-2">
+            <Dumbbell className="w-5 h-5 text-primary" />
+            Your Workouts
+          </h2>
+          <Link href="/editor/workout/create">
+            <Button size="sm" className="gap-2">
+              <FileEdit className="w-4 h-4" />
+              Create New
+            </Button>
+          </Link>
+        </div>
+
+        {/* Filter Tabs */}
+        <div className="flex items-center gap-2 p-1 bg-muted/50 rounded-lg w-fit">
+            {([ 'all', 'public', 'private', 'draft'] as const).map((f) => (
+                <button
+                    key={f}
+                    onClick={() => setFilter(f)}
+                    className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all capitalize ${
+                        filter === f 
+                        ? 'bg-background text-foreground shadow-sm' 
+                        : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
+                    }`}
+                >
+                    {f}
+                </button>
+            ))}
+        </div>
+
+        {workoutsLoading ? (
+             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {[1, 2, 3].map((i) => (
+                    <div key={i} className="h-48 bg-card rounded-xl animate-pulse" />
+                ))}
+             </div>
+        ) : filteredWorkouts.length > 0 ? (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {filteredWorkouts.map(workout => (
+                <div key={workout.id} className="relative group">
+                  <SimplifiedWorkoutCard workout={workout} />
+                </div>
+              ))}
+            </div>
+        ) : (
+            <div className="text-center py-12 bg-muted/30 rounded-xl border border-dashed">
+                <Dumbbell className="w-12 h-12 mx-auto text-muted-foreground/50 mb-3" />
+                <h3 className="font-semibold text-lg" >No workouts found</h3>
+                <p className="text-muted-foreground text-sm mb-4">You haven't created any workouts yet.</p>
+                <Link href="/editor/workout/create">
+                    <Button variant="outline" size="sm">Create your first workout</Button>
                 </Link>
             </div>
-        </div>
+        )}
       </div>
     </div>
   )

@@ -1,14 +1,15 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useEffect, useState, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { Loader2, AlertCircle } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { Button } from '@/components/Button'
 
-export default function AuthCallbackPage() {
+function AuthCallbackContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { setUser } = useAuthStore()
   const [error, setError] = useState<string | null>(null)
 
@@ -72,7 +73,8 @@ export default function AuthCallbackPage() {
             setUser(tempUser as any)
         }
         
-        router.push('/')
+        const next = searchParams.get('next')
+        router.push(next || ('/' as any))
         router.refresh()
 
       } catch (err: any) {
@@ -82,7 +84,7 @@ export default function AuthCallbackPage() {
     }
 
     handleAuthCallback()
-  }, [router, setUser])
+  }, [router, setUser, searchParams])
 
   if (error) {
     return (
@@ -106,5 +108,13 @@ export default function AuthCallbackPage() {
         <p className="text-gray-600 dark:text-gray-400">Setting up your profile...</p>
       </div>
     </div>
+  )
+}
+
+export default function AuthCallbackPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-slate-950"><Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" /></div>}>
+      <AuthCallbackContent />
+    </Suspense>
   )
 }
