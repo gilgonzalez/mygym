@@ -1,8 +1,8 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { Button } from '@/components/Button'
 import { LocalWorkout } from '@/types/workout/viewTypes'
-import { ChevronLeft, Dumbbell, Info, Play, TimerIcon, Lock } from 'lucide-react'
+import { ChevronLeft, Dumbbell, Info, Play, TimerIcon, Lock, Target, Layers } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -37,6 +37,38 @@ export function WorkoutOverview({
   const pathname = usePathname()
   const heroImage = workout.cover
   const [showLoginDialog, setShowLoginDialog] = useState(false)
+
+  // Calculate derived stats
+  const { durationInMinutes, uniqueMuscleGroups, uniqueEquipment, totalExercises, totalSets } = useMemo(() => {
+    let totalSeconds = 0
+    let exerciseCount = 0
+    let setsCount = 0
+    const muscleGroups = new Set<string>()
+    const equipment = new Set<string>()
+
+    workout.sections.forEach(section => {
+      section.exercises.forEach(ex => {
+        exerciseCount++
+        const sets = ex.sets || 1
+        setsCount += sets
+        const duration = ex.duration || 0
+        const rest = ex.rest || 0
+        const timePerSet = duration > 0 ? duration : 45 
+        totalSeconds += (timePerSet + rest) * sets
+
+        ex.muscle_groups?.forEach(m => muscleGroups.add(m))
+        ex.equipment?.forEach(e => equipment.add(e))
+      })
+    })
+
+    return {
+      durationInMinutes: Math.ceil(totalSeconds / 60),
+      uniqueMuscleGroups: Array.from(muscleGroups),
+      uniqueEquipment: Array.from(equipment),
+      totalExercises: exerciseCount,
+      totalSets: setsCount
+    }
+  }, [workout])
 
   const handleStart = () => {
     if (!isAuthenticated) {
@@ -136,27 +168,66 @@ export function WorkoutOverview({
          
          <div className="absolute bottom-0 left-0 right-0 p-6 max-w-3xl mx-auto w-full z-10">
            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/20 backdrop-blur-md text-primary text-xs font-medium mb-4 border border-primary/20">
-             <Dumbbell className="w-3 h-3" /> Strength Training
+             <Dumbbell className="w-3 h-3" /> {workout.tags?.[0] || 'Workout'}
            </div>
            <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-foreground mb-2 drop-shadow-sm">
              {workout.title}
            </h1>
            <div className="flex items-center gap-4 text-sm text-muted-foreground font-medium">
              <span className="flex items-center gap-1">
-               <TimerIcon className="w-4 h-4" /> 45 mins
+               <TimerIcon className="w-4 h-4" /> {durationInMinutes} mins
+             </span>
+             <span className="flex items-center gap-1 capitalize">
+               <Info className="w-4 h-4" /> {workout.difficulty || 'General'}
              </span>
              <span className="flex items-center gap-1">
-               <Info className="w-4 h-4" /> Intermediate
+               <Layers className="w-4 h-4" /> {totalExercises} Exercises
              </span>
            </div>
          </div>
       </div>
 
       <div className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 py-8 space-y-8">
-         <div className="prose prose-invert max-w-none">
-           <p className="text-lg text-muted-foreground leading-relaxed">
-             {workout.description}
-           </p>
+         <div className="space-y-6">
+           <div className="prose prose-invert max-w-none">
+             <p className="text-lg text-muted-foreground leading-relaxed">
+               {workout.description}
+             </p>
+           </div>
+
+           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+             {uniqueMuscleGroups.length > 0 && (
+               <div className="bg-card/50 rounded-xl p-4 border border-border/50">
+                 <div className="flex items-center gap-2 mb-3 text-primary font-semibold">
+                   <Target className="w-5 h-5" />
+                   <h4>Target Muscles</h4>
+                 </div>
+                 <div className="flex flex-wrap gap-2">
+                   {uniqueMuscleGroups.map((muscle) => (
+                     <span key={muscle} className="px-2.5 py-1 rounded-md bg-secondary text-secondary-foreground text-xs font-medium capitalize border border-border/50">
+                       {muscle.replace('_', ' ')}
+                     </span>
+                   ))}
+                 </div>
+               </div>
+             )}
+
+             {uniqueEquipment.length > 0 && (
+               <div className="bg-card/50 rounded-xl p-4 border border-border/50">
+                 <div className="flex items-center gap-2 mb-3 text-primary font-semibold">
+                   <Dumbbell className="w-5 h-5" />
+                   <h4>Equipment Needed</h4>
+                 </div>
+                 <div className="flex flex-wrap gap-2">
+                   {uniqueEquipment.map((item) => (
+                     <span key={item} className="px-2.5 py-1 rounded-md bg-secondary text-secondary-foreground text-xs font-medium capitalize border border-border/50">
+                       {item.replace('_', ' ')}
+                     </span>
+                   ))}
+                 </div>
+               </div>
+             )}
+           </div>
          </div>
 
          <div className="space-y-8">
