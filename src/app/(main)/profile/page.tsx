@@ -8,9 +8,9 @@ import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import { Progress } from '@/components/ui/progress'
 import { ActivityHeatmap } from '@/components/profile/ActivityHeatmap'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { getUserWorkoutsAction } from '@/app/actions/workout/list'
-import { Workout } from '@/types/workout/composite'
+import { getUserStatsAction } from '@/app/actions/user/getStats'
 import SimplifiedWorkoutCard from '@/components/SimplifiedWorkoutCard'
 
 interface UserStats {
@@ -29,89 +29,74 @@ interface UserStats {
     }
 }
 
+import { useQuery } from '@tanstack/react-query'
+
 export default function ProfilePage() {
   const { user, logout } = useAuthStore()
   const router = useRouter()
-  const [stats, setStats] = useState<UserStats | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [workouts, setWorkouts] = useState<Workout[]>([])
-  const [workoutsLoading, setWorkoutsLoading] = useState(true)
   const [filter, setFilter] = useState<'all' | 'public' | 'private' | 'draft'>('all')
 
-  useEffect(() => {
-    async function fetchWorkouts() {
-        if (!user?.id) return
-        try {
-            const res = await getUserWorkoutsAction(user.id)
-            if (res.success && res.data) {
-                setWorkouts(res.data)
-            }
-        } catch (error) {
-            console.error(error)
-        } finally {
-            setWorkoutsLoading(false)
-        }
-    }
-    fetchWorkouts()
-  }, [user?.id])
+  const { data: workouts = [], isLoading: workoutsLoading } = useQuery({
+    queryKey: ['userWorkouts', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return []
+      const res = await getUserWorkoutsAction(user.id)
+      return res.success && res.data ? res.data : []
+    },
+    enabled: !!user?.id
+  })
 
-  useEffect(() => {
-    async function fetchStats() {
-      if (!user?.id) return
-      try {
-        const { data, error } = await supabase
-          .from('user_stats')
-          .select('*')
-          .eq('user_id', user.id)
-          .single()
-
-        if (error && error.code !== 'PGRST116') {
-            console.error('Error fetching stats:', error)
-        }
-
-        if (data) {
-            setStats({
-                level: data.level ?? 1,
-                current_xp: data.current_xp ?? 0,
-                next_level_xp: data.next_level_xp ?? 1000,
-                streak_current: data.streak_current ?? 0,
-                total_workouts: data.total_workouts ?? 0,
-                total_minutes: data.total_minutes ?? 0,
-                rank_title: data.rank_title ?? 'Novice',
-                // @ts-ignore - Supabase types return Json, but we know the structure
-                attributes: data.attributes || {
-                    strength: 0,
-                    agility: 0,
-                    endurance: 0,
-                    wisdom: 0
-                }
-            })
-        } else {
-            // Default stats if not found
-            setStats({
-                level: 1,
-                current_xp: 0,
-                next_level_xp: 1000,
-                streak_current: 0,
-                total_workouts: 0,
-                total_minutes: 0,
-                rank_title: 'Novice',
-                attributes: {
-                    strength: 0,
-                    agility: 0,
-                    endurance: 0,
-                    wisdom: 0
-                }
-            })
-        }
-      } catch (e) {
-        console.error(e)
-      } finally {
-        setLoading(false)
+  const { data: stats, isLoading: statsLoading } = useQuery({
+    queryKey: ['userStats', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null
+      
+      const res = await getUserStatsAction(user.id)
+      
+      if (!res.success && res.error) {
+        console.error('Error fetching stats:', res.error)
       }
-    }
-    fetchStats()
-  }, [user?.id])
+
+      const data = res.data
+
+      if (data) {
+        return {
+          level: data.level ?? 1,
+          current_xp: data.current_xp ?? 0,
+          next_level_xp: data.next_level_xp ?? 1000,
+          streak_current: data.streak_current ?? 0,
+          total_workouts: data.total_workouts ?? 0,
+          total_minutes: data.total_minutes ?? 0,
+          rank_title: data.rank_title ?? 'Novice',
+          // @ts-ignore
+          attributes: data.attributes || {
+            strength: 0,
+            agility: 0,
+            endurance: 0,
+            wisdom: 0
+          }
+        } as UserStats
+      }
+      
+      // Return default stats if not found
+      return {
+        level: 1,
+        current_xp: 0,
+        next_level_xp: 1000,
+        streak_current: 0,
+        total_workouts: 0,
+        total_minutes: 0,
+        rank_title: 'Novice',
+        attributes: {
+          strength: 0,
+          agility: 0,
+          endurance: 0,
+          wisdom: 0
+        }
+      } as UserStats
+    },
+    enabled: !!user?.id
+  })
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
