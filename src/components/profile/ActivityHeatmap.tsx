@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Activity, ChevronLeft, ChevronRight, Dumbbell, Zap, Swords, Shield, Brain, Footprints, BarChart2 } from "lucide-react"
+import { Activity, ChevronLeft, ChevronRight, Dumbbell, Zap, Swords, Shield, Brain, Footprints, BarChart2, Clock } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
@@ -10,11 +10,18 @@ import { cn } from "@/lib/utils"
 import { getWorkoutLogsAction } from "@/app/actions/user/getLogs"
 import { useQuery } from "@tanstack/react-query"
 
+type WorkoutSession = {
+  title: string
+  xpEarned: number
+  duration: number
+  completedAt: string
+}
+
 type ActivityDay = {
   date: Date
   intensity: number // 0-4
-  workoutTitle?: string
-  xpGained?: number
+  workouts: WorkoutSession[]
+  totalXp: number
 }
 
 interface ActivityHeatmapProps {
@@ -69,23 +76,27 @@ export function ActivityHeatmap({ userId, attributes }: ActivityHeatmapProps) {
             })
 
             let intensity = 0
-            let workoutTitle
-            let xpGained = 0
+            let workouts: WorkoutSession[] = []
+            let totalXp = 0
 
             if (dayLogs.length > 0) {
-                xpGained = dayLogs.reduce((sum, log) => sum + (log.xp_earned || 0), 0)
+                totalXp = dayLogs.reduce((sum, log) => sum + (log.xp_earned || 0), 0)
                 
-                if (xpGained > 200) intensity = 4
-                else if (xpGained > 100) intensity = 3
-                else if (xpGained > 50) intensity = 2
+                if (totalXp > 200) intensity = 4
+                else if (totalXp > 100) intensity = 3
+                else if (totalXp > 50) intensity = 2
                 else intensity = 1
 
-                // @ts-ignore
-                workoutTitle = dayLogs[0].workouts?.title || "Workout Session"
-                if (dayLogs.length > 1) workoutTitle += ` (+${dayLogs.length - 1} more)`
+                workouts = dayLogs.map(log => ({
+                    // @ts-ignore
+                    title: log.workouts?.title || "Workout Session",
+                    xpEarned: log.xp_earned || 0,
+                    duration: (log.duration_seconds || 0) / 60,
+                    completedAt: log.completed_at || ''
+                }))
             }
             
-            newMonthData.push({ date, intensity, workoutTitle, xpGained })
+            newMonthData.push({ date, intensity, workouts, totalXp })
         }
         return newMonthData
     }
@@ -225,7 +236,12 @@ export function ActivityHeatmap({ userId, attributes }: ActivityHeatmapProps) {
                             <TooltipContent sideOffset={5} className="bg-popover/95 backdrop-blur-sm border-border/50 shadow-xl">
                                 <p className="text-xs font-bold">{day.date.toLocaleDateString()}</p>
                                 {day.intensity > 0 ? (
-                                    <p className="text-xs font-medium text-muted-foreground mt-1">{day.workoutTitle} <span className="text-primary font-bold">(+{day.xpGained} XP)</span></p>
+                                    <div className="mt-1">
+                                        <p className="text-xs font-medium text-muted-foreground">
+                                            {day.workouts.length} workout{day.workouts.length > 1 ? 's' : ''}
+                                            <span className="text-primary font-bold ml-1">(+{day.totalXp} XP)</span>
+                                        </p>
+                                    </div>
                                 ) : (
                                     <p className="text-xs text-muted-foreground">Rest Day</p>
                                 )}
@@ -290,42 +306,49 @@ export function ActivityHeatmap({ userId, attributes }: ActivityHeatmapProps) {
                     <Swords className="w-5 h-5" />
                     Activity Report
                 </DialogTitle>
-                <DialogDescription>
-                    {selectedDay?.date.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                <DialogDescription asChild>
+                    <div className="flex flex-col gap-1.5 mt-1.5">
+                        <span className="text-base text-foreground/80">
+                            {selectedDay?.date.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                        </span>
+                        <div className="flex items-center gap-4 text-sm font-medium text-muted-foreground">
+                            <span className="flex items-center gap-1.5 bg-secondary/30 px-2 py-0.5 rounded-md">
+                                <Clock className="w-3.5 h-3.5" />
+                                {Math.round(selectedDay?.workouts.reduce((acc, curr) => acc + curr.duration, 0) || 0)} mins total
+                            </span>
+                            <span className="flex items-center gap-1.5 bg-amber-500/10 text-amber-600 dark:text-amber-500 px-2 py-0.5 rounded-md">
+                                <Zap className="w-3.5 h-3.5" />
+                                {selectedDay?.totalXp || 0} XP total
+                            </span>
+                        </div>
+                    </div>
                 </DialogDescription>
             </DialogHeader>
             
-            <div className="py-4 space-y-2">
-                {/* Single Row Workout Display */}
-                <div className="flex flex-col sm:flex-row sm:items-center gap-3 bg-muted/30 p-4 rounded-xl border border-border/50 hover:bg-muted/50 transition-colors shadow-sm">
-                    <div className="flex items-center gap-3 w-full sm:w-auto">
-                        {/* Icon */}
-                        <div className="bg-primary/10 p-2.5 rounded-xl ring-1 ring-primary/20 shrink-0 shadow-sm">
-                            <Dumbbell className="w-5 h-5 text-primary" />
+            <div className="py-4 space-y-3">
+                {selectedDay?.workouts.map((workout, idx) => (
+                    <div key={idx} className="flex flex-col sm:flex-row sm:items-center gap-3 bg-muted/30 p-4 rounded-xl border border-border/50 hover:bg-muted/50 transition-colors shadow-sm">
+                        <div className="p-3 rounded-lg bg-background shadow-sm border border-border/50 shrink-0">
+                            <Dumbbell className="w-6 h-6 text-primary" />
                         </div>
-                        
-                        {/* Title */}
-                        <div className="flex-1 min-w-[120px] sm:hidden">
-                            <h4 className="font-bold text-sm text-foreground truncate">{selectedDay?.workoutTitle}</h4>
-                            <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold">Workout</p>
+                        <div className="flex-1 min-w-0">
+                            <h4 className="font-bold text-base truncate">{workout.title}</h4>
+                            <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
+                                <span className="flex items-center gap-1">
+                                    <Clock className="w-3 h-3" />
+                                    {Math.round(workout.duration)} mins
+                                </span>
+                                <span className="w-1 h-1 rounded-full bg-muted-foreground/30" />
+                                <span>{new Date(workout.completedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                            </div>
+                        </div>
+                        <div className="flex flex-col items-end gap-1 shrink-0">
+                            <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20 hover:bg-primary/20">
+                                +{workout.xpEarned} XP
+                            </Badge>
                         </div>
                     </div>
-                    
-                    {/* Title (Desktop) */}
-                    <div className="hidden sm:block flex-1 min-w-[120px]">
-                        <h4 className="font-bold text-sm text-foreground truncate">{selectedDay?.workoutTitle}</h4>
-                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold">Workout</p>
-                    </div>
-
-                    {/* Right Side: Stats (Top) & XP (Bottom) */}
-                    <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-2 sm:gap-1.5 w-full sm:w-auto mt-2 sm:mt-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-border/50">
-                        {/* XP Badge */}
-                        <Badge variant="secondary" className="text-[10px] px-2.5 py-0.5 bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800 gap-1.5 shadow-sm">
-                            <Zap className="w-3 h-3 fill-amber-500 text-amber-500" />
-                            +{selectedDay?.xpGained} XP
-                        </Badge>
-                    </div>
-                </div>
+                ))}
             </div>
         </DialogContent>
     </Dialog>

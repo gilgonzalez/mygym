@@ -12,7 +12,7 @@ import { useWorkoutStore } from '@/store/workOutStore'
 import { useQuery } from '@tanstack/react-query'
 import { getWorkoutById } from '@/app/actions/workout/get'
 import { useAuthStore } from '@/store/authStore'
-import { supabase } from '@/lib/supabase'
+import { completeWorkoutAction } from '@/app/actions/user/completeWorkout'
 
 export default function WorkoutSessionPage({ params }: { params: { id: string } }) {
   const router = useRouter()
@@ -114,19 +114,18 @@ export default function WorkoutSessionPage({ params }: { params: { id: string } 
         const xpEarned = Math.ceil(durationMinutes * 5) + 50 // Base 50 + 5 per minute
         setXpEarnedState(xpEarned)
 
-        // Call RPC
-        supabase.rpc('complete_workout_session', {
-            p_user_id: user.id,
-            p_workout_id: activeWorkout.id,
-            p_duration_minutes: durationMinutes,
-            p_xp_earned: xpEarned
-        }).then(({ data, error }) => {
-            if (error) {
-                console.error('Error logging workout stats:', error)
+        // Call Server Action
+        completeWorkoutAction({
+            workoutId: activeWorkout.id,
+            durationMinutes: durationMinutes,
+            xpEarned: xpEarned
+        }).then((result) => {
+            if (!result.success) {
+                console.error('Error logging workout stats:', result.error)
             } else {
-                console.log('Workout logged successfully:', data)
-                if (data && typeof data === 'object' && 'log_id' in data) {
-                    setCurrentLogId((data as any).log_id)
+                console.log('Workout logged successfully:', result.data)
+                if (result.data && typeof result.data === 'object' && 'log_id' in result.data) {
+                    setCurrentLogId((result.data as any).log_id)
                 }
             }
         })
