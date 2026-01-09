@@ -1,7 +1,7 @@
 'use client'
 import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
-import { Heart, Clock, BarChart, User, Play, MoreVertical, Edit, Trash2, Loader2, Zap,  Brain, Footprints, Swords, Shield } from 'lucide-react'
+import { Heart, Clock, BarChart, User, Play, MoreVertical, Edit, Trash2, Loader2, Zap,  Brain, Footprints, Swords, Shield, Share2 } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
 import { Workout } from '../types/workout/composite'
 import { Card } from './Card'
@@ -9,6 +9,7 @@ import { Button } from './Button'
 import { deleteWorkoutAction } from '@/app/actions/workout/delete'
 import { useRouter } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
+import { ShareWorkoutDialog } from './share/ShareWorkoutDialog'
 
 interface WorkoutCardProps {
   workout: Workout
@@ -17,6 +18,7 @@ interface WorkoutCardProps {
 export default function WorkoutCard({ workout }: WorkoutCardProps) {
   const [likesCount, setLikesCount] = useState(workout.likes_count || 0)
   const [isLiked, setIsLiked] = useState(workout.is_liked || false)
+  const [showShare, setShowShare] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [isLoadingEdit, setIsLoadingEdit] = useState(false)
@@ -224,6 +226,9 @@ export default function WorkoutCard({ workout }: WorkoutCardProps) {
                       <Heart className={`w-4 h-4 ${isLiked ? 'fill-current' : 'group-hover/like:scale-110 transition-transform'}`} />
                       <span className="font-medium text-xs">{likesCount}</span>
                     </button>
+                    <button onClick={() => setShowShare(true)} className="flex items-center gap-2 transition-colors hover:text-primary group/share">
+                      <Share2 className="w-4 h-4 group-hover/share:scale-110 transition-transform" />
+                    </button>
                     <div className="flex items-center gap-2">
                       <Clock className="w-4 h-4" />
                       <span className="text-xs">{duration} min</span>
@@ -282,6 +287,12 @@ export default function WorkoutCard({ workout }: WorkoutCardProps) {
             </Link>
          </div>
       </div>
+      
+      <ShareWorkoutDialog 
+        open={showShare} 
+        onOpenChange={setShowShare} 
+        workout={workout} 
+      />
     </Card>
   )
 }

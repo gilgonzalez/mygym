@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { Button } from '@/components/Button'
 import { LocalWorkout } from '@/types/workout/viewTypes'
-import { ChevronLeft, Dumbbell, Info, Play, TimerIcon, Lock, Target, Layers } from 'lucide-react'
+import { ChevronLeft, Dumbbell, Info, Play, TimerIcon, Lock, Target, Layers, Share2 } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dialog"
 
 import { GoogleAuthButton } from '@/components/auth/GoogleAuthButton'
+import { ShareWorkoutDialog } from '../share/ShareWorkoutDialog'
 
 interface WorkoutOverviewProps {
   workout: LocalWorkout
@@ -37,6 +38,7 @@ export function WorkoutOverview({
   const pathname = usePathname()
   const heroImage = workout.cover
   const [showLoginDialog, setShowLoginDialog] = useState(false)
+  const [showShare, setShowShare] = useState(false)
 
   // Calculate derived stats
   const { durationInMinutes, uniqueMuscleGroups, uniqueEquipment, totalExercises, totalSets } = useMemo(() => {
@@ -144,6 +146,12 @@ export function WorkoutOverview({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      
+      <ShareWorkoutDialog 
+        open={showShare} 
+        onOpenChange={setShowShare} 
+        workout={workout} 
+      />
 
       <div className="relative h-[45vh] min-h-[350px] w-full overflow-hidden">
          <div className="absolute top-4 left-4 z-50">
@@ -154,6 +162,17 @@ export function WorkoutOverview({
              onClick={onBack}
            >
              <ChevronLeft className="w-6 h-6" />
+           </Button>
+         </div>
+
+         <div className="absolute top-4 right-4 z-50">
+           <Button 
+             variant="ghost" 
+             size="icon" 
+             className="h-10 w-10 rounded-full bg-black/20 backdrop-blur-md text-white hover:bg-black/40 border border-white/10" 
+             onClick={() => setShowShare(true)}
+           >
+             <Share2 className="w-5 h-5" />
            </Button>
          </div>
 

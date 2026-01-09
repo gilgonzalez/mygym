@@ -2,13 +2,14 @@
 
 import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
-import { Heart, Clock, User, MoreVertical, Edit, Trash2, Loader2, Zap, Lock, Globe, FileEdit } from 'lucide-react'
+import { Heart, Clock, User, MoreVertical, Edit, Trash2, Loader2, Zap, Lock, Globe, FileEdit, Share2 } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
 import { Workout } from '../types/workout/composite'
 import { Card } from './Card'
 import { deleteWorkoutAction } from '@/app/actions/workout/delete'
 import { useRouter } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
+import { ShareWorkoutDialog } from './share/ShareWorkoutDialog'
 
 interface SimplifiedWorkoutCardProps {
   workout: Workout
@@ -17,8 +18,9 @@ interface SimplifiedWorkoutCardProps {
 export default function SimplifiedWorkoutCard({ workout }: SimplifiedWorkoutCardProps) {
   const [likesCount, setLikesCount] = useState(workout.likes_count || 0)
   const [isLiked, setIsLiked] = useState(workout.is_liked || false)
-  const [showMenu, setShowMenu] = useState(false)
+  const [showShare, setShowShare] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [showMenu, setShowMenu] = useState(false)
   
   const { user } = useAuthStore()
   const router = useRouter()
@@ -179,6 +181,9 @@ export default function SimplifiedWorkoutCard({ workout }: SimplifiedWorkoutCard
                   <Heart className={`w-3.5 h-3.5 ${isLiked ? 'fill-current' : 'group-hover/like:scale-110 transition-transform'}`} />
                   <span className="font-medium">{likesCount}</span>
                 </button>
+                <button onClick={(e) => { e.preventDefault(); setShowShare(true); }} className="flex items-center gap-1 transition-colors hover:text-primary group/share">
+                  <Share2 className="w-3.5 h-3.5 group-hover/share:scale-110 transition-transform" />
+                </button>
                 <div className="flex items-center gap-1">
                   <Clock className="w-3.5 h-3.5" />
                   <span>{duration}m</span>
@@ -191,6 +196,12 @@ export default function SimplifiedWorkoutCard({ workout }: SimplifiedWorkoutCard
             </div>
         </div>
       </div>
+      
+      <ShareWorkoutDialog 
+        open={showShare} 
+        onOpenChange={setShowShare} 
+        workout={workout} 
+      />
     </Card>
   )
 }

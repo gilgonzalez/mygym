@@ -4,7 +4,8 @@ import { useState, useTransition } from 'react'
 import { Button } from '@/components/Button'
 import { Card, CardContent } from '@/components/Card'
 import { LocalWorkout } from '@/types/workout/viewTypes'
-import { Trophy, Dumbbell, Loader2, Star, Timer, Frown, Meh, Smile, Zap, BatteryWarning } from 'lucide-react'
+import { ShareWorkoutDialog } from '../share/ShareWorkoutDialog'
+import { Trophy, Dumbbell, Loader2, Star, Timer, Frown, Meh, Smile, Zap, BatteryWarning, Share2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { logWorkoutCompletion } from '@/app/actions/workout/log'
@@ -25,6 +26,7 @@ export function WorkoutCompleted({ workout, onRestart, initialLogId, xpEarned }:
   const [hoverRating, setHoverRating] = useState(0)
   const [feeling, setFeeling] = useState<string>('happy')
   const [isPending, startTransition] = useTransition()
+  const [showShare, setShowShare] = useState(false)
   
   const { startTime, endTime } = useWorkoutStore()
 
@@ -58,7 +60,7 @@ export function WorkoutCompleted({ workout, onRestart, initialLogId, xpEarned }:
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4 sm:p-6 overflow-y-auto">
-      <Card className="max-w-lg w-full border-primary/20 glow-card animate-in zoom-in-95 duration-500 shadow-2xl my-auto">
+      <Card className="max-w-lg w-full border-primary/20 glow-card animate-in zoom-in-95 duration-500 shadow-2xl my-auto relative">
         <CardContent className="p-6 flex flex-col items-center text-center space-y-4">
           
           {/* Header */}
@@ -190,6 +192,12 @@ export function WorkoutCompleted({ workout, onRestart, initialLogId, xpEarned }:
 
         </CardContent>
       </Card>
+      
+      <ShareWorkoutDialog 
+        open={showShare} 
+        onOpenChange={setShowShare} 
+        workout={workout} 
+      />
     </div>
   )
 }
