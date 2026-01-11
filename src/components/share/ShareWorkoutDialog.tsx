@@ -80,10 +80,10 @@ export function ShareWorkoutDialog({ open, onOpenChange, workout }: ShareWorkout
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent showCloseButton={false} className="sm:max-w-[420px] p-6 !rounded-3xl border-border/50 shadow-2xl bg-background/95 backdrop-blur-xl">
-                <div className="flex flex-col gap-6">
+            <DialogContent showCloseButton={false} className="w-[90vw] max-w-[420px] p-4 sm:p-6 rounded-2xl sm:rounded-3xl border-border/50 shadow-2xl bg-background/95 backdrop-blur-xl gap-0">
+                <div className="flex flex-col gap-5 sm:gap-6">
                     {/* Header & Preview */}
-                    <div className="space-y-4">
+                    <div className="space-y-3 sm:space-y-4">
                         <div className="flex items-center justify-between">
                             <h2 className="text-lg font-semibold tracking-tight">Share Workout</h2>
                             <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full -mr-2" onClick={() => onOpenChange(false)}>
@@ -91,20 +91,20 @@ export function ShareWorkoutDialog({ open, onOpenChange, workout }: ShareWorkout
                             </Button>
                         </div>
                         
-                        <div className="relative overflow-hidden rounded-2xl border border-border/50 bg-secondary/30">
+                        <div className="relative overflow-hidden rounded-xl sm:rounded-2xl border border-border/50 bg-secondary/30">
                             <div className="flex items-stretch">
-                                <div className="w-24 bg-muted shrink-0 relative overflow-hidden">
+                                <div className="w-20 sm:w-24 bg-muted shrink-0 relative overflow-hidden">
                                     {workout.cover ? (
                                         <img src={workout.cover} alt="" className="w-full h-full object-cover" />
                                     ) : (
                                         <div className="w-full h-full flex items-center justify-center bg-primary/10">
-                                            <Share2 className="w-8 h-8 text-primary/40" />
+                                            <Share2 className="w-6 h-6 sm:w-8 sm:h-8 text-primary/40" />
                                         </div>
                                     )}
                                 </div>
-                                <div className="flex-1 p-4 flex flex-col justify-center min-w-0">
-                                    <h3 className="font-bold text-foreground truncate">{workout.title}</h3>
-                                    <p className="text-xs text-muted-foreground mt-1 truncate">
+                                <div className="flex-1 p-3 sm:p-4 flex flex-col justify-center min-w-0">
+                                    <h3 className="font-bold text-sm sm:text-base text-foreground truncate">{workout.title}</h3>
+                                    <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1 truncate">
                                         Check out this routine on MyGym
                                     </p>
                                 </div>
@@ -113,64 +113,64 @@ export function ShareWorkoutDialog({ open, onOpenChange, workout }: ShareWorkout
                     </div>
 
                     {/* Social Row */}
-                    <div className="flex items-center justify-between px-2">
+                    <div className="grid grid-cols-4 gap-2 sm:flex sm:items-center sm:justify-between px-0 sm:px-2">
                         {shareLinks.map((link) => (
-                            <div key={link.name} className="flex flex-col items-center gap-2 group cursor-pointer">
+                            <div key={link.name} className="flex flex-col items-center gap-1.5 sm:gap-2 group cursor-pointer">
                                 <a
                                     href={link.url}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className={cn(
-                                        "w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 shadow-sm hover:scale-110 hover:shadow-md",
+                                        "w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center transition-all duration-300 shadow-sm hover:scale-110 hover:shadow-md",
                                         link.color
                                     )}
                                 >
-                                    <link.icon className="w-6 h-6" />
+                                    <link.icon className="w-5 h-5 sm:w-6 sm:h-6" />
                                 </a>
-                                <span className="text-[10px] font-medium text-muted-foreground group-hover:text-foreground transition-colors">
+                                <span className="text-[9px] sm:text-[10px] font-medium text-muted-foreground group-hover:text-foreground transition-colors">
                                     {link.name}
                                 </span>
                             </div>
                         ))}
                         
                         {/* Instagram Special Case */}
-                        <div className="flex flex-col items-center gap-2 group cursor-pointer">
+                        <div className="flex flex-col items-center gap-1.5 sm:gap-2 group cursor-pointer">
                             <button
                                 onClick={handleInstagramCopy}
                                 className={cn(
-                                    "w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 shadow-sm hover:scale-110 hover:shadow-md",
+                                    "w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center transition-all duration-300 shadow-sm hover:scale-110 hover:shadow-md",
                                     "bg-gradient-to-tr from-[#f09433] via-[#dc2743] to-[#bc1888] text-white"
                                 )}
                             >
-                                {copiedInstagram ? <Check className="w-6 h-6" /> : <InstagramIcon className="w-6 h-6" />}
+                                {copiedInstagram ? <Check className="w-5 h-5 sm:w-6 sm:h-6" /> : <InstagramIcon className="w-5 h-5 sm:w-6 sm:h-6" />}
                             </button>
-                            <span className="text-[10px] font-medium text-muted-foreground group-hover:text-foreground transition-colors">
+                            <span className="text-[9px] sm:text-[10px] font-medium text-muted-foreground group-hover:text-foreground transition-colors">
                                 {copiedInstagram ? "Copied!" : "Stories"}
                             </span>
                         </div>
                     </div>
 
                     {/* Copy Link Input */}
-                    <div className="space-y-2 pt-2">
-                        <label className="text-xs font-semibold text-muted-foreground ml-1 uppercase tracking-wider">Page Link</label>
+                    <div className="space-y-1.5 sm:space-y-2 pt-1 sm:pt-2">
+                        <label className="text-[10px] sm:text-xs font-semibold text-muted-foreground ml-1 uppercase tracking-wider">Page Link</label>
                         <div className="flex items-center gap-2 p-1.5 rounded-xl border bg-muted/40 focus-within:ring-2 focus-within:ring-primary/20 transition-all">
-                            <div className="p-2 rounded-lg bg-background border shadow-sm shrink-0">
-                                <LinkIcon className="w-4 h-4 text-muted-foreground" />
+                            <div className="p-1.5 sm:p-2 rounded-lg bg-background border shadow-sm shrink-0">
+                                <LinkIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground" />
                             </div>
                             <input 
                                 readOnly 
                                 value={shareUrl} 
-                                className="flex-1 bg-transparent text-xs font-medium text-foreground focus:outline-none truncate px-2"
+                                className="flex-1 bg-transparent text-xs font-medium text-foreground focus:outline-none truncate px-1"
                             />
                             <Button 
                                 size="sm" 
                                 onClick={handleCopy} 
                                 className={cn(
-                                    "shrink-0 gap-1.5 h-8 px-4 rounded-lg transition-all duration-300",
+                                    "shrink-0 gap-1.5 h-7 sm:h-8 px-3 sm:px-4 rounded-lg transition-all duration-300 text-xs sm:text-sm",
                                     copied ? "bg-green-500 hover:bg-green-600 text-white" : ""
                                 )}
                             >
-                                {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                                {copied ? <Check className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> : <Copy className="w-3 h-3 sm:w-3.5 sm:h-3.5" />}
                                 <span>{copied ? "Copied" : "Copy"}</span>
                             </Button>
                         </div>

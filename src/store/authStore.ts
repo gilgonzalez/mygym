@@ -27,17 +27,34 @@ export const useAuthStore = create<AuthState>()(
       },
       initialize: async () => {
         try {
+          // Primero intentamos recuperar la sesión del almacenamiento local
           const { data: { session } } = await supabase.auth.getSession()
           
           if (session?.user) {
-            const { data: userData } = await supabase
-              .from('users')
-              .select('*')
-              .eq('id', session.user.id)
-              .single()
+            // Si hay sesión local, intentamos refrescarla para asegurar que las cookies estén sincronizadas
+            // Esto es crucial para que las Server Actions funcionen si las cookies se borraron
+            const { data: { session: refreshedSession }, error: refreshError } = await supabase.auth.refreshSession()
             
-            if (userData) {
-              set({ user: userData, isAuthenticated: true })
+            if (refreshError) {
+               console.warn('Error refreshing session:', refreshError)
+               // Si falla el refresh (token inválido), hacemos logout
+               set({ user: null, isAuthenticated: false })
+               await supabase.auth.signOut()
+               // Return a dummy cleanup function to satisfy the type
+               return () => {}
+            }
+
+            const activeSession = refreshedSession || session
+            if (activeSession?.user) {
+                const { data: userData } = await supabase
+                .from('users')
+                .select('*')
+                .eq('id', activeSession.user.id)
+                .single()
+                
+                if (userData) {
+                set({ user: userData, isAuthenticated: true })
+                }
             }
           }
         } catch (error) {

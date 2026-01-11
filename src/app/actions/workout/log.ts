@@ -10,10 +10,10 @@ export async function logWorkoutCompletion(
 ) {
   try {
     const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-
-    if (!user) {
-      return { success: false, error: 'User not authenticated' }
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    console.log({userDatabase: user, authError})
+    if (!user || authError) {
+      return { success: false, error: 'User not authenticated: ' + (authError?.message || 'No session') }
     }
 
     if (logId) {
