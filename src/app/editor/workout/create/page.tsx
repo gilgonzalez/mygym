@@ -41,6 +41,7 @@ import { WorkoutTag } from '@/constants/workout-tags'
 import { ExercisesVault } from '../components/ExercisesVault'
 import { WorkoutTagSelector } from '@/components/ui/workout-tag-selector'
 import { Exercise } from '@/app/actions/exercises/list'
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 
 // --- Schema Definition ---
 const exerciseSchema = z.object({
@@ -91,6 +92,7 @@ function CreateWorkoutContent() {
   
   const { user, isLoading } = useAuthStore()
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isMetaOpen, setIsMetaOpen] = useState(false)
   const [isRetry, setIsRetry] = useState(false)
   const [showPreview, setShowPreview] = useState(true)
   const [previewDevice, setPreviewDevice] = useState<'mobile' | 'desktop'>('mobile')
@@ -485,6 +487,9 @@ function CreateWorkoutContent() {
         return
     }
     
+    // Cerrar el diálogo de metadatos al confirmar el guardado
+    setIsMetaOpen(false)
+
     setUploadProgress(0)
     setUploadStatus('')
     setIsRetry(false)
@@ -531,7 +536,7 @@ function CreateWorkoutContent() {
              </div>
           )}
 
-          <Button onClick={handleSubmit(onSubmit)} disabled={isSubmitting} size="sm" className="gap-2 rounded-full px-4 md:px-6 font-bold">
+          <Button onClick={() => setIsMetaOpen(true)} disabled={isSubmitting} size="sm" className="gap-2 rounded-full px-4 md:px-6 font-bold">
             {isSubmitting ? (
                 <>
                     <RotateCw className="h-4 w-4 animate-spin" />
@@ -557,158 +562,12 @@ function CreateWorkoutContent() {
         
         {/* LEFT: Editor Panel */}
         <div className={cn(
-          "flex-1 overflow-y-auto p-4 md:p-8 transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] scrollbar-hide",
+          "flex-1 overflow-y-auto p-4 md:p-8 transition-all duration-500 ease-&lsqb;cubic-bezier(0.32,0.72,0,1)&rsqb; scrollbar-hide",
           showPreview ? (previewDevice === 'mobile' ? "hidden lg:block lg:mr-[420px]" : "hidden lg:block lg:mr-[65%]") : ""
         )}>
           <div className="max-w-5xl mx-auto space-y-10 pb-40">
             
-            {/* Metadata Card */}
-            <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-700">
-              <div className="space-y-4">
-                <Input 
-                  {...register('title')} 
-                  placeholder="Workout Title" 
-                  className="text-5xl md:text-6xl font-black tracking-tighter border-none px-0 h-auto focus-visible:ring-0 placeholder:text-muted-foreground/20 bg-transparent text-foreground"
-                />
-                {errors.title && <p className="text-red-500 text-sm font-medium">{errors.title.message}</p>}
-                <Textarea 
-                  {...register('description')} 
-                  placeholder="What's the goal of this session?" 
-                  className="resize-none border-none px-0 min-h-[40px] focus-visible:ring-0 text-xl text-muted-foreground bg-transparent font-medium"
-                />
-                {errors.description && <p className="text-red-500 text-sm font-medium">{errors.description.message}</p>}
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                 {/* Cover Image */}
-                 <div className="space-y-2">
-                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest pl-1">Cover Image</label>
-                    <Controller
-                        control={control}
-                        name="cover"
-                        render={({ field }) => (
-                            <MediaInput 
-                                value={field.value} 
-                                onChange={field.onChange}
-                                placeholder="Add cover image..."
-                                type="media"
-                            />
-                        )}
-                    />
-                 </div>
-
-                 {/* Workout Audio */}
-                 <div className="space-y-2">
-                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest pl-1">Workout Playlist (URLs)</label>
-                    <Controller
-                        control={control}
-                        name="audio"
-                        render={({ field }) => (
-                            <TagInput 
-                                value={field.value || []} 
-                                onChange={field.onChange}
-                                placeholder="Add YouTube/Spotify links..."
-                                icon={<Music className="h-4 w-4" />}
-                                variant="blue"
-                            />
-                        )}
-                    />
-                 </div>
-
-                 {/* Tags & Difficulty */}
-                 <div className="space-y-2">
-                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest pl-1">Tags</label>
-                    <Controller
-                        control={control}
-                        name="tags"
-                        render={({ field }) => (
-                            <WorkoutTagSelector 
-                                value={field.value || []} 
-                                onChange={field.onChange}
-                            />
-                        )}
-                    />
-                 </div>
-                 <div className="space-y-2">
-                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest pl-1">Difficulty</label>
-                    <Controller
-                        control={control}
-                        name="difficulty"
-                        render={({ field }) => (
-                            <Select onValueChange={field.onChange} value={field.value}>
-                                <SelectTrigger className="w-full h-10 rounded-xl bg-background border-border/50 focus:ring-primary/20 font-medium">
-                                    <SelectValue placeholder="Select difficulty level" />
-                                </SelectTrigger>
-                                <SelectContent className="rounded-xl border-border/50 shadow-xl">
-                                    <SelectItem value="beginner" className="rounded-lg my-1 cursor-pointer focus:bg-primary/5 focus:text-primary font-medium">
-                                        <div className="flex items-center gap-2">
-                                            <Dna className="h-4 w-4 text-emerald-500" />
-                                            <span>Beginner</span>
-                                        </div>
-                                    </SelectItem>
-                                    <SelectItem value="intermediate" className="rounded-lg my-1 cursor-pointer focus:bg-primary/5 focus:text-primary font-medium">
-                                        <div className="flex items-center gap-2">
-                                            <Activity className="h-4 w-4 text-blue-500" />
-                                            <span>Intermediate</span>
-                                        </div>
-                                    </SelectItem>
-                                    <SelectItem value="advanced" className="rounded-lg my-1 cursor-pointer focus:bg-primary/5 focus:text-primary font-medium">
-                                        <div className="flex items-center gap-2">
-                                            <Zap className="h-4 w-4 text-orange-500" />
-                                            <span>Advanced</span>
-                                        </div>
-                                    </SelectItem>
-                                </SelectContent>
-                            </Select>
-                        )}
-                    />
-                 </div>
-
-                 {/* Visibility */}
-                 <div className="space-y-2">
-                    <div className="flex items-center gap-2 px-1">
-                        <Globe className="h-3 w-3 text-muted-foreground" />
-                        <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Visibility</label>
-                    </div>
-                    <Controller
-                        control={control}
-                        name="visibility"
-                        render={({ field }) => (
-                            <Select onValueChange={field.onChange} value={field.value}>
-                                <SelectTrigger className="w-full h-10 rounded-xl bg-background border-border/50 focus:ring-primary/20 font-medium">
-                                    <SelectValue placeholder="Select visibility" />
-                                </SelectTrigger>
-                                <SelectContent className="rounded-xl border-border/50 shadow-xl">
-                                    <SelectItem value="draft" className="rounded-lg my-1 cursor-pointer focus:bg-primary/5 focus:text-primary font-medium">
-                                        <div className="flex items-center gap-2">
-                                            <FileText className="h-4 w-4 text-slate-500" />
-                                            <span>Draft</span>
-                                            <span className="ml-auto text-xs text-muted-foreground">Only you</span>
-                                        </div>
-                                    </SelectItem>
-                                    <SelectItem value="private" className="rounded-lg my-1 cursor-pointer focus:bg-primary/5 focus:text-primary font-medium">
-                                        <div className="flex items-center gap-2">
-                                            <Lock className="h-4 w-4 text-rose-500" />
-                                            <span>Private</span>
-                                            <span className="ml-auto text-xs text-muted-foreground">Followers only</span>
-                                        </div>
-                                    </SelectItem>
-                                    <SelectItem value="public" className="rounded-lg my-1 cursor-pointer focus:bg-primary/5 focus:text-primary font-medium">
-                                        <div className="flex items-center gap-2">
-                                            <Globe className="h-4 w-4 text-emerald-500" />
-                                            <span>Public</span>
-                                            <span className="ml-auto text-xs text-muted-foreground">Everyone</span>
-                                        </div>
-                                    </SelectItem>
-                                </SelectContent>
-                            </Select>
-                        )}
-                    />
-                 </div>
-              </div>
-            </div>
-
-            {/* Sections */}
+            {/* Sections (Step 1) */}
             <DragDropContext onDragEnd={onDragEnd}>
               <Droppable droppableId="sections" type="SECTION">
                 {(provided) => (
@@ -841,7 +700,7 @@ function CreateWorkoutContent() {
 
         {/* RIGHT: Live Preview Panel */}
         <div className={cn(
-            "absolute inset-y-0 right-0 bg-white/80 dark:bg-black/80 backdrop-blur-xl border-l transform transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] z-20 shadow-2xl",
+            "absolute inset-y-0 right-0 bg-white/80 dark:bg-black/80 backdrop-blur-xl border-l transform transition-all duration-500 ease-&lsqb;cubic-bezier(0.32,0.72,0,1)&rsqb; z-20 shadow-2xl",
             showPreview ? "translate-x-0" : "translate-x-full",
             previewDevice === 'mobile' ? "w-full md:w-[420px]" : "w-full md:w-[65%]"
         )}>
@@ -899,6 +758,173 @@ function CreateWorkoutContent() {
           </div>
         </div>
       </div>
+
+      {/* Step 2: Metadata Dialog */}
+      <Dialog open={isMetaOpen} onOpenChange={setIsMetaOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Workout Details</DialogTitle>
+            <DialogDescription>
+              Define the main information of your workout: title, description, cover, audio, tags, difficulty and visibility.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-6 mt-2">
+            <div className="space-y-3">
+              <Input 
+                {...register('title')} 
+                placeholder="Workout Title" 
+                className="text-2xl md:text-3xl font-black tracking-tighter border-none px-0 h-auto focus-visible:ring-0 placeholder:text-muted-foreground/40 bg-transparent text-foreground"
+              />
+              {errors.title && <p className="text-red-500 text-xs font-medium">{errors.title.message}</p>}
+              <Textarea 
+                {...register('description')} 
+                placeholder="What's the goal of this session?" 
+                className="resize-none border-none px-0 min-h-[60px] focus-visible:ring-0 text-sm text-muted-foreground bg-transparent font-medium"
+              />
+              {errors.description && <p className="text-red-500 text-xs font-medium">{errors.description.message}</p>}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Cover Image */}
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-1">Cover Image</label>
+                <Controller
+                  control={control}
+                  name="cover"
+                  render={({ field }) => (
+                    <MediaInput 
+                      value={field.value} 
+                      onChange={field.onChange}
+                      placeholder="Add cover image..."
+                      type="media"
+                    />
+                  )}
+                />
+              </div>
+
+              {/* Workout Audio */}
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-1">Workout Playlist (URLs)</label>
+                <Controller
+                  control={control}
+                  name="audio"
+                  render={({ field }) => (
+                    <TagInput 
+                      value={field.value || []} 
+                      onChange={field.onChange}
+                      placeholder="Add YouTube/Spotify links..."
+                      icon={<Music className="h-4 w-4" />}
+                      variant="blue"
+                    />
+                  )}
+                />
+              </div>
+
+              {/* Tags & Difficulty */}
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-1">Tags</label>
+                <Controller
+                  control={control}
+                  name="tags"
+                  render={({ field }) => (
+                    <WorkoutTagSelector 
+                      value={field.value || []} 
+                      onChange={field.onChange}
+                    />
+                  )}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-1">Difficulty</label>
+                <Controller
+                  control={control}
+                  name="difficulty"
+                  render={({ field }) => (
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <SelectTrigger className="w-full h-9 rounded-xl bg-background border-border/50 focus:ring-primary/20 font-medium text-sm">
+                        <SelectValue placeholder="Select difficulty level" />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-xl border-border/50 shadow-xl">
+                        <SelectItem value="beginner" className="rounded-lg my-1 cursor-pointer focus:bg-primary/5 focus:text-primary font-medium">
+                          <div className="flex items-center gap-2">
+                            <Dna className="h-4 w-4 text-emerald-500" />
+                            <span>Beginner</span>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="intermediate" className="rounded-lg my-1 cursor-pointer focus:bg-primary/5 focus:text-primary font-medium">
+                          <div className="flex items-center gap-2">
+                            <Activity className="h-4 w-4 text-blue-500" />
+                            <span>Intermediate</span>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="advanced" className="rounded-lg my-1 cursor-pointer focus:bg-primary/5 focus:text-primary font-medium">
+                          <div className="flex items-center gap-2">
+                            <Zap className="h-4 w-4 text-orange-500" />
+                            <span>Advanced</span>
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+              </div>
+
+              {/* Visibility */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 px-1">
+                  <Globe className="h-3 w-3 text-muted-foreground" />
+                  <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Visibility</label>
+                </div>
+                <Controller
+                  control={control}
+                  name="visibility"
+                  render={({ field }) => (
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <SelectTrigger className="w-full h-9 rounded-xl bg-background border-border/50 focus:ring-primary/20 font-medium text-sm">
+                        <SelectValue placeholder="Select visibility" />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-xl border-border/50 shadow-xl">
+                        <SelectItem value="draft" className="rounded-lg my-1 cursor-pointer focus:bg-primary/5 focus:text-primary font-medium">
+                          <div className="flex items-center gap-2">
+                            <FileText className="h-4 w-4 text-slate-500" />
+                            <span>Draft</span>
+                            <span className="ml-auto text-xs text-muted-foreground">Only you</span>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="private" className="rounded-lg my-1 cursor-pointer focus:bg-primary/5 focus:text-primary font-medium">
+                          <div className="flex items-center gap-2">
+                            <Lock className="h-4 w-4 text-rose-500" />
+                            <span>Private</span>
+                            <span className="ml-auto text-xs text-muted-foreground">Followers only</span>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="public" className="rounded-lg my-1 cursor-pointer focus:bg-primary/5 focus:text-primary font-medium">
+                          <div className="flex items-center gap-2">
+                            <Globe className="h-4 w-4 text-emerald-500" />
+                            <span>Public</span>
+                            <span className="ml-auto text-xs text-muted-foreground">Everyone</span>
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter className="mt-4">
+            <Button type="button" variant="ghost" onClick={() => setIsMetaOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="button" onClick={handleSubmit(onSubmit)} className="gap-2">
+              <Save className="h-4 w-4" />
+              Save Workout
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
@@ -1039,6 +1065,10 @@ function ExercisesFieldArray({ nestIndex, control, register, errors }: { nestInd
                                         render={({ field: typeField }) => (
                                             <Input 
                                                 {...register(typeField.value === 'reps' ? `sections.${nestIndex}.exercises.${k}.reps` : `sections.${nestIndex}.exercises.${k}.duration`)}
+                                                type="number"
+                                                inputMode="numeric"
+                                                pattern="[0-9]*"
+                                                min={0}
                                                 placeholder="0" 
                                                 className="h-8 w-16 text-center bg-white dark:bg-zinc-800 border-none shadow-sm rounded-lg font-bold focus-visible:ring-0"
                                             />
