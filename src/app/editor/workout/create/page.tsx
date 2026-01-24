@@ -616,17 +616,23 @@ function CreateWorkoutContent() {
           <Link href="/" className="text-muted-foreground hover:text-foreground transition-colors">
             <ArrowLeft className="h-5 w-5" />
           </Link>
-          <div className="h-6 w-px bg-border mx-2" />
-          <h1 className="font-semibold text-lg">Workout Builder</h1>
+          <div className="h-6 w-px bg-border mx-2 hidden md:block" />
+          <h1 className="font-semibold text-lg hidden md:block">Workout Builder</h1>
           
           <Button 
             variant="outline" 
             size="sm" 
-            className="hidden md:flex ml-4 gap-2 text-indigo-500 border-indigo-200 hover:bg-indigo-50 hover:text-indigo-600 dark:border-indigo-900/50 dark:hover:bg-indigo-950/50"
+            className="flex md:ml-4 gap-2 text-indigo-600 border-indigo-200 hover:bg-indigo-50 hover:text-indigo-700 dark:text-indigo-400 dark:border-indigo-900/50 dark:hover:bg-indigo-950/50 shadow-sm bg-indigo-50/50 dark:bg-indigo-950/20"
             onClick={() => setIsAiOpen(true)}
           >
             <Sparkles className="h-4 w-4" />
-            AI Assistant
+            <span className="hidden sm:inline">AI Assistant</span>
+            <span className="inline sm:hidden font-bold">AI</span>
+            
+            {/* Voice Indicator */}
+            <div className="flex items-center gap-1 pl-1 border-l border-indigo-200 dark:border-indigo-800 ml-1">
+                 <Mic className="h-3.5 w-3.5 opacity-70" />
+            </div>
           </Button>
         </div>
         
@@ -704,11 +710,11 @@ function CreateWorkoutContent() {
                                 animationDelay: `${index * 100}ms` 
                             }}
                           >
-                            <div className="bg-gradient-to-r from-gray-50 to-white dark:from-zinc-900 dark:to-zinc-900/50 p-6 flex items-center gap-4 border-b border-border/50">
+                            <div className="bg-gradient-to-r from-gray-50 to-white dark:from-zinc-900 dark:to-zinc-900/50 p-6 flex  items-center gap-4 border-b border-border/50">
                               <div {...provided.dragHandleProps} className="cursor-grab text-muted-foreground/30 hover:text-foreground transition-colors p-2 hover:bg-black/5 rounded-xl">
                                 <GripVertical className="h-6 w-6" />
                               </div>
-                              <div className="flex-1 flex items-center gap-4">
+                              <div className="flex-1 flex flex-col md:flex-row items-start md:items-center gap-4">
                                 <div className="flex-1">
                                     <Input 
                                         {...register(`sections.${index}.name` as const)} 
@@ -726,7 +732,7 @@ function CreateWorkoutContent() {
                                     control={control}
                                     name={`sections.${index}.orderType` as const}
                                     render={({ field }) => (
-                                <div className="flex bg-muted/50 p-1 rounded-lg shrink-0 gap-1">
+                                <div className="flex flex-col sm:flex-row bg-muted/50 p-1 rounded-lg shrink-0 gap-1 h-auto">
                                     {/* Straight Sets (Single) */}
                                     <Tooltip>
                                         <TooltipTrigger asChild>
@@ -734,7 +740,7 @@ function CreateWorkoutContent() {
                                                 type="button"
                                                 onClick={() => field.onChange('single')}
                                                 className={cn(
-                                                    "px-3 py-1.5 rounded-md text-xs font-bold uppercase transition-all flex items-center gap-1.5",
+                                                    "px-3 py-1.5 rounded-md text-xs font-bold uppercase transition-all flex items-center justify-center sm:justify-start gap-1.5 w-full sm:w-auto",
                                                     field.value === 'single' ? "bg-white dark:bg-zinc-800 shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
                                                 )}
                                             >
@@ -754,7 +760,7 @@ function CreateWorkoutContent() {
                                                 type="button"
                                                 onClick={() => field.onChange('linear')}
                                                 className={cn(
-                                                    "px-3 py-1.5 rounded-md text-xs font-bold uppercase transition-all flex items-center gap-1.5",
+                                                    "px-3 py-1.5 rounded-md text-xs font-bold uppercase transition-all flex items-center justify-center sm:justify-start gap-1.5 w-full sm:w-auto",
                                                     field.value === 'linear' || !field.value ? "bg-white dark:bg-zinc-800 shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
                                                 )}
                                             >
@@ -805,7 +811,7 @@ function CreateWorkoutContent() {
                         type="button" 
                         variant="outline" 
                         size="lg"
-                        className="h-12 px-8 rounded-full border border-dashed border-border/60 hover:border-primary/40 bg-background text-muted-foreground/60 hover:text-primary hover:bg-primary/5 text-xs font-bold uppercase tracking-widest shadow-sm hover:shadow-md transition-all duration-300"
+                        className="w-full sm:w-auto h-12 px-8 rounded-full border border-dashed border-border/60 hover:border-primary/40 bg-background text-muted-foreground/60 hover:text-primary hover:bg-primary/5 text-xs font-bold uppercase tracking-widest shadow-sm hover:shadow-md transition-all duration-300"
                         onClick={() => appendSection({ id: `sec-${Date.now()}`, name: '', orderType: 'linear', exercises: [] })}
                     >
                         <span className="flex items-center gap-2 group-hover:gap-3 transition-all">
@@ -1139,13 +1145,13 @@ function ExercisesFieldArray({ nestIndex, control, register, errors }: { nestInd
                         <div 
                             ref={provided.innerRef}
                             {...provided.draggableProps}
-                            className="group relative bg-white dark:bg-zinc-900 rounded-3xl p-6 border border-border/50 shadow-sm hover:shadow-lg transition-all"
+                            className="group relative bg-white dark:bg-zinc-900 rounded-3xl p-4 md:p-6 border border-border/50 shadow-sm hover:shadow-lg transition-all"
                         >
                             
                             {/* Drag Handle */}
                             <div 
                                 {...provided.dragHandleProps} 
-                                className="absolute top-6 left-3 z-10 p-2 cursor-grab text-muted-foreground/20 hover:text-foreground transition-colors rounded-lg hover:bg-black/5"
+                                className="absolute top-4 left-3 z-10 p-2 cursor-grab text-muted-foreground/20 hover:text-foreground transition-colors rounded-lg hover:bg-black/5"
                             >
                                 <GripVertical className="h-5 w-5" />
                             </div>
@@ -1161,7 +1167,7 @@ function ExercisesFieldArray({ nestIndex, control, register, errors }: { nestInd
                                 </Button>
                             </div>
 
-                            <div className="flex flex-wrap gap-4 md:gap-8 pl-8 md:pl-8">
+                            <div className="flex flex-wrap gap-4 md:gap-8 pl-10 md:pl-8">
                                 {/* Main Content (Left) */}
                                 <div className="flex-1 min-w-full sm:min-w-[300px] space-y-6">
                     {/* Header: Name & Description */}
