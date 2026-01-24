@@ -506,7 +506,9 @@ function CreateWorkoutContent() {
     }
   }, [user, isLoading, router])
 
-  if (isLoading || isLoadingWorkout) {
+  const isWorkoutLoading = !!workoutId && isLoadingWorkout
+
+  if (isLoading || isWorkoutLoading) {
     return (
       <div className="min-h-screen p-8">
         <div className="animate-pulse space-y-8">
@@ -732,7 +734,7 @@ function CreateWorkoutContent() {
                                     control={control}
                                     name={`sections.${index}.orderType` as const}
                                     render={({ field }) => (
-                                <div className="flex flex-col sm:flex-row bg-muted/50 p-1 rounded-lg shrink-0 gap-1 h-auto">
+                                <div className="flex flex-col bg-muted/50 p-1 rounded-lg shrink-0 gap-1 h-auto">
                                     {/* Straight Sets (Single) */}
                                     <Tooltip>
                                         <TooltipTrigger asChild>
