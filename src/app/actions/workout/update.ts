@@ -1,7 +1,7 @@
 'use server'
 
 import { createClient } from "@/lib/supabase/server"
-import { WorkoutInput } from "./create"
+import { WorkoutInput, preprocessWorkoutData } from "./create"
 
 export async function updateWorkoutAction(workoutId: string, data: WorkoutInput) {
   try {
@@ -10,10 +10,12 @@ export async function updateWorkoutAction(workoutId: string, data: WorkoutInput)
 
     if (!user) throw new Error('User not authenticated')
 
+    const processedData = await preprocessWorkoutData(supabase, user.id, data)
+
     const { error } = await supabase.rpc('update_complete_workout', {
         p_workout_id: workoutId,
         p_user_id: user.id,
-        p_workout_data: data
+        p_workout_data: processedData
     })
 
     if (error) {

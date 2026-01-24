@@ -6,7 +6,7 @@ import { useMutation, useQuery } from '@tanstack/react-query'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd'
-import { Plus, Trash2, GripVertical, Save,  ArrowLeft, Eye, Play, Smartphone, Monitor, Tag, Image as ImageIcon,  Music, X, Upload, Mic, Square, Camera, Circle, Dna, Activity, Zap, Repeat, List, RotateCw, Library, Package, Globe, Lock, FileText } from 'lucide-react'
+import { Plus, Trash2, GripVertical, Save,  ArrowLeft, Eye, Play, Smartphone, Monitor, Tag, Image as ImageIcon,  Music, X, Upload, Mic, Square, Camera, Circle, Dna, Activity, Zap, Repeat, List, RotateCw, Library, Package, Globe, Lock, FileText, Sparkles, Loader2 } from 'lucide-react'
 import { 
   Select,
   SelectContent,
@@ -41,6 +41,7 @@ import { WorkoutTag } from '@/constants/workout-tags'
 import { ExercisesVault } from '../components/ExercisesVault'
 import { WorkoutTagSelector } from '@/components/ui/workout-tag-selector'
 import { Exercise } from '@/app/actions/exercises/list'
+import { generateWorkoutAction } from '@/app/actions/workout/generate-by-ai'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 
 // --- Schema Definition ---
@@ -93,12 +94,73 @@ function CreateWorkoutContent() {
   const { user, isLoading } = useAuthStore()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isMetaOpen, setIsMetaOpen] = useState(false)
+  
+  // AI Assistant State
+  const [isAiOpen, setIsAiOpen] = useState(false)
+  const [aiPrompt, setAiPrompt] = useState('')
+  const [isGenerating, setIsGenerating] = useState(false)
   const [isRetry, setIsRetry] = useState(false)
   const [showPreview, setShowPreview] = useState(true)
   const [previewDevice, setPreviewDevice] = useState<'mobile' | 'desktop'>('mobile')
   const [uploadProgress, setUploadProgress] = useState(0)
   const [uploadStatus, setUploadStatus] = useState('')
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
+  
+  // Voice Input State
+  const [isListening, setIsListening] = useState(false)
+  const recognitionRef = React.useRef<any>(null)
+
+  const toggleListening = () => {
+    if (isListening) {
+        if (recognitionRef.current) {
+            recognitionRef.current.stop()
+        }
+        setIsListening(false)
+        return
+    }
+
+    if (typeof window !== 'undefined' && !('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+        alert("Speech recognition is not supported in this browser. Please use Chrome or Edge.")
+        return
+    }
+
+    const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition
+    const recognition = new SpeechRecognition()
+    
+    recognitionRef.current = recognition
+    recognition.continuous = true
+    recognition.interimResults = true
+    recognition.lang = 'es-ES' 
+
+    recognition.onstart = () => {
+        setIsListening(true)
+    }
+
+    recognition.onend = () => {
+        setIsListening(false)
+    }
+
+    recognition.onerror = (event: any) => {
+        console.error("Speech recognition error", event.error)
+        setIsListening(false)
+    }
+
+    recognition.onresult = (event: any) => {
+        let finalTranscript = ''
+        
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+            if (event.results[i].isFinal) {
+                finalTranscript += event.results[i][0].transcript + ' '
+            }
+        }
+
+        if (finalTranscript) {
+            setAiPrompt(prev => prev + finalTranscript)
+        }
+    }
+
+    recognition.start()
+  }
 
   React.useLayoutEffect(() => {
     if (typeof window !== 'undefined' && window.innerWidth < 1024) {
@@ -481,6 +543,54 @@ function CreateWorkoutContent() {
     }
   }
 
+  const handleAiGenerate = async () => {
+    if (!aiPrompt.trim()) return
+    
+    setIsGenerating(true)
+    try {
+        const res = await generateWorkoutAction(aiPrompt)
+        if (res.success && res.data) {
+            const w = res.data
+            
+            // Update Metadata
+            setValue('title', w.title)
+            setValue('description', w.description)
+            setValue('difficulty', w.difficulty || 'intermediate')
+            
+            // Map Sections & Exercises
+            const newSections = w.sections.map((s: any, idx: number) => ({
+                id: `section-${Date.now()}-${idx}`,
+                name: s.name,
+                orderType: 'single',
+                exercises: s.exercises.map((e: any, eIdx: number) => ({
+                    id: `ex-${Date.now()}-${idx}-${eIdx}`,
+                    name: e.name,
+                    type: e.type || 'reps',
+                    reps: e.reps || 0,
+                    sets: e.sets || 3,
+                    duration: e.duration || 0,
+                    rest: e.rest || 60,
+                    description: e.description || '',
+                    muscle_groups: e.muscle_groups || [],
+                    equipment: e.equipment || [],
+                    difficulty: 'intermediate'
+                }))
+            }))
+            
+            setValue('sections', newSections)
+            setIsAiOpen(false)
+            setAiPrompt('')
+        } else {
+            alert("Failed to generate workout: " + (res.error || "Unknown error"))
+        }
+    } catch (err) {
+        console.error(err)
+        alert("An error occurred while communicating with the AI")
+    } finally {
+        setIsGenerating(false)
+    }
+  }
+
   const onSubmit = async (data: WorkoutFormValues) => {
     if (!user) {
         alert("Please sign in to save workouts")
@@ -508,6 +618,16 @@ function CreateWorkoutContent() {
           </Link>
           <div className="h-6 w-px bg-border mx-2" />
           <h1 className="font-semibold text-lg">Workout Builder</h1>
+          
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="hidden md:flex ml-4 gap-2 text-indigo-500 border-indigo-200 hover:bg-indigo-50 hover:text-indigo-600 dark:border-indigo-900/50 dark:hover:bg-indigo-950/50"
+            onClick={() => setIsAiOpen(true)}
+          >
+            <Sparkles className="h-4 w-4" />
+            AI Assistant
+          </Button>
         </div>
         
         <div className="flex items-center gap-2 md:gap-3">
@@ -923,6 +1043,59 @@ function CreateWorkoutContent() {
               Save Workout
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* AI Assistant Dialog */}
+      <Dialog open={isAiOpen} onOpenChange={setIsAiOpen}>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                    <Sparkles className="h-5 w-5 text-indigo-500" />
+                    AI Workout Assistant
+                </DialogTitle>
+                <DialogDescription>
+                    Describe your goal and let AI build the structure for you.
+                    <br/>
+                    <span className="text-xs text-muted-foreground/80 italic">e.g., "Leg day focused on quads, advanced level" or "30 min HIIT cardio without equipment"</span>
+                </DialogDescription>
+            </DialogHeader>
+            <div className="relative">
+                <Textarea 
+                    value={aiPrompt} 
+                    onChange={e => setAiPrompt(e.target.value)} 
+                    placeholder="What do you want to train today? (You can also use voice)" 
+                    className="min-h-[100px] text-base pr-12 resize-none"
+                />
+                <Button 
+                    type="button"
+                    variant={isListening ? "destructive" : "secondary"}
+                    size="icon"
+                    className={cn(
+                        "absolute bottom-3 right-3 h-8 w-8 rounded-full transition-all duration-300 shadow-sm",
+                        isListening && "animate-pulse scale-110 ring-4 ring-red-500/20"
+                    )}
+                    onClick={toggleListening}
+                    title={isListening ? "Stop Listening" : "Start Voice Input"}
+                >
+                    <Mic className={cn("h-4 w-4", isListening ? "animate-bounce" : "")} />
+                </Button>
+            </div>
+            <DialogFooter>
+                <Button onClick={handleAiGenerate} disabled={isGenerating || !aiPrompt.trim()} className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white">
+                    {isGenerating ? (
+                        <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Generating...
+                        </>
+                    ) : (
+                        <>
+                            <Sparkles className="mr-2 h-4 w-4" />
+                            Generate Magic
+                        </>
+                    )}
+                </Button>
+            </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

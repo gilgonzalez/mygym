@@ -1,12 +1,13 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { createPortal } from 'react-dom'
 import { useQuery } from '@tanstack/react-query'
 import { X, Image as ImageIcon, Music, Film, Loader2, Check, AlertCircle, Search } from 'lucide-react'
 import { listMediaAction, MediaItem } from '@/app/actions/media/list'
 import { Button } from '@/components/Button'
 import { cn } from '@/lib/utils'
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
+import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
 
 interface MediaSelectionDialogProps {
   isOpen: boolean
@@ -70,12 +71,15 @@ export function MediaSelectionDialog({ isOpen, onClose, onSelect, mediaType = 'i
     return 'image' // Default to image
   }
 
-  return createPortal(
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-      <div className="bg-background border border-border w-full max-w-4xl max-h-[85vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+  return (
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-4xl max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden outline-none" showCloseButton={false}>
+        <VisuallyHidden>
+            <DialogTitle>Select Media</DialogTitle>
+        </VisuallyHidden>
         
         {/* Header */}
-        <div className="flex flex-col gap-4 p-4 border-b border-border bg-muted/20">
+        <div className="flex flex-col gap-4 p-4 border-b border-border bg-muted/20 shrink-0">
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                     {mediaType === 'audio' ? <Music className="h-5 w-5 text-primary" /> : <ImageIcon className="h-5 w-5 text-primary" />}
@@ -176,7 +180,7 @@ export function MediaSelectionDialog({ isOpen, onClose, onSelect, mediaType = 'i
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-border bg-muted/20 flex justify-between items-center">
+        <div className="p-4 border-t border-border bg-muted/20 flex justify-between items-center shrink-0">
             <span className="text-xs text-muted-foreground">
                 {selectedId ? '1 item selected' : 'No item selected'}
             </span>
@@ -187,8 +191,7 @@ export function MediaSelectionDialog({ isOpen, onClose, onSelect, mediaType = 'i
                 </Button>
             </div>
         </div>
-      </div>
-    </div>,
-    document.body
+      </DialogContent>
+    </Dialog>
   )
 }
