@@ -109,6 +109,7 @@ function CreateWorkoutContent() {
   // Voice Input State
   const [isListening, setIsListening] = useState(false)
   const recognitionRef = React.useRef<any>(null)
+  const initialPromptRef = React.useRef('')
 
   const toggleListening = () => {
     if (isListening) {
@@ -123,6 +124,9 @@ function CreateWorkoutContent() {
         alert("Speech recognition is not supported in this browser. Please use Chrome or Edge.")
         return
     }
+
+    // Capture current text before starting
+    initialPromptRef.current = aiPrompt
 
     const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition
     const recognition = new SpeechRecognition()
@@ -146,17 +150,14 @@ function CreateWorkoutContent() {
     }
 
     recognition.onresult = (event: any) => {
-        let finalTranscript = ''
+        let transcript = ''
+        // Rebuild transcript from the entire session to avoid duplication on mobile
+        for (let i = 0; i < event.results.length; ++i) {
+            transcript += event.results[i][0].transcript
+        }
         
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
-            if (event.results[i].isFinal) {
-                finalTranscript += event.results[i][0].transcript + ' '
-            }
-        }
-
-        if (finalTranscript) {
-            setAiPrompt(prev => prev + finalTranscript)
-        }
+        const spacer = (initialPromptRef.current && !initialPromptRef.current.endsWith(' ') && transcript) ? ' ' : ''
+        setAiPrompt(initialPromptRef.current + spacer + transcript)
     }
 
     recognition.start()
