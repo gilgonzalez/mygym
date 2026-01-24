@@ -550,7 +550,8 @@ function CreateWorkoutContent() {
     
     setIsGenerating(true)
     try {
-        const res = await generateWorkoutAction(aiPrompt)
+        const userLang = typeof navigator !== 'undefined' ? navigator.language : 'es-ES'
+        const res = await generateWorkoutAction(aiPrompt, userLang)
         if (res.success && res.data) {
             const w = res.data
             
