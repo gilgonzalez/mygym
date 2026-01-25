@@ -127,6 +127,9 @@ function CreateWorkoutContent() {
 
     // Capture current text before starting
     initialPromptRef.current = aiPrompt
+    
+    // Session-level variable to store finalized text
+    let finalTranscript = ''
 
     const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition
     const recognition = new SpeechRecognition()
@@ -150,14 +153,23 @@ function CreateWorkoutContent() {
     }
 
     recognition.onresult = (event: any) => {
-        let transcript = ''
-        // Rebuild transcript from the entire session to avoid duplication on mobile
-        for (let i = 0; i < event.results.length; ++i) {
-            transcript += event.results[i][0].transcript
+        let interimTranscript = ''
+
+        // Only process new results starting from resultIndex
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+            const transcript = event.results[i][0].transcript
+            if (event.results[i].isFinal) {
+                finalTranscript += transcript
+            } else {
+                interimTranscript += transcript
+            }
         }
         
-        const spacer = (initialPromptRef.current && !initialPromptRef.current.endsWith(' ') && transcript) ? ' ' : ''
-        setAiPrompt(initialPromptRef.current + spacer + transcript)
+        // Combine initial prompt + session final text + current interim text
+        const currentSessionText = finalTranscript + interimTranscript
+        const spacer = (initialPromptRef.current && !initialPromptRef.current.endsWith(' ') && currentSessionText) ? ' ' : ''
+        
+        setAiPrompt(initialPromptRef.current + spacer + currentSessionText)
     }
 
     recognition.start()

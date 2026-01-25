@@ -29,7 +29,7 @@ DECLARE
   v_exercise_order int;
 BEGIN
   -- 1. Create Workout
-  INSERT INTO workouts (user_id, title, description, difficulty, tags, cover, audio, visibility)
+  INSERT INTO workouts (user_id, title, description, difficulty, tags, cover, audio, visibility, estimated_time, exp_earned, stats)
   VALUES (
     p_user_id,
     p_workout_data->>'title',
@@ -38,7 +38,10 @@ BEGIN
     (SELECT array_agg(x) FROM jsonb_array_elements_text(p_workout_data->'tags') t(x)),
     p_workout_data->>'cover',
     (SELECT array_agg(x) FROM jsonb_array_elements_text(p_workout_data->'audio') t(x)),
-    COALESCE(p_workout_data->>'visibility', 'public') -- Default to public if not provided
+    COALESCE(p_workout_data->>'visibility', 'public'), -- Default to public if not provided
+    (p_workout_data->>'estimated_time')::int,
+    (p_workout_data->>'exp_earned')::int,
+    p_workout_data->'stats'
   )
   RETURNING id INTO v_workout_id;
 
