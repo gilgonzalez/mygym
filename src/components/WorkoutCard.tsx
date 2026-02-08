@@ -1,7 +1,7 @@
 'use client'
 import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
-import { Heart, Clock, BarChart, User, Play, MoreVertical, Edit, Trash2, Loader2, Zap,  Brain, Footprints, Swords, Shield, Share2 } from 'lucide-react'
+import { Heart, Clock, BarChart, User, Play, MoreVertical, Edit, Trash2, Loader2, Zap,  Brain, Footprints, Swords, Shield, Share2, MessageSquare, Star } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
 import { Workout } from '../types/workout/composite'
 import { Card } from './Card'
@@ -10,6 +10,7 @@ import { deleteWorkoutAction } from '@/app/actions/workout/delete'
 import { useRouter } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
 import { ShareWorkoutDialog } from './share/ShareWorkoutDialog'
+import { WorkoutCommentsSheet } from './workout/WorkoutCommentsSheet'
 
 interface WorkoutCardProps {
   workout: Workout
@@ -229,6 +230,11 @@ export default function WorkoutCard({ workout }: WorkoutCardProps) {
                     <button onClick={() => setShowShare(true)} className="flex items-center gap-2 transition-colors hover:text-primary group/share">
                       <Share2 className="w-4 h-4 group-hover/share:scale-110 transition-transform" />
                     </button>
+                    <WorkoutCommentsSheet workoutId={workout.id}>
+                      <button className="flex items-center gap-2 transition-colors hover:text-primary group/comments">
+                        <MessageSquare className="w-4 h-4 group-hover/comments:scale-110 transition-transform" />
+                      </button>
+                    </WorkoutCommentsSheet>
                     <div className="flex items-center gap-2">
                       <Clock className="w-4 h-4" />
                       <span className="text-xs">{duration} min</span>
@@ -293,6 +299,8 @@ export default function WorkoutCard({ workout }: WorkoutCardProps) {
         onOpenChange={setShowShare} 
         workout={workout} 
       />
+
+   
     </Card>
   )
 }

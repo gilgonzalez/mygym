@@ -5,11 +5,12 @@ import { Button } from '@/components/Button'
 import { Card, CardContent } from '@/components/Card'
 import { LocalWorkout } from '@/types/workout/viewTypes'
 import { ShareWorkoutDialog } from '../share/ShareWorkoutDialog'
-import { Trophy, Dumbbell, Loader2, Star, Timer, Frown, Meh, Smile, Zap, BatteryWarning, Share2 } from 'lucide-react'
+import { Trophy, Dumbbell, Loader2, Star, Timer, Share2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { logWorkoutCompletion } from '@/app/actions/workout/log'
 import { useWorkoutStore } from '@/store/workOutStore'
+import { FEELING_CONFIG } from '@/constants/feeling'
 
 
 interface WorkoutCompletedProps {
@@ -126,13 +127,7 @@ export function WorkoutCompleted({ workout, onRestart, initialLogId, xpEarned }:
             <div className="space-y-2">
               <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest">How do you feel?</label>
               <div className="flex items-center justify-center gap-4">
-                  {[
-                      { value: 'tired', icon: BatteryWarning, label: 'Tired', color: 'text-red-500' },
-                      { value: 'sad', icon: Frown, label: 'Bad', color: 'text-orange-500' },
-                      { value: 'normal', icon: Meh, label: 'Okay', color: 'text-yellow-500' },
-                      { value: 'happy', icon: Smile, label: 'Good', color: 'text-green-500' },
-                      { value: 'pumped', icon: Zap, label: 'Pumped', color: 'text-blue-500' },
-                  ].map((item) => (
+                  {Object.values(FEELING_CONFIG).map((item) => (
                       <button
                           key={item.value}
                           onClick={() => setFeeling(item.value)}

@@ -391,6 +391,7 @@ export type Database = {
           estimated_time: number | null
           exp_earned: number | null
           id: string
+          rating: number | null
           stats: Json | null
           tags: string[] | null
           title: string
@@ -407,6 +408,7 @@ export type Database = {
           estimated_time?: number | null
           exp_earned?: number | null
           id?: string
+          rating?: number | null
           stats?: Json | null
           tags?: string[] | null
           title: string
@@ -423,6 +425,7 @@ export type Database = {
           estimated_time?: number | null
           exp_earned?: number | null
           id?: string
+          rating?: number | null
           stats?: Json | null
           tags?: string[] | null
           title?: string

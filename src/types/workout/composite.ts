@@ -43,4 +43,5 @@ export interface Workout extends DbWorkout {
   }>
   likes_count?: number
   is_liked?: boolean
+  rating?: number | null
 }

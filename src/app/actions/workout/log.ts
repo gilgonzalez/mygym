@@ -53,6 +53,35 @@ export async function logWorkoutCompletion(
       }
     }
 
+    // Update Workout Rating
+    try {
+      const { data: currentWorkout } = await supabase
+        .from('workouts')
+        .select('rating')
+        .eq('id', workoutId)
+        .single()
+
+      let newRating = rating
+      
+      if (currentWorkout && currentWorkout.rating !== null) {
+         newRating = (Number(currentWorkout.rating) + Number(rating)) / 2
+      }
+      
+      // Round to 1 decimal place
+      newRating = Math.round(newRating * 10) / 10
+
+      const { error: updateError } = await supabase
+        .from('workouts')
+        .update({ rating: newRating })
+        .eq('id', workoutId)
+        
+      if (updateError) {
+         console.error('Error updating workout rating:', updateError)
+      }
+    } catch (err) {
+      console.error('Failed to calculate new rating', err)
+    }
+
     return { success: true }
   } catch (error: any) {
     console.error('Server Action Error:', error)
