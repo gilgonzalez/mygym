@@ -1,5 +1,6 @@
 import { LocalWorkout } from '@/types/workout/viewTypes'
 import { create } from 'zustand'
+import { getNextWorkoutCursor, getPreviousWorkoutCursor } from '@/lib/workout/sessionNavigation'
 
 interface WorkoutState {
   activeWorkout: LocalWorkout | null
@@ -90,36 +91,23 @@ export const useWorkoutStore = create<WorkoutState>((set, get) => ({
     if (!activeWorkout) return
 
     if (isResting) {
-        set({ isResting: false })
-        return
+      set({ isResting: false })
+      return
     }
 
-    const currentSection = activeWorkout.sections[currentSectionIndex]
-    
-    // Simple logic: Go back to previous logical step (Rest of previous set/exercise)
-    // We prioritize "Single" mode logic as it's the default.
-    
-    if (currentSet > 1) {
-         set({ isResting: true, currentSet: currentSet - 1 })
-    } else {
-         // currentSet == 1
-         if (currentExerciseIndex > 0) {
-             const prevEx = currentSection.exercises[currentExerciseIndex - 1]
-             set({ 
-                 isResting: true, 
-                 currentExerciseIndex: currentExerciseIndex - 1, 
-                 currentSet: prevEx.sets || 1 
-             })
-         } else if (currentSectionIndex > 0) {
-             const prevSec = activeWorkout.sections[currentSectionIndex - 1]
-             const prevEx = prevSec.exercises[prevSec.exercises.length - 1]
-             set({ 
-                 isResting: true, 
-                 currentSectionIndex: currentSectionIndex - 1, 
-                 currentExerciseIndex: prevSec.exercises.length - 1, 
-                 currentSet: prevEx.sets || 1 
-             })
-         }
+    const previousCursor = getPreviousWorkoutCursor(activeWorkout, {
+      sectionIndex: currentSectionIndex,
+      exerciseIndex: currentExerciseIndex,
+      set: currentSet,
+    })
+
+    if (previousCursor) {
+      set({
+        currentSectionIndex: previousCursor.sectionIndex,
+        currentExerciseIndex: previousCursor.exerciseIndex,
+        currentSet: previousCursor.set,
+        isResting: false,
+      })
     }
   },
 
@@ -135,147 +123,28 @@ export const useWorkoutStore = create<WorkoutState>((set, get) => ({
 
     if (!activeWorkout) return
 
-    const currentSection = activeWorkout.sections[currentSectionIndex]
-    const currentExercise = currentSection.exercises[currentExerciseIndex]
-    const totalSets = currentExercise.sets || 1
-    const orderType = currentSection.orderType || 'single'
+    const nextCursor = getNextWorkoutCursor(activeWorkout, {
+      sectionIndex: currentSectionIndex,
+      exerciseIndex: currentExerciseIndex,
+      set: currentSet,
+    })
     
-    // Logic for transitioning between states
     if (isResting) {
-      // Finished Rest -> Go to next step
-      
-      if (orderType === 'single') {
-        // Standard behavior: Finish all sets of current exercise first
-        if (currentSet < totalSets) {
-          set({ 
-            isResting: false, 
-            currentSet: currentSet + 1 
-          })
-          return
-        }
-
-        // No more sets, go to next exercise
-        if (currentExerciseIndex < currentSection.exercises.length - 1) {
-          // Next exercise in same section
-          set({ 
-            isResting: false, 
-            currentExerciseIndex: currentExerciseIndex + 1,
-            currentSet: 1
-          })
-        } else if (currentSectionIndex < activeWorkout.sections.length - 1) {
-          // Next section
-          set({ 
-            isResting: false, 
-            currentSectionIndex: currentSectionIndex + 1,
-            currentExerciseIndex: 0,
-            currentSet: 1
-          })
-        } else {
-          // Workout Complete
-          set({ isCompleted: true, hasStarted: false, endTime: Date.now() })
-        }
+      if (nextCursor) {
+        set({
+          currentSectionIndex: nextCursor.sectionIndex,
+          currentExerciseIndex: nextCursor.exerciseIndex,
+          currentSet: nextCursor.set,
+          isResting: false,
+        })
       } else {
-        // Linear/Circuit behavior: Move to next exercise immediately
-        
-        // 1. Try to find next exercise in current round (Set)
-        let nextExIdx = -1;
-        for (let i = currentExerciseIndex + 1; i < currentSection.exercises.length; i++) {
-            const ex = currentSection.exercises[i];
-            const exSets = ex.sets || 1;
-            if (currentSet <= exSets) {
-                nextExIdx = i;
-                break;
-            }
-        }
-
-        if (nextExIdx !== -1) {
-            // Found next exercise in this round
-            set({
-                isResting: false,
-                currentExerciseIndex: nextExIdx,
-                // Keep currentSet same
-            })
-            return;
-        }
-
-        // 2. End of list reached for this round. Check if we need another round.
-        let nextRoundExIdx = -1;
-        const nextSet = currentSet + 1;
-        
-        for (let i = 0; i < currentSection.exercises.length; i++) {
-             const ex = currentSection.exercises[i];
-             const exSets = ex.sets || 1;
-             if (nextSet <= exSets) {
-                 nextRoundExIdx = i;
-                 break;
-             }
-        }
-        
-        if (nextRoundExIdx !== -1) {
-            // Start new round
-            set({
-                isResting: false,
-                currentExerciseIndex: nextRoundExIdx,
-                currentSet: nextSet
-            })
-            return;
-        }
-
-        // 3. No more rounds needed in this section. Move to Next Section.
-        if (currentSectionIndex < activeWorkout.sections.length - 1) {
-             set({ 
-                isResting: false, 
-                currentSectionIndex: currentSectionIndex + 1,
-                currentExerciseIndex: 0,
-                currentSet: 1
-             })
-        } else {
-             set({ isCompleted: true, hasStarted: false, endTime: Date.now() })
-        }
+        set({ isCompleted: true, hasStarted: false, endTime: Date.now() })
       }
     } else {
-      // Finished Exercise -> Go to Rest (or finish if it's the very last thing)
-      let isFinished = false
-
-      if (orderType === 'single') {
-        const isLastExerciseInSection = currentExerciseIndex === currentSection.exercises.length - 1
-        const isLastSection = currentSectionIndex === activeWorkout.sections.length - 1
-        const isLastSet = currentSet >= totalSets
-        isFinished = isLastExerciseInSection && isLastSection && isLastSet
-      } else {
-        // Linear: Finished if last section AND no more exercises in this round AND no more rounds
-        if (currentSectionIndex === activeWorkout.sections.length - 1) {
-            // Check remaining in current round
-            let hasMoreInRound = false;
-            for(let i = currentExerciseIndex + 1; i < currentSection.exercises.length; i++) {
-                if ((currentSection.exercises[i].sets || 1) >= currentSet) {
-                    hasMoreInRound = true; break;
-                }
-            }
-            
-            // Check next round
-            let hasMoreNextRound = false;
-            if (!hasMoreInRound) {
-                const nextSet = currentSet + 1;
-                for(let i = 0; i < currentSection.exercises.length; i++) {
-                    if ((currentSection.exercises[i].sets || 1) >= nextSet) {
-                        hasMoreNextRound = true; break;
-                    }
-                }
-            }
-            
-            if (!hasMoreInRound && !hasMoreNextRound) {
-                isFinished = true;
-            }
-        }
-      }
-
-      if (isFinished) {
-        // Immediately finish if it's the last set of the last exercise of the last section
-        set({ isCompleted: true, hasStarted: false, endTime: Date.now() })
-      } else {
-        // Go to rest mode
+      if (nextCursor) {
         set({ isResting: true })
+      } else {
+        set({ isCompleted: true, hasStarted: false, endTime: Date.now() })
       }
     }
   }

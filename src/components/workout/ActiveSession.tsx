@@ -2,6 +2,7 @@ import { LocalWorkout } from '@/types/workout/viewTypes'
 import { useEffect } from 'react'
 import { useWorkoutStore } from '@/store/workOutStore'
 import { WorkoutExecutionView } from './WorkoutExecutionView'
+import { getNextWorkoutCursor, getStepInfo } from '@/lib/workout/sessionNavigation'
 
 interface ActiveSessionProps {
   workout: LocalWorkout
@@ -41,9 +42,6 @@ export function ActiveSession({
 
     // Determine what comes next to announce it
     let text = ''
-    
-    const totalSets = currentExercise?.sets || 1
-    const orderType = currentSection.orderType || 'single'
 
     const formatDetails = (ex: any) => {
       if (ex.type === 'time') {
@@ -56,69 +54,29 @@ export function ActiveSession({
       return ''
     }
 
-    let nextStepFound = false
+    const nextCursor = getNextWorkoutCursor(workout, {
+      sectionIndex: currentSectionIndex,
+      exerciseIndex: currentExerciseIndex,
+      set: currentSet,
+    })
+    const nextStep = nextCursor ? getStepInfo(workout, nextCursor) : null
 
-    // 1. Single Mode Logic
-    if (orderType === 'single') {
-      if (currentSet < totalSets) {
-        // Next set of same exercise
-        text = `Siguiente serie. ${currentExercise?.name}. Serie ${currentSet + 1}.`
-        nextStepFound = true
+    if (nextStep) {
+      const currentOrderType = currentSection.orderType || 'single'
+      const isNewSection = nextStep.sectionIndex !== currentSectionIndex
+      const isNewSet = nextStep.set !== currentSet
+      const isSameExercise = nextStep.exerciseIndex === currentExerciseIndex && nextStep.sectionIndex === currentSectionIndex
+
+      if (isNewSection) {
+        text = `Siguiente sección: ${nextStep.section.name}. Primer ejercicio: ${nextStep.exercise.name}. ${formatDetails(nextStep.exercise)}.`
+      } else if (currentOrderType === 'single' && isSameExercise && isNewSet) {
+        text = `Siguiente serie. ${nextStep.exercise.name}. Serie ${nextStep.set}.`
+      } else if (currentOrderType === 'linear' && isNewSet) {
+        text = `Siguiente ronda. ${nextStep.exercise.name}. Serie ${nextStep.set}.`
       } else {
-        // Next exercise in section?
-        if (currentExerciseIndex < currentSection.exercises.length - 1) {
-           const nextEx = currentSection.exercises[currentExerciseIndex + 1]
-           text = `Siguiente ejercicio: ${nextEx.name}. ${formatDetails(nextEx)}.`
-           nextStepFound = true
-        } else if (currentSectionIndex < workout.sections.length - 1) {
-           // Next section
-           const nextSec = workout.sections[currentSectionIndex + 1]
-           if (nextSec.exercises.length > 0) {
-              const nextEx = nextSec.exercises[0]
-              text = `Siguiente sección: ${nextSec.name}. Primer ejercicio: ${nextEx.name}. ${formatDetails(nextEx)}.`
-              nextStepFound = true
-           }
-        }
+        text = `Siguiente ejercicio: ${nextStep.exercise.name}. ${formatDetails(nextStep.exercise)}.`
       }
     } else {
-      // 2. Linear/Circuit Mode Logic
-      // Try to find next exercise in current round
-      for (let i = currentExerciseIndex + 1; i < currentSection.exercises.length; i++) {
-        const ex = currentSection.exercises[i]
-        const exSets = ex.sets || 1
-        if (currentSet <= exSets) {
-            text = `Siguiente ejercicio: ${ex.name}. ${formatDetails(ex)}.`
-            nextStepFound = true
-            break
-        }
-      }
-      
-      if (!nextStepFound) {
-        // Try next round
-        const nextSet = currentSet + 1
-        for (let i = 0; i < currentSection.exercises.length; i++) {
-             const ex = currentSection.exercises[i]
-             const exSets = ex.sets || 1
-             if (nextSet <= exSets) {
-                 text = `Siguiente ronda. ${ex.name}. Serie ${nextSet}.`
-                 nextStepFound = true
-                 break
-             }
-        }
-      }
-
-      if (!nextStepFound && currentSectionIndex < workout.sections.length - 1) {
-         // Next section
-         const nextSec = workout.sections[currentSectionIndex + 1]
-         if (nextSec.exercises.length > 0) {
-            const nextEx = nextSec.exercises[0]
-            text = `Siguiente sección: ${nextSec.name}. Primer ejercicio: ${nextEx.name}. ${formatDetails(nextEx)}.`
-            nextStepFound = true
-         }
-      }
-    }
-
-    if (!nextStepFound) {
       text = "Entrenamiento casi completado."
     }
     
@@ -143,7 +101,7 @@ export function ActiveSession({
       window.speechSynthesis.cancel()
       setSpeaking(false)
     }
-  }, [currentExercise, currentSet, isResting])
+  }, [currentExercise, currentExerciseIndex, currentSection, currentSectionIndex, currentSet, isResting, setSpeaking, workout])
 
   return (
     <WorkoutExecutionView
