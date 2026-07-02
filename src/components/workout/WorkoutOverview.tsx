@@ -278,10 +278,10 @@ export function WorkoutOverview({
                        </div>
                      )}
                      <div className="w-16 h-16 rounded-lg bg-muted overflow-hidden shrink-0 border border-border/30">
-                      {ex.media_url ? (
-                        /\.(mp4|webm|ogg|mov)($|\?)/i.test(ex.media_url) ? (
+                      {ex.thumbnail_url ? (
+                        /\.(mp4|webm|ogg|mov)($|\?)/i.test(ex.thumbnail_url) ? (
                           <video 
-                            src={ex.media_url} 
+                            src={ex.thumbnail_url} 
                             className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                             muted
                             loop
@@ -289,7 +289,7 @@ export function WorkoutOverview({
                             autoPlay
                           />
                         ) : (
-                          <img src={ex.media_url} alt={ex.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                          <img src={ex.thumbnail_url} alt={ex.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                         )
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">

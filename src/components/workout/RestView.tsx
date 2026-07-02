@@ -1,7 +1,9 @@
 import { Button } from '@/components/Button'
 import { WorkoutTimer } from '@/components/WorkoutTimer'
-import { Play } from 'lucide-react'
+import { Info, Play } from 'lucide-react'
 import { LocalExercise, LocalSection, LocalWorkout } from '@/types/workout/viewTypes'
+import { useState } from 'react'
+import { ExerciseTutorialDialog } from './ExerciseTutorialDialog'
 
 interface RestViewProps {
   currentExercise: LocalExercise | undefined
@@ -22,6 +24,7 @@ export function RestView({
   currentSet,
   onComplete 
 }: RestViewProps) {
+  const [isTutorialOpen, setIsTutorialOpen] = useState(false)
   const totalSets = currentExercise?.sets || 1
   const orderType = currentSection.orderType || 'single'
 
@@ -117,40 +120,19 @@ export function RestView({
              </div>
            ) : nextStepInfo.type === 'next' && nextExercise ? (
              <div className="space-y-3">
-               <h3 className="text-xl font-bold leading-tight">{nextExercise.name}</h3>
+               <div className="flex items-start justify-between gap-3">
+                 <h3 className="text-xl font-bold leading-tight">{nextExercise.name}</h3>
+                 {nextExercise.tutorial && (
+                   <Button type="button" variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => setIsTutorialOpen(true)}>
+                     <Info className="h-4 w-4" />
+                   </Button>
+                 )}
+               </div>
                
                {/* Show Set info for Circuit mode */}
                {orderType === 'linear' && (
                  <div className="inline-block px-3 py-1 rounded-full bg-blue-500/20 text-blue-400 text-xs font-bold uppercase tracking-wider border border-blue-500/20 mb-2">
                     Round {nextStepInfo.set}
-                 </div>
-               )}
-
-               {nextExercise.tutorial && (
-                 <div className="rounded-lg overflow-hidden bg-black/5 border border-border/50">
-                   {nextExercise.tutorial?.type === 'image' && (
-                     <img 
-                       src={nextExercise.tutorial?.url} 
-                       alt="Tutorial" 
-                       className="w-full h-40 object-cover"
-                     />
-                   )}
-                   {nextExercise.tutorial?.type === 'video' && (
-                     <video 
-                       src={nextExercise.tutorial?.url} 
-                       controls 
-                       className="w-full max-h-48"
-                     />
-                   )}
-                   {nextExercise.tutorial?.type === 'audio' && (
-                     <div className="p-3 flex items-center justify-center bg-secondary">
-                       <audio 
-                         src={nextExercise.tutorial?.url} 
-                         controls 
-                         className="w-full h-8"
-                       />
-                     </div>
-                   )}
                  </div>
                )}
 
@@ -168,6 +150,12 @@ export function RestView({
            </Button>
         </div>
       </div>
+      <ExerciseTutorialDialog
+        open={isTutorialOpen}
+        onOpenChange={setIsTutorialOpen}
+        exerciseName={nextExercise?.name || 'Ejercicio'}
+        tutorial={nextExercise?.tutorial}
+      />
     </div>
   )
 }

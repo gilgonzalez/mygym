@@ -1,6 +1,7 @@
 import React from 'react'
-import { X, ChevronLeft, ChevronRight, Clock, CheckCircle2 } from 'lucide-react'
+import { X, ChevronLeft, ChevronRight, Clock, CheckCircle2, Info } from 'lucide-react'
 import { Button } from '@/components/Button'
+import { ExerciseTutorialDialog } from '@/components/workout/ExerciseTutorialDialog'
 
 interface PreviewActivityProps {
   exercise: any
@@ -22,6 +23,7 @@ export function PreviewActivity({
   onClose
 }: PreviewActivityProps) {
   const progress = ((stepIndex + 1) / totalSteps) * 100
+  const [isTutorialOpen, setIsTutorialOpen] = React.useState(false)
 
   const getMediaType = (url?: string) => {
     if (!url) return null
@@ -31,7 +33,7 @@ export function PreviewActivity({
     return 'video' // Default to video for unknown (e.g. blob) as it's a workout app
   }
 
-  const mediaType = getMediaType(exercise?.media_url)
+  const mediaType = getMediaType(exercise?.thumbnail_url)
 
   return (
     <div className="absolute inset-0 z-20 bg-black text-white flex flex-col animate-in fade-in duration-300">
@@ -41,9 +43,16 @@ export function PreviewActivity({
           <span className="text-xs text-gray-400 uppercase tracking-wider">{sectionName}</span>
           <span className="font-bold text-sm">Step {stepIndex + 1} of {totalSteps}</span>
         </div>
-        <Button variant="ghost" size="icon" onClick={onClose} className="text-white hover:bg-white/10">
-          <X className="h-5 w-5" />
-        </Button>
+        <div className="flex items-center gap-2">
+          {exercise?.tutorial && (
+            <Button variant="ghost" size="icon" onClick={() => setIsTutorialOpen(true)} className="text-white hover:bg-white/10">
+              <Info className="h-5 w-5" />
+            </Button>
+          )}
+          <Button variant="ghost" size="icon" onClick={onClose} className="text-white hover:bg-white/10">
+            <X className="h-5 w-5" />
+          </Button>
+        </div>
       </div>
 
       {/* Progress Bar */}
@@ -58,7 +67,7 @@ export function PreviewActivity({
             <div className="w-full max-w-sm aspect-video rounded-2xl bg-zinc-900 overflow-hidden shadow-2xl shrink-0 border border-white/10 relative">
               {mediaType === 'video' ? (
                 <video 
-                    src={exercise.media_url} 
+                    src={exercise.thumbnail_url} 
                     className="w-full h-full object-cover"
                     autoPlay
                     muted
@@ -68,7 +77,7 @@ export function PreviewActivity({
                 />
               ) : mediaType === 'image' ? (
                 <img 
-                    src={exercise.media_url} 
+                    src={exercise.thumbnail_url} 
                     alt={exercise.name}
                     className="w-full h-full object-cover"
                 />
@@ -137,6 +146,12 @@ export function PreviewActivity({
           {stepIndex >= totalSteps ? <CheckCircle2 className="h-6 w-6" /> : <ChevronRight className="h-6 w-6" />}
         </Button>
       </div>
+      <ExerciseTutorialDialog
+        open={isTutorialOpen}
+        onOpenChange={setIsTutorialOpen}
+        exerciseName={exercise?.name || 'Ejercicio'}
+        tutorial={exercise?.tutorial}
+      />
     </div>
   )
 }

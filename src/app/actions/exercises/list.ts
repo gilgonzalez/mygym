@@ -4,9 +4,21 @@ import { createClient } from "@/lib/supabase/server"
 import { Database } from "@/types/database"
 
 export type Exercise = Database['public']['Tables']['exercises']['Row'] & {
-  media?: {
+  thumbnail?: {
     url: string
     type: string | null
+  } | null
+  tutorial?: {
+    media?: {
+      url: string
+      type: string | null
+    } | null
+    steps?: Array<{
+      id: string
+      title: string
+      description: string
+      order_index: number
+    }>
   } | null
 }
 
@@ -35,7 +47,14 @@ export async function listExercises({
   
   let query = supabase
     .from('exercises')
-    .select('*, media(url, type)', { count: 'exact' })
+    .select(`
+      *,
+      thumbnail:media!exercises_thumbnail_media_id_fkey(url, type),
+      tutorial:exercise_tutorials(
+        media:media!exercise_tutorials_media_id_fkey(url, type),
+        steps:exercise_tutorial_steps(id, title, description, order_index)
+      )
+    `, { count: 'exact' })
   
   if (search) {
     query = query.ilike('name', `%${search}%`)

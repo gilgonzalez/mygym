@@ -13,7 +13,7 @@ interface MediaSelectionDialogProps {
   isOpen: boolean
   onClose: () => void
   onSelect: (url: string) => void
-  mediaType?: 'image' | 'audio' | 'video'
+  mediaType?: 'image' | 'audio' | 'video' | 'all'
 }
 
 export function MediaSelectionDialog({ isOpen, onClose, onSelect, mediaType = 'image' }: MediaSelectionDialogProps) {
@@ -38,7 +38,16 @@ export function MediaSelectionDialog({ isOpen, onClose, onSelect, mediaType = 'i
 
   const { data: result, isLoading } = useQuery({
     queryKey: ['media', mediaType, debouncedSearch],
-    queryFn: () => listMediaAction(mediaType === 'image' ? 'image' : mediaType === 'audio' ? 'audio' : undefined, debouncedSearch),
+    queryFn: () => listMediaAction(
+      mediaType === 'image'
+        ? 'image'
+        : mediaType === 'audio'
+          ? 'audio'
+          : mediaType === 'video'
+            ? 'video'
+            : undefined,
+      debouncedSearch
+    ),
     enabled: isOpen,
   })
 
@@ -82,8 +91,8 @@ export function MediaSelectionDialog({ isOpen, onClose, onSelect, mediaType = 'i
         <div className="flex flex-col gap-4 p-4 border-b border-border bg-muted/20 shrink-0">
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                    {mediaType === 'audio' ? <Music className="h-5 w-5 text-primary" /> : <ImageIcon className="h-5 w-5 text-primary" />}
-                    <h3 className="font-bold text-lg">Select {mediaType === 'audio' ? 'Audio' : 'Media'}</h3>
+                    {mediaType === 'audio' ? <Music className="h-5 w-5 text-primary" /> : mediaType === 'video' ? <Film className="h-5 w-5 text-primary" /> : <ImageIcon className="h-5 w-5 text-primary" />}
+                    <h3 className="font-bold text-lg">Select {mediaType === 'audio' ? 'Audio' : mediaType === 'video' ? 'Video' : mediaType === 'all' ? 'Media' : 'Image'}</h3>
                 </div>
                 <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full">
                     <X className="h-5 w-5" />
@@ -112,7 +121,7 @@ export function MediaSelectionDialog({ isOpen, onClose, onSelect, mediaType = 'i
             ) : mediaList.length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center text-muted-foreground gap-2">
                     <div className="p-4 rounded-full bg-muted/50">
-                        {mediaType === 'audio' ? <Music className="h-8 w-8 opacity-50" /> : <ImageIcon className="h-8 w-8 opacity-50" />}
+                        {mediaType === 'audio' ? <Music className="h-8 w-8 opacity-50" /> : mediaType === 'video' ? <Film className="h-8 w-8 opacity-50" /> : <ImageIcon className="h-8 w-8 opacity-50" />}
                     </div>
                     <p>No media found.</p>
                 </div>

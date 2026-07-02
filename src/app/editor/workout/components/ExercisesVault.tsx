@@ -137,11 +137,11 @@ export function ExercisesVault({ onSelect, trigger }: ExercisesVaultProps) {
                 >
                   {/* Media Preview */}
                   <div className="relative aspect-video w-full overflow-hidden bg-muted">
-                    {exercise.media?.url ? (
-                      exercise.media.type?.startsWith('video') ? (
+                    {exercise.thumbnail?.url ? (
+                      exercise.thumbnail.type?.startsWith('video') ? (
                         <div className="relative h-full w-full">
                           <video 
-                            src={exercise.media.url} 
+                            src={exercise.thumbnail.url} 
                             className="h-full w-full object-cover" 
                             muted 
                             loop 
@@ -158,7 +158,7 @@ export function ExercisesVault({ onSelect, trigger }: ExercisesVaultProps) {
                         </div>
                       ) : (
                         <img 
-                          src={exercise.media.url} 
+                          src={exercise.thumbnail.url} 
                           alt={exercise.name} 
                           className="h-full w-full object-cover" 
                         />

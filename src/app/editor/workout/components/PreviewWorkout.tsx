@@ -35,7 +35,14 @@ export function PreviewWorkout({ data, onClose }: PreviewWorkoutProps) {
           sets: e.sets,
           rest: e.rest || 60,
           description: e.description,
-          media_url: e.media_url,
+          thumbnail_url: e.thumbnail_url,
+          tutorial: e.tutorial?.media_url ? {
+            media: {
+              type: e.tutorial.media_type || 'image',
+              url: e.tutorial.media_url,
+            },
+            steps: e.tutorial.steps || [],
+          } : undefined,
           muscle_groups: e.muscle_groups,
           equipment: e.equipment
         }))
@@ -152,16 +159,16 @@ export function PreviewWorkout({ data, onClose }: PreviewWorkoutProps) {
                      className="group relative flex items-center gap-3 p-3 rounded-xl bg-card border border-border/50 hover:border-primary/50 transition-all cursor-default"
                    >
                      <div className="w-12 h-12 rounded-lg bg-muted overflow-hidden shrink-0 border border-border/30 flex items-center justify-center relative">
-                       {ex.media_url ? (
-                         getMediaType(ex.media_url) === 'video' ? (
+                      {ex.thumbnail_url ? (
+                        getMediaType(ex.thumbnail_url) === 'video' ? (
                             <video 
-                                src={ex.media_url} 
+                               src={ex.thumbnail_url} 
                                 className="w-full h-full object-cover" 
                                 muted 
                                 playsInline
                             />
                          ) : (
-                            <img src={ex.media_url} alt={ex.name} className="w-full h-full object-cover" />
+                           <img src={ex.thumbnail_url} alt={ex.name} className="w-full h-full object-cover" />
                          )
                        ) : (
                          <Dumbbell className="w-5 h-5 text-muted-foreground/40" />

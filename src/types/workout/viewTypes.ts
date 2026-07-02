@@ -1,3 +1,17 @@
+export interface ExerciseTutorialStep {
+  id?: string
+  title: string
+  description: string
+}
+
+export interface ExerciseTutorial {
+  media?: {
+    type: 'image' | 'video' | 'audio'
+    url: string
+  }
+  steps: ExerciseTutorialStep[]
+}
+
 export interface LocalExercise {
   id: string
   name: string
@@ -6,11 +20,8 @@ export interface LocalExercise {
   sets?: number
   duration?: number // seconds
   rest: number // seconds
-  media_url?: string
-  tutorial?: {
-    type: 'image' | 'video' | 'audio'
-    url: string
-  }
+  thumbnail_url?: string
+  tutorial?: ExerciseTutorial
   description?: string
   muscle_groups?: string[]
   equipment?: string[]

@@ -37,11 +37,26 @@ export interface Workout extends DbWorkout {
       reps?: number | null
       rest?: number | null 
       duration?: number | null 
-      media_url?: string | null
+      thumbnail_url?: string | null
+      thumbnail_media_id?: string | null
+      filename?: string | null
+      bucket_path?: string | null
+      tutorial?: {
+        media_id?: string | null
+        media_url?: string | null
+        media_type?: 'image' | 'video' | 'audio' | null
+        filename?: string | null
+        bucket_path?: string | null
+        steps: Array<{
+          id?: string
+          title: string
+          description: string
+        }>
+      } | null
       link_id?: string
     }>
   }>
   likes_count?: number
   is_liked?: boolean
-  rating?: number | null
+  rating: number | null
 }

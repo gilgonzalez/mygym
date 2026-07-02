@@ -23,12 +23,12 @@ export type Database = {
           equipment: string[] | null
           id: string
           is_public: boolean | null
-          media_id: string | null
           muscle_group: string[] | null
           name: string
           reps: number | null
           rest: number | null
           sets: number | null
+          thumbnail_media_id: string | null
           type: string | null
           user_id: string | null
         }
@@ -40,12 +40,12 @@ export type Database = {
           equipment?: string[] | null
           id?: string
           is_public?: boolean | null
-          media_id?: string | null
           muscle_group?: string[] | null
           name: string
           reps?: number | null
           rest?: number | null
           sets?: number | null
+          thumbnail_media_id?: string | null
           type?: string | null
           user_id?: string | null
         }
@@ -57,19 +57,19 @@ export type Database = {
           equipment?: string[] | null
           id?: string
           is_public?: boolean | null
-          media_id?: string | null
           muscle_group?: string[] | null
           name?: string
           reps?: number | null
           rest?: number | null
           sets?: number | null
+          thumbnail_media_id?: string | null
           type?: string | null
           user_id?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "exercises_media_id_fkey"
-            columns: ["media_id"]
+            foreignKeyName: "exercises_thumbnail_media_id_fkey"
+            columns: ["thumbnail_media_id"]
             isOneToOne: false
             referencedRelation: "media"
             referencedColumns: ["id"]
@@ -79,6 +79,77 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      exercise_tutorial_steps: {
+        Row: {
+          created_at: string
+          description: string
+          id: string
+          order_index: number
+          title: string
+          tutorial_id: string
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          id?: string
+          order_index?: number
+          title: string
+          tutorial_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          id?: string
+          order_index?: number
+          title?: string
+          tutorial_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exercise_tutorial_steps_tutorial_id_fkey"
+            columns: ["tutorial_id"]
+            isOneToOne: false
+            referencedRelation: "exercise_tutorials"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      exercise_tutorials: {
+        Row: {
+          created_at: string
+          exercise_id: string
+          id: string
+          media_id: string
+        }
+        Insert: {
+          created_at?: string
+          exercise_id: string
+          id?: string
+          media_id: string
+        }
+        Update: {
+          created_at?: string
+          exercise_id?: string
+          id?: string
+          media_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exercise_tutorials_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: true
+            referencedRelation: "exercises"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exercise_tutorials_media_id_fkey"
+            columns: ["media_id"]
+            isOneToOne: false
+            referencedRelation: "media"
             referencedColumns: ["id"]
           },
         ]
@@ -137,6 +208,7 @@ export type Database = {
           rest: number | null
           section_id: string
           sets: number | null
+          type: string | null
           weight_kg: number | null
         }
         Insert: {
@@ -148,6 +220,7 @@ export type Database = {
           rest?: number | null
           section_id: string
           sets?: number | null
+          type?: string | null
           weight_kg?: number | null
         }
         Update: {
@@ -159,6 +232,7 @@ export type Database = {
           rest?: number | null
           section_id?: string
           sets?: number | null
+          type?: string | null
           weight_kg?: number | null
         }
         Relationships: [

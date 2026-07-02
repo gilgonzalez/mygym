@@ -1,8 +1,9 @@
 import { Button } from '@/components/Button'
 import { WorkoutTimer } from '@/components/WorkoutTimer'
-import { CheckCircle2, ChevronLeft, Dumbbell, Volume2, VolumeX } from 'lucide-react'
+import { CheckCircle2, ChevronLeft, Dumbbell, Info, Volume2, VolumeX } from 'lucide-react'
 import { LocalExercise, LocalSection } from '@/types/workout/viewTypes'
 import { useState, useRef } from 'react'
+import { ExerciseTutorialDialog } from './ExerciseTutorialDialog'
 
 interface ExerciseViewProps {
   currentExercise: LocalExercise
@@ -22,6 +23,7 @@ export function ExerciseView({
   onPrev
 }: ExerciseViewProps) {
   const [isVideoMuted, setIsVideoMuted] = useState(false)
+  const [isTutorialOpen, setIsTutorialOpen] = useState(false)
   const videoRef = useRef<HTMLIFrameElement>(null)
   const totalSets = currentExercise.sets || 1
 
@@ -45,7 +47,7 @@ export function ExerciseView({
   }
 
   const toggleVideoMute = () => {
-    if (currentExercise.media_url && isYouTubeUrl(currentExercise.media_url)) {
+    if (currentExercise.thumbnail_url && isYouTubeUrl(currentExercise.thumbnail_url)) {
       if (videoRef.current && videoRef.current.contentWindow) {
         const command = isVideoMuted ? 'unMute' : 'mute'
         videoRef.current.contentWindow.postMessage(JSON.stringify({
@@ -61,12 +63,12 @@ export function ExerciseView({
   return (
     <div className="absolute inset-0 flex flex-col bg-black animate-in fade-in duration-500">
        <div className="relative flex-1 w-full h-full overflow-hidden">
-          {currentExercise.media_url ? (
-            isYouTubeUrl(currentExercise.media_url) ? (
+          {currentExercise.thumbnail_url ? (
+            isYouTubeUrl(currentExercise.thumbnail_url) ? (
                <>
                  <iframe 
                    ref={videoRef}
-                   src={getYouTubeEmbedUrl(currentExercise.media_url)} 
+                   src={getYouTubeEmbedUrl(currentExercise.thumbnail_url)} 
                    className="w-full h-full object-cover opacity-90 pointer-events-none scale-125"
                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                    allowFullScreen
@@ -75,15 +77,15 @@ export function ExerciseView({
                     variant="ghost"
                     size="icon"
                     onClick={toggleVideoMute}
-                    className="absolute top-20 right-6 z-30 h-10 w-10 rounded-full bg-black/40 backdrop-blur-md text-white hover:bg-black/60 border border-white/10"
+                    className="absolute top-20 right-20 z-30 h-10 w-10 rounded-full bg-black/40 backdrop-blur-md text-white hover:bg-black/60 border border-white/10"
                  >
                     {isVideoMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
                  </Button>
                </>
-            ) : isVideoFile(currentExercise.media_url) ? (
+            ) : isVideoFile(currentExercise.thumbnail_url) ? (
                <>
                  <video 
-                   src={currentExercise.media_url} 
+                   src={currentExercise.thumbnail_url} 
                    className="w-full h-full object-cover opacity-90"
                    autoPlay
                    loop
@@ -94,7 +96,7 @@ export function ExerciseView({
                     variant="ghost"
                     size="icon"
                     onClick={toggleVideoMute}
-                    className="absolute top-20 right-6 z-30 h-10 w-10 rounded-full bg-black/40 backdrop-blur-md text-white hover:bg-black/60 border border-white/10"
+                    className="absolute top-20 right-20 z-30 h-10 w-10 rounded-full bg-black/40 backdrop-blur-md text-white hover:bg-black/60 border border-white/10"
                  >
                     {isVideoMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
                  </Button>
@@ -104,7 +106,7 @@ export function ExerciseView({
                 {/* Blurred Background */}
                 <div className="absolute inset-0 overflow-hidden">
                   <img 
-                    src={currentExercise.media_url} 
+                    src={currentExercise.thumbnail_url} 
                     alt="" 
                     className="w-full h-full object-cover blur-3xl opacity-30 scale-110" 
                   />
@@ -115,7 +117,7 @@ export function ExerciseView({
                 <div className="relative z-10 w-full max-w-md px-6 -mt-20">
                   <div className="relative aspect-square w-full rounded-2xl overflow-hidden shadow-2xl ring-1 ring-white/10 bg-zinc-900/50 backdrop-blur-sm">
                     <img 
-                      src={currentExercise.media_url} 
+                        src={currentExercise.thumbnail_url} 
                       alt={currentExercise.name} 
                       className="w-full h-full object-contain p-2" 
                     />
@@ -142,6 +144,20 @@ export function ExerciseView({
                     onComplete={onComplete}
                   />
                </div>
+            </div>
+          )}
+
+          {currentExercise.tutorial && (
+            <div className="absolute top-20 right-6 z-30">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsTutorialOpen(true)}
+                className="h-10 w-10 rounded-full bg-black/40 backdrop-blur-md text-white hover:bg-black/60 border border-white/10"
+                title="Ver tutorial"
+              >
+                <Info className="h-5 w-5" />
+              </Button>
             </div>
           )}
           
@@ -219,6 +235,12 @@ export function ExerciseView({
               </div>
           </div>
        </div>
+      <ExerciseTutorialDialog
+        open={isTutorialOpen}
+        onOpenChange={setIsTutorialOpen}
+        exerciseName={currentExercise.name}
+        tutorial={currentExercise.tutorial}
+      />
     </div>
   )
 }

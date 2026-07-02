@@ -6,7 +6,7 @@ import { useMutation, useQuery } from '@tanstack/react-query'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd'
-import { Plus, Trash2, GripVertical, Save,  ArrowLeft, Eye, Play, Smartphone, Monitor, Tag, Image as ImageIcon,  Music, X, Upload, Mic, Square, Camera, Circle, Dna, Activity, Zap, Repeat, List, RotateCw, Library, Package, Globe, Lock, FileText, Sparkles, Loader2 } from 'lucide-react'
+import { Plus, Trash2, GripVertical, Save,  ArrowLeft, Eye, Play, Smartphone, Monitor, Image as ImageIcon,  Music, X, Upload, Mic, Square, Camera, Circle, Dna, Activity, Zap, Repeat, List, RotateCw, Library, Package, Globe, Lock, FileText, Sparkles, Loader2, Info } from 'lucide-react'
 import { 
   Select,
   SelectContent,
@@ -43,8 +43,24 @@ import { WorkoutTagSelector } from '@/components/ui/workout-tag-selector'
 import { Exercise } from '@/app/actions/exercises/list'
 import { generateWorkoutAction } from '@/app/actions/workout/generate-by-ai'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
+import { ActivityTutorialEditor } from '../components/ActivityTutorialEditor'
 
 // --- Schema Definition ---
+const tutorialStepSchema = z.object({
+  id: z.string().optional(),
+  title: z.string().min(1, "Required"),
+  description: z.string().min(1, "Required"),
+})
+
+const tutorialSchema = z.object({
+  media_url: z.string().min(1, "Tutorial media required"),
+  media_id: z.string().optional().nullable(),
+  filename: z.string().optional().nullable(),
+  bucket_path: z.string().optional().nullable(),
+  media_type: z.enum(['image', 'video', 'audio']).optional().nullable(),
+  steps: z.array(tutorialStepSchema).min(1, "Add at least one step"),
+})
+
 const exerciseSchema = z.object({
   id: z.string(),
   db_id: z.string().optional(),
@@ -54,8 +70,8 @@ const exerciseSchema = z.object({
   sets: z.coerce.number().optional(),
   duration: z.coerce.number().optional(),
   rest: z.coerce.number().optional(),
-  media_url: z.string().optional().nullable(),
-  media_id: z.string().optional().nullable(),
+  thumbnail_url: z.string().optional().nullable(),
+  thumbnail_media_id: z.string().optional().nullable(),
   filename: z.string().optional().nullable(),
   bucket_path: z.string().optional().nullable(),
   description: z.string().optional(),
@@ -63,6 +79,7 @@ const exerciseSchema = z.object({
   equipment: z.array(z.string()).optional(),
   difficulty: z.enum(['beginner', 'intermediate', 'advanced']).optional(),
   link_id: z.string().optional(),
+  tutorial: tutorialSchema.optional().nullable(),
 })
 
 const sectionSchema = z.object({
@@ -85,6 +102,32 @@ const workoutSchema = z.object({
 })
 
 type WorkoutFormValues = z.infer<typeof workoutSchema>
+type WorkoutFormSection = WorkoutFormValues['sections'][number]
+type WorkoutFormExercise = WorkoutFormSection['exercises'][number]
+
+function inferMediaType(value?: string | null): 'image' | 'video' | 'audio' {
+  if (!value) return 'image'
+  if (value.includes('#audio') || /\.(mp3|wav|ogg|m4a|aac)($|\?)/i.test(value)) return 'audio'
+  if (value.includes('#video') || /youtube\.com|youtu\.be/i.test(value) || /\.(mp4|webm|ogg|mov|mkv)($|\?)/i.test(value)) return 'video'
+  return 'image'
+}
+
+function createEmptyExercise() {
+  return {
+    id: `ex-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    name: '',
+    sets: 3,
+    reps: 10,
+    duration: 0,
+    type: 'reps' as const,
+    rest: 60,
+    description: '',
+    difficulty: 'beginner' as const,
+    thumbnail_url: '',
+    thumbnail_media_id: null,
+    tutorial: undefined,
+  }
+}
 
 function CreateWorkoutContent() {
   const router = useRouter()
@@ -104,7 +147,7 @@ function CreateWorkoutContent() {
   const [previewDevice, setPreviewDevice] = useState<'mobile' | 'desktop'>('mobile')
   const [uploadProgress, setUploadProgress] = useState(0)
   const [uploadStatus, setUploadStatus] = useState('')
-  const [submitStatus, setSubmitStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
+  const [, setSubmitStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
   
   // Voice Input State
   const [isListening, setIsListening] = useState(false)
@@ -181,7 +224,7 @@ function CreateWorkoutContent() {
     }
   }, [])
 
-  const { isLoading: isLoadingWorkout, isError: isWorkoutError, data: loadedWorkout } = useQuery({
+  const { isLoading: isLoadingWorkout, data: loadedWorkout } = useQuery({
     queryKey: ['workout', workoutId],
     queryFn: async () => {
       if (!workoutId) return null
@@ -214,15 +257,27 @@ function CreateWorkoutContent() {
                     sets: e.sets || 0,
                     duration: e.duration || 0,
                     rest: e.rest || 0,
-                    media_url: e.media_url,
-                    media_id: e.media_id,
+                    thumbnail_url: e.thumbnail_url,
+                    thumbnail_media_id: e.thumbnail_media_id,
                     filename: e.filename,
                     bucket_path: e.bucket_path,
                     description: e.description || '',
                     muscle_groups: e.muscle_group || [],
                     equipment: e.equipment || [],
                     difficulty: e.difficulty || 'beginner',
-                    link_id: (e as any).link_id
+                    link_id: (e as any).link_id,
+                    tutorial: e.tutorial ? {
+                      media_url: e.tutorial.media_url || '',
+                      media_id: e.tutorial.media_id || null,
+                      filename: e.tutorial.filename || null,
+                      bucket_path: e.tutorial.bucket_path || null,
+                      media_type: e.tutorial.media_type || inferMediaType(e.tutorial.media_url),
+                      steps: (e.tutorial.steps || []).map((step: any, stepIndex: number) => ({
+                        id: step.id || `tutorial-step-${stepIndex}`,
+                        title: step.title,
+                        description: step.description,
+                      })),
+                    } : undefined,
                 }))
             }))
         } as WorkoutFormValues
@@ -247,7 +302,7 @@ function CreateWorkoutContent() {
           id: 'section-1',
           name: 'Warm Up',
           orderType: 'linear',
-          exercises: [{ id: 'ex-1', name: '', sets: 3, reps: 10, rest: 60, type: 'reps', duration: 0, description: '', difficulty: 'beginner' }]
+          exercises: [createEmptyExercise()]
         }
       ]
     }
@@ -279,7 +334,7 @@ function CreateWorkoutContent() {
   }, [loadedWorkout, workoutId, reset])
 
 
-  const { mutate: createWorkout, isPending: isCreating } = useMutation({
+  const { mutate: createWorkout } = useMutation({
     mutationFn: async (data: WorkoutFormValues) => {
         // Timeout safeguard: 30 seconds
         const timeout = new Promise<never>((_, reject) => 
@@ -292,9 +347,10 @@ function CreateWorkoutContent() {
             // Count total operations
             let totalOps = 1; // Server action
             if (data.cover?.startsWith('blob:')) totalOps++;
-            (data.audio || []).forEach(url => { if (url.startsWith('blob:')) totalOps++; });
-            data.sections.forEach(s => s.exercises.forEach(e => {
-                if (e.media_url?.startsWith('blob:')) totalOps++;
+            (data.audio || []).forEach((url: string) => { if (url.startsWith('blob:')) totalOps++; });
+            data.sections.forEach((s: WorkoutFormSection) => s.exercises.forEach((e: WorkoutFormExercise) => {
+                if (e.thumbnail_url?.startsWith('blob:')) totalOps++;
+                if (e.tutorial?.media_url?.startsWith('blob:')) totalOps++;
             }));
 
             let completedOps = 0;
@@ -327,7 +383,7 @@ function CreateWorkoutContent() {
             
             // Upload Audio
             const audioUrls = await Promise.all(
-                (data.audio || []).map(async (url) => {
+                (data.audio || []).map(async (url: string) => {
                     if (url.startsWith('blob:')) {
                         const res = await uploadFile(url)
                         updateProgress('Audio track uploaded')
@@ -336,33 +392,54 @@ function CreateWorkoutContent() {
                     return url
                 })
             )
-            const validAudioUrls = audioUrls.filter((url): url is string => !!url)
+            const validAudioUrls = audioUrls.filter((url: string | undefined): url is string => !!url)
 
             // Upload Exercise Media
-            const sectionsWithMedia = await Promise.all(data.sections.map(async (section) => {
-                const exercisesWithMedia = await Promise.all(section.exercises.map(async (exercise) => {
-                    let finalMediaUrl = exercise.media_url
-                    let finalMediaId = exercise.media_id
+            const sectionsWithMedia = await Promise.all(data.sections.map(async (section: WorkoutFormSection) => {
+                const exercisesWithMedia = await Promise.all(section.exercises.map(async (exercise: WorkoutFormExercise) => {
+                    let finalThumbnailUrl = exercise.thumbnail_url
+                    let finalThumbnailMediaId = exercise.thumbnail_media_id
                     let finalFilename = exercise.filename
                     let finalBucketPath = exercise.bucket_path
+                    let finalTutorial = exercise.tutorial
+                      ? {
+                          ...exercise.tutorial,
+                          media_type: exercise.tutorial.media_type || inferMediaType(exercise.tutorial.media_url),
+                        }
+                      : undefined
 
-                    if (exercise.media_url && exercise.media_url.startsWith('blob:')) {
-                        // setUploadStatus(`Uploading media: ${exercise.name}...`)
-                        const res = await uploadFile(exercise.media_url)
+                    if (exercise.thumbnail_url && exercise.thumbnail_url.startsWith('blob:')) {
+                        const res = await uploadFile(exercise.thumbnail_url)
                         if (res) {
-                            finalMediaUrl = res.url
-                            finalMediaId = res.id
+                            finalThumbnailUrl = res.url
+                            finalThumbnailMediaId = res.id
                             finalFilename = res.filename
                             finalBucketPath = res.bucket_path
                         }
-                        updateProgress(`Media uploaded: ${exercise.name}`)
+                        updateProgress(`Thumbnail uploaded: ${exercise.name}`)
+                    }
+
+                    if (exercise.tutorial?.media_url && exercise.tutorial.media_url.startsWith('blob:')) {
+                        const res = await uploadFile(exercise.tutorial.media_url)
+                        if (res) {
+                            finalTutorial = {
+                                ...exercise.tutorial,
+                                media_url: res.url,
+                                media_id: res.id || null,
+                                filename: res.filename || null,
+                                bucket_path: res.bucket_path || null,
+                                media_type: exercise.tutorial.media_type || inferMediaType(exercise.tutorial.media_url),
+                            }
+                        }
+                        updateProgress(`Tutorial uploaded: ${exercise.name}`)
                     }
                     return { 
                         ...exercise, 
-                        media_url: finalMediaUrl,
-                        media_id: finalMediaId,
+                        thumbnail_url: finalThumbnailUrl,
+                        thumbnail_media_id: finalThumbnailMediaId,
                         filename: finalFilename,
-                        bucket_path: finalBucketPath
+                        bucket_path: finalBucketPath,
+                        tutorial: finalTutorial,
                     }
                 }))
                 return { ...section, exercises: exercisesWithMedia }
@@ -371,8 +448,8 @@ function CreateWorkoutContent() {
             setUploadStatus('Finalizing workout...')
 
             // Calculate estimated time (in seconds)
-            const estimatedTime = data.sections.reduce((total, section) => {
-                return total + section.exercises.reduce((secTotal, ex) => {
+            const estimatedTime = data.sections.reduce((total: number, section: WorkoutFormSection) => {
+                return total + section.exercises.reduce((secTotal: number, ex: WorkoutFormExercise) => {
                     const sets = ex.sets || 1
                     const rest = ex.rest || 0
                     const duration = ex.duration || 0
@@ -396,11 +473,13 @@ function CreateWorkoutContent() {
 
             // Calculate EXP based on time and difficulty
             // Formula: 10 XP per minute * Difficulty Multiplier
-            const difficultyMultiplier = {
+            const difficultyMultiplierMap: Record<'beginner' | 'intermediate' | 'advanced', number> = {
                 'beginner': 1,
                 'intermediate': 1.5,
                 'advanced': 2
-            }[data.difficulty || 'beginner'] || 1
+            }
+            const difficultyKey = (data.difficulty || 'beginner') as keyof typeof difficultyMultiplierMap
+            const difficultyMultiplier = difficultyMultiplierMap[difficultyKey] || 1
 
             const expEarned = Math.round((estimatedTime / 60) * 10 * difficultyMultiplier)
 
@@ -417,7 +496,7 @@ function CreateWorkoutContent() {
             let totalWeight = 0
             const tags = data.tags || []
             
-            tags.forEach(tag => {
+            tags.forEach((tag: string) => {
                 const weights = TAG_STATS_WEIGHTS[tag as WorkoutTag]
                 if (weights) {
                     Object.entries(weights).forEach(([stat, weight]) => {
@@ -457,17 +536,28 @@ function CreateWorkoutContent() {
                 tags: data.tags,
                 cover: coverUrl,
                 audio: validAudioUrls,
-                sections: sectionsWithMedia.map((s) => ({
+                sections: sectionsWithMedia.map((s: WorkoutFormSection) => ({
                     id: s.id,
                     name: s.name,
                     orderType: s.orderType,
-                    exercises: s.exercises.map((e) => ({
+                    exercises: s.exercises.map((e: WorkoutFormExercise) => ({
                         ...e,
                         id: e.db_id || undefined, // Use db_id if available (existing), else undefined (new)
-                        media_url: e.media_url,
-                        media_id: e.media_id,
+                        thumbnail_url: e.thumbnail_url,
+                        thumbnail_media_id: e.thumbnail_media_id,
                         filename: e.filename,
-                        bucket_path: e.bucket_path
+                        bucket_path: e.bucket_path,
+                        tutorial: e.tutorial ? {
+                            media_url: e.tutorial.media_url,
+                            media_id: e.tutorial.media_id,
+                            filename: e.tutorial.filename,
+                            bucket_path: e.tutorial.bucket_path,
+                            media_type: e.tutorial.media_type || inferMediaType(e.tutorial.media_url),
+                            steps: (e.tutorial.steps || []).map((step: { title: string; description: string }) => ({
+                                title: step.title,
+                                description: step.description,
+                            }))
+                        } : null
                     }))
                 }))
             }
@@ -497,7 +587,7 @@ function CreateWorkoutContent() {
         reset()
         router.push('/')
     },
-    onError: (error) => {
+    onError: (error: Error) => {
         setSubmitStatus('idle')
         console.error(error)
         alert("Failed to create workout: " + error.message)
@@ -589,7 +679,10 @@ function CreateWorkoutContent() {
                     description: e.description || '',
                     muscle_groups: e.muscle_groups || [],
                     equipment: e.equipment || [],
-                    difficulty: 'intermediate'
+                    difficulty: 'intermediate',
+                    thumbnail_url: '',
+                    thumbnail_media_id: null,
+                    tutorial: undefined,
                 }))
             }))
             
@@ -805,6 +898,8 @@ function CreateWorkoutContent() {
                                 nestIndex={index} 
                                 control={control} 
                                 register={register} 
+                                setValue={setValue}
+                                watch={watch}
                                 errors={errors}
                               />
                             </div>
@@ -1125,15 +1220,33 @@ function CreateWorkoutContent() {
 }
 
 
-function ExercisesFieldArray({ nestIndex, control, register, errors }: { nestIndex: number, control: any, register: any, errors: any }) {
+function ExercisesFieldArray({ nestIndex, control, register, setValue, watch, errors }: { nestIndex: number, control: any, register: any, setValue: any, watch: any, errors: any }) {
   const { fields, append, remove } = useFieldArray({
     control,
     name: `sections.${nestIndex}.exercises`
   })
 
+  const renderHint = (text: string) => (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          className="rounded-full border border-border/60 bg-background/80 p-1.5 text-muted-foreground transition-colors hover:text-foreground"
+        >
+          <Info className="h-3.5 w-3.5" />
+        </button>
+      </TooltipTrigger>
+      <TooltipContent side="top" className="max-w-xs text-xs leading-relaxed">
+        {text}
+      </TooltipContent>
+    </Tooltip>
+  )
+
   const handleAddFromVault = (exercise: Exercise) => {
+    const tutorialData = Array.isArray(exercise.tutorial) ? exercise.tutorial[0] : exercise.tutorial
+
     append({
-        id: `ex-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        id: `ex-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
         db_id: exercise.id,
         name: exercise.name,
         type: (exercise.type === 'time' ? 'time' : 'reps'),
@@ -1145,8 +1258,20 @@ function ExercisesFieldArray({ nestIndex, control, register, errors }: { nestInd
         difficulty: (exercise.difficulty as any) || 'beginner',
         muscle_groups: exercise.muscle_group || [],
         equipment: exercise.equipment || [],
-        media_id: exercise.media_id,
-        media_url: exercise.media?.url,
+        thumbnail_media_id: exercise.thumbnail_media_id,
+        thumbnail_url: exercise.thumbnail?.url,
+        tutorial: tutorialData ? {
+          media_url: tutorialData.media?.url || '',
+          media_id: null,
+          filename: null,
+          bucket_path: null,
+          media_type: (tutorialData.media?.type as 'image' | 'video' | 'audio' | null) || inferMediaType(tutorialData.media?.url),
+          steps: (tutorialData.steps || []).map((step: { id?: string; title: string; description: string }) => ({
+            id: step.id,
+            title: step.title,
+            description: step.description,
+          })),
+        } : undefined,
     })
   }
 
@@ -1155,19 +1280,25 @@ function ExercisesFieldArray({ nestIndex, control, register, errors }: { nestInd
       <Droppable droppableId={`exercises-${nestIndex}`} type="EXERCISE">
         {(provided) => (
           <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-4">
-            {fields.map((item, k) => (
+            {fields.map((item, k) => {
+              const exercisePath = `sections.${nestIndex}.exercises.${k}` as const
+              const selectedType = watch(`${exercisePath}.type`) === 'time' ? 'time' : 'reps'
+              const hasTutorial = Boolean(watch(`${exercisePath}.tutorial`))
+
+              return (
                 <Draggable key={item.id} draggableId={item.id} index={k}>
                     {(provided) => (
-                        <div 
+                        <article
                             ref={provided.innerRef}
                             {...provided.draggableProps}
-                            className="group relative bg-white dark:bg-zinc-900 rounded-3xl p-4 md:p-6 border border-border/50 shadow-sm hover:shadow-lg transition-all"
+                            className="group relative overflow-hidden rounded-[30px] border border-border/60 bg-gradient-to-br from-white via-white to-muted/20 p-4 shadow-sm transition-all hover:shadow-lg dark:from-zinc-950 dark:via-zinc-950 dark:to-zinc-900/80 md:p-6"
                         >
+                            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
                             
                             {/* Drag Handle */}
                             <div 
                                 {...provided.dragHandleProps} 
-                                className="absolute top-4 left-3 z-10 p-2 cursor-grab text-muted-foreground/20 hover:text-foreground transition-colors rounded-lg hover:bg-black/5"
+                                className="absolute left-3 top-4 z-10 rounded-xl p-2 text-muted-foreground/30 transition-colors hover:bg-black/5 hover:text-foreground"
                             >
                                 <GripVertical className="h-5 w-5" />
                             </div>
@@ -1183,203 +1314,328 @@ function ExercisesFieldArray({ nestIndex, control, register, errors }: { nestInd
                                 </Button>
                             </div>
 
-                            <div className="flex flex-wrap gap-4 md:gap-8 pl-10 md:pl-8">
-                                {/* Main Content (Left) */}
-                                <div className="flex-1 min-w-full sm:min-w-[300px] space-y-6">
-                    {/* Header: Name & Description */}
-                    <div className="space-y-2 pr-10">
-                        <div>
-                            <Input 
-                                {...register(`sections.${nestIndex}.exercises.${k}.name`)} 
-                                placeholder="Exercise Name" 
-                                className="h-auto text-xl font-black bg-transparent border-none px-0 focus-visible:ring-0 placeholder:text-muted-foreground/30 tracking-tight"
-                            />
-                            <input type="hidden" {...register(`sections.${nestIndex}.exercises.${k}.id`)} />
-                            <input type="hidden" {...register(`sections.${nestIndex}.exercises.${k}.db_id`)} />
-                            <input type="hidden" {...register(`sections.${nestIndex}.exercises.${k}.link_id`)} />
-                            {errors.sections?.[nestIndex]?.exercises?.[k]?.name && (
-                                <p className="text-red-500 text-xs font-medium">
-                                    {errors.sections[nestIndex].exercises[k].name.message}
-                                </p>
-                            )}
-                        </div>
-                        <Input 
-                            {...register(`sections.${nestIndex}.exercises.${k}.description`)} 
-                            placeholder="Add instructions, cues or notes..." 
-                            className="h-auto text-sm bg-transparent border-none px-0 hover:bg-muted/10 transition-colors focus-visible:ring-0 placeholder:text-muted-foreground/40 w-full font-medium text-muted-foreground"
-                        />
-                    </div>
+                            <div className="pl-10 pr-10">
+                              <div className="flex flex-wrap items-start justify-between gap-4 border-b border-border/60 pb-5">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <span className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-primary">
+                                    Activity {k + 1}
+                                  </span>
+                                  <span className="rounded-full border border-border/70 bg-background/80 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                                    {selectedType === 'time' ? 'Time based' : 'Rep based'}
+                                  </span>
+                                  {hasTutorial && (
+                                    <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-600 dark:text-emerald-400">
+                                      Tutorial ready
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
 
-                    {/* Metrics Panel */}
-                    <div className="bg-muted/30 rounded-2xl p-4 border border-border/50 flex flex-col justify-center gap-4">
-                        <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground pl-1">Metrics</label>
-                        <div className="flex flex-wrap items-center justify-center sm:justify-between gap-y-6 gap-x-2">
-                            {/* Type Toggle */}
-                            <Controller
-                                control={control}
-                                name={`sections.${nestIndex}.exercises.${k}.type`}
-                                render={({ field }) => (
-                                    <div className="flex bg-muted/50 p-1 rounded-lg shrink-0 w-full sm:w-auto justify-center">
-                                        <button 
+                              <div className="mt-6 space-y-5">
+                                <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px] xl:items-stretch">
+                                  <div className="rounded-[28px] border border-border/60 bg-background/75 p-4 shadow-sm md:p-5">
+                                    <div className="mb-4 flex items-start justify-between gap-3">
+                                      <div>
+                                        <p className="text-sm font-semibold">Título y descripción</p>
+                                      </div>
+                                      {renderHint('Usa un nombre corto y una descripción breve con cues o aclaraciones útiles para entender el ejercicio de un vistazo.')}
+                                    </div>
+
+                                    <Input
+                                      {...register(`sections.${nestIndex}.exercises.${k}.name`)}
+                                      placeholder="Nombre del ejercicio"
+                                      className="h-auto border-none bg-transparent px-0 text-2xl font-black tracking-tight shadow-none focus-visible:ring-0 placeholder:text-muted-foreground/30"
+                                    />
+                                    <input type="hidden" {...register(`sections.${nestIndex}.exercises.${k}.id`)} />
+                                    <input type="hidden" {...register(`sections.${nestIndex}.exercises.${k}.db_id`)} />
+                                    <input type="hidden" {...register(`sections.${nestIndex}.exercises.${k}.link_id`)} />
+                                    {errors.sections?.[nestIndex]?.exercises?.[k]?.name && (
+                                      <p className="mt-2 text-xs font-medium text-red-500">
+                                        {errors.sections[nestIndex].exercises[k].name.message}
+                                      </p>
+                                    )}
+
+                                    <Textarea
+                                      {...register(`sections.${nestIndex}.exercises.${k}.description`)}
+                                      placeholder="Ej. Mantén el core activo, baja controlado y evita encoger los hombros."
+                                      className="mt-4 min-h-[108px] resize-none rounded-[22px] border-border/60 bg-muted/20 shadow-none"
+                                    />
+                                  </div>
+
+                                  <div className="rounded-[28px] border border-border/60 bg-background/75 p-4 shadow-sm">
+                                    <div className="mb-3 flex items-start justify-between gap-3">
+                                      <div className="flex items-center gap-2">
+                                        <div className="rounded-2xl bg-primary/10 p-2 text-primary">
+                                          <ImageIcon className="h-4 w-4" />
+                                        </div>
+                                        <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                                          Thumbnail
+                                        </label>
+                                      </div>
+                                      {renderHint('Sube una imagen o gif que identifique visualmente el ejercicio. Se usa como vista previa en tarjetas y listados.')}
+                                    </div>
+
+                                    <Controller
+                                      control={control}
+                                      name={`sections.${nestIndex}.exercises.${k}.thumbnail_url`}
+                                      render={({ field }) => (
+                                        <div className="min-h-[212px] overflow-hidden rounded-[24px] border-2 border-dashed border-border/50 bg-muted/30 shadow-inner transition-colors hover:border-primary/20">
+                                          <MediaInput
+                                            value={field.value}
+                                            onChange={(value) => {
+                                              field.onChange(value)
+                                              setValue(`sections.${nestIndex}.exercises.${k}.thumbnail_media_id`, null, { shouldDirty: true })
+                                              setValue(`sections.${nestIndex}.exercises.${k}.filename`, null, { shouldDirty: true })
+                                              setValue(`sections.${nestIndex}.exercises.${k}.bucket_path`, null, { shouldDirty: true })
+                                            }}
+                                            type="thumbnail"
+                                            variant="thumbnail"
+                                          />
+                                        </div>
+                                      )}
+                                    />
+                                  </div>
+                                </div>
+
+                                <div className="space-y-5">
+                                  <div className="rounded-[28px] border border-border/60 bg-background/75 p-4 shadow-sm md:p-5">
+                                    <div className="mb-4 flex items-start justify-between gap-3">
+                                      <div>
+                                        <p className="text-sm font-semibold">Cómo se realiza</p>
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        <div className="rounded-2xl bg-primary/10 p-2 text-primary">
+                                          <Activity className="h-4 w-4" />
+                                        </div>
+                                        {renderHint('Define si el ejercicio se mide por repeticiones o por tiempo, y configura sus valores principales desde este bloque.')}
+                                      </div>
+                                    </div>
+
+                                    <Controller
+                                      control={control}
+                                      name={`sections.${nestIndex}.exercises.${k}.type`}
+                                      render={({ field }) => (
+                                        <div className="grid gap-3 md:grid-cols-2">
+                                          <button
                                             type="button"
                                             onClick={() => field.onChange('reps')}
                                             className={cn(
-                                                "px-2 py-1.5 rounded-md text-[10px] font-bold uppercase transition-all min-w-[40px] flex-1 sm:flex-none",
-                                                field.value === 'reps' ? "bg-white dark:bg-zinc-800 shadow-sm text-primary" : "text-muted-foreground hover:text-foreground"
+                                              'rounded-[24px] border p-4 text-left transition-all',
+                                              field.value === 'reps'
+                                                ? 'border-primary/40 bg-primary/[0.08] shadow-sm'
+                                                : 'border-border/60 bg-muted/20 hover:border-primary/20 hover:bg-background'
                                             )}
-                                        >
-                                            Reps
-                                        </button>
-                                        <button 
+                                          >
+                                            <div className="mb-3 flex items-center justify-between">
+                                              <div className="rounded-2xl bg-background/90 p-2 text-primary shadow-sm">
+                                                <List className="h-4 w-4" />
+                                              </div>
+                                              <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
+                                                Reps
+                                              </span>
+                                            </div>
+                                            <p className="text-sm font-semibold text-foreground">Por repeticiones</p>
+                                          </button>
+
+                                          <button
                                             type="button"
                                             onClick={() => field.onChange('time')}
                                             className={cn(
-                                                "px-2 py-1.5 rounded-md text-[10px] font-bold uppercase transition-all min-w-[40px] flex-1 sm:flex-none",
-                                                field.value === 'time' ? "bg-white dark:bg-zinc-800 shadow-sm text-primary" : "text-muted-foreground hover:text-foreground"
+                                              'rounded-[24px] border p-4 text-left transition-all',
+                                              field.value === 'time'
+                                                ? 'border-primary/40 bg-primary/[0.08] shadow-sm'
+                                                : 'border-border/60 bg-muted/20 hover:border-primary/20 hover:bg-background'
                                             )}
-                                        >
-                                            Time
-                                        </button>
-                                    </div>
-                                )}
-                            />
+                                          >
+                                            <div className="mb-3 flex items-center justify-between">
+                                              <div className="rounded-2xl bg-background/90 p-2 text-primary shadow-sm">
+                                                <Zap className="h-4 w-4" />
+                                              </div>
+                                              <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
+                                                Time
+                                              </span>
+                                            </div>
+                                            <p className="text-sm font-semibold text-foreground">Por tiempo</p>
+                                          </button>
+                                        </div>
+                                      )}
+                                    />
 
-                            <div className="flex items-center justify-center gap-4 sm:gap-6 flex-wrap">
-                                {/* Value */}
-                                <div className="flex flex-col items-center">
-                                    <span className="text-[9px] font-bold text-muted-foreground uppercase mb-1">
-                                            <Controller
-                                            control={control}
-                                            name={`sections.${nestIndex}.exercises.${k}.type`}
-                                            render={({ field }) => <>{field.value === 'reps' ? 'Count' : 'Work'}</>}
-                                        />
-                                    </span>
-                                    <Controller
-                                        control={control}
-                                        name={`sections.${nestIndex}.exercises.${k}.type`}
-                                        render={({ field: typeField }) => (
-                                            <Input 
-                                                {...register(typeField.value === 'reps' ? `sections.${nestIndex}.exercises.${k}.reps` : `sections.${nestIndex}.exercises.${k}.duration`)}
-                                                type="number"
-                                                inputMode="numeric"
-                                                pattern="[0-9]*"
-                                                min={0}
-                                                placeholder="0" 
-                                                className="h-8 w-16 text-center bg-white dark:bg-zinc-800 border-none shadow-sm rounded-lg font-bold focus-visible:ring-0"
+                                    <div className="mt-4 grid gap-3 md:grid-cols-3">
+                                      <div className="rounded-[24px] border border-border/60 bg-muted/20 p-4">
+                                        <div className="mb-3 flex items-center justify-between">
+                                          <div className="rounded-2xl bg-background/90 p-2 text-primary shadow-sm">
+                                            {selectedType === 'time' ? <Zap className="h-4 w-4" /> : <List className="h-4 w-4" />}
+                                          </div>
+                                          <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
+                                            {selectedType === 'time' ? 'Seconds' : 'Reps'}
+                                          </span>
+                                        </div>
+                                        <p className="text-sm font-semibold text-foreground">
+                                          {selectedType === 'time' ? 'Tiempo de trabajo' : 'Repeticiones'}
+                                        </p>
+                                        <div className="mt-2">
+                                          {renderHint(selectedType === 'time' ? 'Indica los segundos que dura cada serie del ejercicio.' : 'Indica cuántas repeticiones debe completar el usuario en cada serie.')}
+                                        </div>
+                                        <Controller
+                                          control={control}
+                                          name={`sections.${nestIndex}.exercises.${k}.type`}
+                                          render={({ field: typeField }) => (
+                                            <Input
+                                              {...register(
+                                                typeField.value === 'reps'
+                                                  ? `sections.${nestIndex}.exercises.${k}.reps`
+                                                  : `sections.${nestIndex}.exercises.${k}.duration`
+                                              )}
+                                              type="number"
+                                              inputMode="numeric"
+                                              pattern="[0-9]*"
+                                              min={0}
+                                              placeholder="0"
+                                              className="mt-4 h-12 rounded-2xl border-border/60 bg-background text-base font-bold shadow-none"
                                             />
-                                        )}
-                                    />
-                                </div>
-
-                                {/* Sets */}
-                                <div className="flex flex-col items-center">
-                                    <span className="text-[9px] font-bold text-muted-foreground uppercase mb-1">Sets</span>
-                                    <Input 
-                                        {...register(`sections.${nestIndex}.exercises.${k}.sets`)} 
-                                        placeholder="0" 
-                                        type="number"
-                                        className="h-8 w-14 text-center bg-white dark:bg-zinc-800 border-none shadow-sm rounded-lg font-bold focus-visible:ring-0"
-                                    />
-                                </div>
-
-                                {/* Rest */}
-                                <div className="flex flex-col items-center">
-                                    <span className="text-[9px] font-bold text-muted-foreground uppercase mb-1">Rest</span>
-                                    <div className="relative">
-                                        <Input 
-                                            {...register(`sections.${nestIndex}.exercises.${k}.rest`)} 
-                                            placeholder="0" 
-                                            type="number"
-                                            className="h-8 w-14 text-center bg-white dark:bg-zinc-800 border-none shadow-sm rounded-lg font-bold focus-visible:ring-0"
+                                          )}
                                         />
-                                        <span className="absolute right-1 top-2 text-[9px] text-muted-foreground font-medium">s</span>
+                                      </div>
+
+                                      <div className="rounded-[24px] border border-border/60 bg-muted/20 p-4">
+                                        <div className="mb-3 flex items-center justify-between">
+                                          <div className="rounded-2xl bg-background/90 p-2 text-primary shadow-sm">
+                                            <Repeat className="h-4 w-4" />
+                                          </div>
+                                          <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
+                                            Sets
+                                          </span>
+                                        </div>
+                                        <p className="text-sm font-semibold text-foreground">Series</p>
+                                        <div className="mt-2">
+                                          {renderHint('Número total de series o vueltas que se deben completar en este ejercicio.')}
+                                        </div>
+                                        <Input
+                                          {...register(`sections.${nestIndex}.exercises.${k}.sets`)}
+                                          placeholder="0"
+                                          type="number"
+                                          min={0}
+                                          className="mt-4 h-12 rounded-2xl border-border/60 bg-background text-base font-bold shadow-none"
+                                        />
+                                      </div>
+
+                                      <div className="rounded-[24px] border border-border/60 bg-muted/20 p-4">
+                                        <div className="mb-3 flex items-center justify-between">
+                                          <div className="rounded-2xl bg-background/90 p-2 text-primary shadow-sm">
+                                            <RotateCw className="h-4 w-4" />
+                                          </div>
+                                          <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
+                                            Rest
+                                          </span>
+                                        </div>
+                                        <p className="text-sm font-semibold text-foreground">Descanso</p>
+                                        <div className="mt-2">
+                                          {renderHint('Tiempo de recuperación entre una serie y la siguiente, expresado en segundos.')}
+                                        </div>
+                                        <div className="relative mt-4">
+                                          <Input
+                                            {...register(`sections.${nestIndex}.exercises.${k}.rest`)}
+                                            placeholder="0"
+                                            type="number"
+                                            min={0}
+                                            className="h-12 rounded-2xl border-border/60 bg-background pr-10 text-base font-bold shadow-none"
+                                          />
+                                          <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-semibold text-muted-foreground">
+                                            seg
+                                          </span>
+                                        </div>
+                                      </div>
                                     </div>
+                                  </div>
+
+                                  <div className="rounded-[28px] border border-border/60 bg-background/75 p-4 shadow-sm md:p-5">
+                                    <div className="mb-4 flex items-start justify-between gap-3">
+                                      <div>
+                                        <p className="text-sm font-semibold">Contexto del ejercicio</p>
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        <div className="rounded-2xl bg-muted p-2 text-muted-foreground">
+                                          <Dna className="h-4 w-4" />
+                                        </div>
+                                        {renderHint('Añade dificultad, grupos musculares y equipamiento para documentar mejor el ejercicio y mejorar los filtros.')}
+                                      </div>
+                                    </div>
+
+                                    <div className="grid gap-4 md:grid-cols-3">
+                                      <div className="space-y-2">
+                                        <label className="pl-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                                          Difficulty
+                                        </label>
+                                        <Controller
+                                          control={control}
+                                          name={`sections.${nestIndex}.exercises.${k}.difficulty`}
+                                          render={({ field }) => (
+                                            <Select onValueChange={field.onChange} value={field.value || 'beginner'}>
+                                              <SelectTrigger className="h-11 rounded-2xl border-border/60 bg-muted/20 text-sm font-medium shadow-none">
+                                                <SelectValue placeholder="Select difficulty" />
+                                              </SelectTrigger>
+                                              <SelectContent>
+                                                <SelectItem value="beginner">Beginner</SelectItem>
+                                                <SelectItem value="intermediate">Intermediate</SelectItem>
+                                                <SelectItem value="advanced">Advanced</SelectItem>
+                                              </SelectContent>
+                                            </Select>
+                                          )}
+                                        />
+                                      </div>
+
+                                      <div className="space-y-2">
+                                        <label className="pl-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                                          Target Muscles
+                                        </label>
+                                        <Controller
+                                          control={control}
+                                          name={`sections.${nestIndex}.exercises.${k}.muscle_groups`}
+                                          render={({ field }) => (
+                                            <TagInput
+                                              value={field.value || []}
+                                              onChange={field.onChange}
+                                              placeholder="Add muscles..."
+                                              variant="orange"
+                                            />
+                                          )}
+                                        />
+                                      </div>
+
+                                      <div className="space-y-2">
+                                        <label className="pl-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                                          Equipment
+                                        </label>
+                                        <Controller
+                                          control={control}
+                                          name={`sections.${nestIndex}.exercises.${k}.equipment`}
+                                          render={({ field }) => (
+                                            <TagInput
+                                              value={field.value || []}
+                                              onChange={field.onChange}
+                                              placeholder="Add equipment..."
+                                              variant="blue"
+                                            />
+                                          )}
+                                        />
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  <ActivityTutorialEditor
+                                    setValue={setValue}
+                                    watch={watch}
+                                    nestIndex={nestIndex}
+                                    exerciseIndex={k}
+                                  />
                                 </div>
+                              </div>
                             </div>
-                        </div>
-                    </div>
-
-                    {/* Metadata Panel (Muscles & Equipment) */}
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        {/* Difficulty */}
-                    <div className="space-y-1.5">
-                        <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-1">Difficulty</label>
-                        <Controller
-                            control={control}
-                            name={`sections.${nestIndex}.exercises.${k}.difficulty`}
-                            render={({ field }) => (
-                                <Select onValueChange={field.onChange} value={field.value || 'beginner'}>
-                                    <SelectTrigger className="w-full h-9 rounded-lg bg-muted/30 border-border/50 text-xs font-medium">
-                                        <SelectValue placeholder="Select difficulty" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="beginner">Beginner</SelectItem>
-                                        <SelectItem value="intermediate">Intermediate</SelectItem>
-                                        <SelectItem value="advanced">Advanced</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            )}
-                        />
-                    </div>
-                        <div className="space-y-1.5">
-                            <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-1">Target Muscles</label>
-                            <Controller
-                                control={control}
-                                name={`sections.${nestIndex}.exercises.${k}.muscle_groups`}
-                                render={({ field }) => (
-                                    <TagInput 
-                                        value={field.value || []} 
-                                        onChange={field.onChange}
-                                        placeholder="Add muscles..."
-                                        variant="orange"
-                                    />
-                                )}
-                            />
-                        </div>
-                        <div className="space-y-1.5">
-                            <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-1">Equipment</label>
-                            <Controller
-                                control={control}
-                                name={`sections.${nestIndex}.exercises.${k}.equipment`}
-                                render={({ field }) => (
-                                    <TagInput 
-                                        value={field.value || []} 
-                                        onChange={field.onChange}
-                                        placeholder="Add equipment..."
-                                        variant="blue"
-                                    />
-                                )}
-                            />
-                        </div>
-                    </div>
-
-                    
-                 </div>
-
-                 {/* Media Column (Right) - Full Height */}
-                 <div className="w-full md:w-[340px] shrink-0 flex flex-col">
-                     <div className="h-full flex flex-col gap-2">
-                         <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground pl-1">Visual Aid</label>
-                         <Controller
-                            control={control}
-                            name={`sections.${nestIndex}.exercises.${k}.media_url`}
-                            render={({ field }) => (
-                                <div className="w-full h-full min-h-[200px] rounded-2xl overflow-hidden bg-muted/30 border-2 border-dashed border-border/50 hover:border-primary/20 relative group/media transition-colors shadow-inner flex items-center justify-center">
-                                    <MediaInput 
-                                        value={field.value} 
-                                        onChange={field.onChange} 
-                                        variant="thumbnail"
-                                    />
-                                </div>
-                            )}
-                         />
-                     </div>
-                 </div>
-             </div>
-        </div>
+                        </article>
                     )}
                 </Draggable>
-      ))}
+              )})}
             {provided.placeholder}
           </div>
         )}
@@ -1388,7 +1644,7 @@ function ExercisesFieldArray({ nestIndex, control, register, errors }: { nestInd
         <Button
             type="button" variant="ghost" size="sm"
             className="w-full h-12 border border-dashed border-border/40 hover:border-primary/40 text-muted-foreground/60 hover:text-primary hover:bg-primary/5 rounded-xl text-xs font-bold uppercase tracking-widest transition-all group"
-            onClick={() => append({ id: `ex-${Date.now()}`, name: '', sets: 3, reps: 10, duration: 0, type: 'reps', rest: 60, description: '' })}
+            onClick={() => append(createEmptyExercise())}
         >
             <span className="flex items-center gap-2 group-hover:gap-3 transition-all">
                 <Plus className="h-3.5 w-3.5" /> 
@@ -1515,7 +1771,7 @@ export default function CreateWorkoutPage() {
   )
 }
 
-function MediaInput({ value, onChange, placeholder, type = 'media', variant = 'default' }: { value?: string | null, onChange: (val: string) => void, placeholder?: string, type?: 'media' | 'audio', variant?: 'default' | 'thumbnail' }) {
+function MediaInput({ value, onChange, placeholder, type = 'media', variant = 'default' }: { value?: string | null, onChange: (val: string) => void, placeholder?: string, type?: 'media' | 'audio' | 'thumbnail' | 'tutorial', variant?: 'default' | 'thumbnail' }) {
     const fileInputRef = React.useRef<HTMLInputElement>(null)
     const [isLibraryOpen, setIsLibraryOpen] = useState(false)
     
@@ -1529,7 +1785,6 @@ function MediaInput({ value, onChange, placeholder, type = 'media', variant = 'd
     const [countdown, setCountdown] = useState<number | null>(null)
     
     // Preview Modal State
-    const [isPreviewOpen, setIsPreviewOpen] = useState(false)
     const [isPlaying, setIsPlaying] = useState(false)
     
     const videoRef = React.useRef<HTMLVideoElement>(null)
@@ -1688,16 +1943,23 @@ function MediaInput({ value, onChange, placeholder, type = 'media', variant = 'd
     }, [isPlaying])
 
     const Icon = type === 'audio' ? Music : ImageIcon
+    const isThumbnailInput = type === 'thumbnail'
+    const fileAccept = type === 'audio'
+      ? 'audio/*'
+      : isThumbnailInput || type === 'media'
+        ? 'image/*'
+        : 'image/*,video/*,audio/*'
+    const libraryMediaType = type === 'audio' ? 'audio' : type === 'tutorial' ? 'all' : 'image'
 
     if (variant === 'thumbnail') {
-        const isVideo = value?.match(/\.(mp4|webm|mov)$/i) || value?.includes('#video') || (value?.startsWith('blob:') && !value?.includes('#image') && !value?.includes('#audio'))
-        const isAudio = type === 'audio' || value?.match(/\.(mp3|wav|ogg)$/i) || value?.includes('#audio')
+        const isVideo = !isThumbnailInput && (value?.match(/\.(mp4|webm|mov)$/i) || value?.includes('#video') || (value?.startsWith('blob:') && !value?.includes('#image') && !value?.includes('#audio')))
+        const isAudio = !isThumbnailInput && (type === 'audio' || value?.match(/\.(mp3|wav|ogg)$/i) || value?.includes('#audio'))
         
         return (
             <div className="w-full h-full relative group bg-muted/20">
                 <input 
                     type="file" ref={fileInputRef} className="hidden" 
-                    accept={type === 'audio' ? "audio/*" : "image/*,video/*,audio/*"} 
+                    accept={fileAccept} 
                     onChange={handleFile} 
                 />
 
@@ -1723,7 +1985,7 @@ function MediaInput({ value, onChange, placeholder, type = 'media', variant = 'd
                                     <div className="flex items-center gap-2 bg-red-600/80 px-4 py-2 rounded-full backdrop-blur-md">
                                         <div className="w-3 h-3 bg-white rounded-full animate-pulse" />
                                         <span className="font-mono text-white font-bold text-xl">
-                                            {new Date(recordingTime * 1000).toISOString().substr(14, 5)}
+                                            {new Date(recordingTime * 1000).toISOString().slice(14, 19)}
                                         </span>
                                     </div>
                                     <Button 
@@ -1764,7 +2026,7 @@ function MediaInput({ value, onChange, placeholder, type = 'media', variant = 'd
                 {isRecordingAudio && (
                     <div className="absolute inset-0 z-50 bg-red-500/90 flex flex-col items-center justify-center text-white animate-in fade-in duration-200">
                         <div className="w-3 h-3 rounded-full bg-white animate-pulse mb-2" />
-                        <span className="text-xs font-mono font-bold mb-3">{new Date(recordingTime * 1000).toISOString().substr(14, 5)}</span>
+                        <span className="text-xs font-mono font-bold mb-3">{new Date(recordingTime * 1000).toISOString().slice(14, 19)}</span>
                         <Button 
                             type="button" 
                             variant="secondary" 
@@ -1848,16 +2110,17 @@ function MediaInput({ value, onChange, placeholder, type = 'media', variant = 'd
                              <span className="text-[8px] font-bold uppercase">Lib</span>
                         </button>
 
-                        {/* Top: Video */}
-                        <button 
-                            type="button"
-                            className="flex-1 flex flex-col items-center justify-center gap-1 hover:bg-black/5 transition-colors text-muted-foreground hover:text-blue-500"
-                            onClick={() => openCamera()}
-                            title="Record Video"
-                        >
-                             <Camera className="h-5 w-5 opacity-70" />
-                             <span className="text-[8px] font-bold uppercase">Cam</span>
-                        </button>
+                        {!isThumbnailInput && (
+                          <button 
+                              type="button"
+                              className="flex-1 flex flex-col items-center justify-center gap-1 hover:bg-black/5 transition-colors text-muted-foreground hover:text-blue-500"
+                              onClick={() => openCamera()}
+                              title="Record Video"
+                          >
+                               <Camera className="h-5 w-5 opacity-70" />
+                               <span className="text-[8px] font-bold uppercase">Cam</span>
+                          </button>
+                        )}
                         
                         {/* Center: Upload */}
                         <button 
@@ -1870,16 +2133,17 @@ function MediaInput({ value, onChange, placeholder, type = 'media', variant = 'd
                              <span className="text-[8px] font-bold uppercase">Up</span>
                         </button>
                         
-                        {/* Bottom: Audio */}
-                        <button 
-                            type="button"
-                            className="flex-1 flex flex-col items-center justify-center gap-1 hover:bg-black/5 transition-colors text-muted-foreground hover:text-red-500"
-                            onClick={() => startAudioRecording()}
-                            title="Record Audio"
-                        >
-                             <Mic className="h-5 w-5 opacity-70" />
-                             <span className="text-[8px] font-bold uppercase">Mic</span>
-                        </button>
+                        {!isThumbnailInput && (
+                          <button 
+                              type="button"
+                              className="flex-1 flex flex-col items-center justify-center gap-1 hover:bg-black/5 transition-colors text-muted-foreground hover:text-red-500"
+                              onClick={() => startAudioRecording()}
+                              title="Record Audio"
+                          >
+                               <Mic className="h-5 w-5 opacity-70" />
+                               <span className="text-[8px] font-bold uppercase">Mic</span>
+                          </button>
+                        )}
                     </div>
                 )}
                 
@@ -1887,7 +2151,7 @@ function MediaInput({ value, onChange, placeholder, type = 'media', variant = 'd
                     isOpen={isLibraryOpen} 
                     onClose={() => setIsLibraryOpen(false)} 
                     onSelect={(url) => { onChange(url); setIsLibraryOpen(false) }} 
-                    mediaType={type === 'audio' ? 'audio' : 'image'}
+                    mediaType={libraryMediaType}
                 />
             </div>
         )
@@ -1900,7 +2164,7 @@ function MediaInput({ value, onChange, placeholder, type = 'media', variant = 'd
                 type="file" 
                 ref={fileInputRef} 
                 className="hidden" 
-                accept={type === 'audio' ? "audio/*" : "image/*,video/*,audio/*"} 
+                accept={fileAccept} 
                 onChange={handleFile} 
             />
             
@@ -1942,7 +2206,7 @@ function MediaInput({ value, onChange, placeholder, type = 'media', variant = 'd
                 isOpen={isLibraryOpen} 
                 onClose={() => setIsLibraryOpen(false)} 
                 onSelect={(url) => { onChange(url); setIsLibraryOpen(false) }} 
-                mediaType={type === 'audio' ? 'audio' : 'image'}
+                mediaType={libraryMediaType}
             />
         </div>
     )

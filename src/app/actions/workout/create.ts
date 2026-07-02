@@ -7,12 +7,25 @@ type DbWorkout = Database['public']['Tables']['workouts']['Insert']
 type DbExercise = Database['public']['Tables']['exercises']['Insert']
 type DbSection = Database['public']['Tables']['sections']['Insert']
 
-type ExerciseInput = Omit<DbExercise, 'id' | 'created_at' | 'created_by' | 'media_id' | 'is_public'> & {
-    id?: string
-    media_url?: string | null 
+type ExerciseTutorialInput = {
+    media_url?: string | null
     media_id?: string | null
     filename?: string | null
     bucket_path?: string | null
+    media_type?: 'image' | 'video' | 'audio' | null
+    steps: Array<{
+        title: string
+        description: string
+    }>
+}
+
+type ExerciseInput = Omit<DbExercise, 'id' | 'created_at' | 'thumbnail_media_id' | 'is_public'> & {
+    id?: string
+    thumbnail_url?: string | null 
+    thumbnail_media_id?: string | null
+    filename?: string | null
+    bucket_path?: string | null
+    tutorial?: ExerciseTutorialInput | null
 }
 
 type SectionInput = Omit<DbSection, 'id' | 'created_at'> & {

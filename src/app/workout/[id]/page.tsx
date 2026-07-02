@@ -72,7 +72,14 @@ export default function WorkoutSessionPage({ params }: { params: { id: string } 
           sets: e.sets || 0,
           duration: e.duration || 0,
           rest: e.rest || 0,
-          media_url: e.media_url || undefined,
+          thumbnail_url: e.thumbnail_url || undefined,
+          tutorial: e.tutorial?.media_url ? {
+            media: {
+              type: (e.tutorial.media_type as 'image' | 'video' | 'audio') || 'image',
+              url: e.tutorial.media_url,
+            },
+            steps: e.tutorial.steps || [],
+          } : undefined,
           description: e.description || '',
           muscle_groups: e.muscle_group || [],
           equipment: e.equipment || []
