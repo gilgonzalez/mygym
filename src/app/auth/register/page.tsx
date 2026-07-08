@@ -6,7 +6,7 @@ import { Button } from '@/components/Button'
 import { Input } from '@/components/ui/input'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { Loader2 } from 'lucide-react'
+import { Loader2, AlertCircle, ShieldCheck } from 'lucide-react'
 import { GoogleAuthButton } from '@/components/auth/GoogleAuthButton'
 
 function RegisterContent() {
@@ -79,6 +79,20 @@ function RegisterContent() {
           </p>
         </div>
 
+        {redirect && (
+          <div className="rounded-2xl border border-primary/15 bg-primary/5 px-4 py-3 text-sm text-primary">
+            <div className="flex items-start gap-3">
+              <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />
+              <div>
+                <p className="font-semibold">Tu acceso quedara listo al entrar</p>
+                <p className="text-primary/80">
+                  Cuando confirmes tu email e inicies sesion, volveras a la pantalla protegida que estabas abriendo.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="mt-8 space-y-6">
           <div className="space-y-4">
             <GoogleAuthButton 
@@ -100,10 +114,15 @@ function RegisterContent() {
 
             <form className="space-y-6" onSubmit={handleEmailRegister}>
               {error && (
-                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 px-4 py-3 rounded text-sm">
+                <div className="flex items-center gap-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 px-4 py-3 rounded text-sm">
+                  <AlertCircle className="h-4 w-4" />
                   {error}
                 </div>
               )}
+
+              <div className="rounded-2xl border border-border/60 bg-card/60 px-4 py-3 text-sm text-muted-foreground">
+                Revisaremos tus datos y despues te pediremos confirmar el email antes del primer login.
+              </div>
               
               <div className="space-y-4">
                 <div>
@@ -178,12 +197,16 @@ function RegisterContent() {
 
               <Button
                 type="submit"
-                className="w-full h-11"
+                className="w-full h-11 gap-2"
                 disabled={isLoading}
               >
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Create account
               </Button>
+
+              <p className="text-center text-xs text-muted-foreground">
+                Usa un email valido al que tengas acceso si quieres probar el flujo completo de autenticacion.
+              </p>
             </form>
           </div>
         </div>

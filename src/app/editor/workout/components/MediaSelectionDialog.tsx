@@ -36,7 +36,7 @@ export function MediaSelectionDialog({ isOpen, onClose, onSelect, mediaType = 'i
     return () => clearTimeout(timer)
   }, [search])
 
-  const { data: result, isLoading } = useQuery({
+  const { data: result, isLoading, refetch, isFetching } = useQuery({
     queryKey: ['media', mediaType, debouncedSearch],
     queryFn: () => listMediaAction(
       mediaType === 'image'
@@ -52,6 +52,7 @@ export function MediaSelectionDialog({ isOpen, onClose, onSelect, mediaType = 'i
   })
 
   const mediaList = result?.data || []
+  const mediaError = result?.success === false ? result.error || 'No pudimos cargar tu libreria de media.' : null
 
   if (!isOpen || !mounted) return null
 
@@ -113,17 +114,44 @@ export function MediaSelectionDialog({ isOpen, onClose, onSelect, mediaType = 'i
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-4 min-h-[300px]">
-            {isLoading ? (
+            {isLoading || isFetching ? (
                 <div className="h-full flex flex-col items-center justify-center text-muted-foreground gap-2">
                     <Loader2 className="h-8 w-8 animate-spin text-primary" />
                     <p>Loading your library...</p>
                 </div>
+            ) : mediaError ? (
+                <div className="h-full flex flex-col items-center justify-center text-center text-muted-foreground gap-3 px-6">
+                    <div className="p-4 rounded-full bg-destructive/10">
+                        <AlertCircle className="h-8 w-8 text-destructive" />
+                    </div>
+                    <div className="space-y-1">
+                        <p className="font-semibold text-foreground">No pudimos abrir tu biblioteca</p>
+                        <p className="text-sm">{mediaError}</p>
+                    </div>
+                    <Button variant="outline" onClick={() => refetch()}>
+                        Reintentar
+                    </Button>
+                </div>
             ) : mediaList.length === 0 ? (
-                <div className="h-full flex flex-col items-center justify-center text-muted-foreground gap-2">
+                <div className="h-full flex flex-col items-center justify-center text-muted-foreground gap-3 text-center px-6">
                     <div className="p-4 rounded-full bg-muted/50">
                         {mediaType === 'audio' ? <Music className="h-8 w-8 opacity-50" /> : mediaType === 'video' ? <Film className="h-8 w-8 opacity-50" /> : <ImageIcon className="h-8 w-8 opacity-50" />}
                     </div>
-                    <p>No media found.</p>
+                    <div className="space-y-1">
+                        <p className="font-semibold text-foreground">
+                          {debouncedSearch ? 'No encontramos archivos con esa busqueda' : 'Tu biblioteca esta vacia'}
+                        </p>
+                        <p className="text-sm">
+                          {debouncedSearch
+                            ? 'Prueba con otro nombre o limpia el filtro para ver todo tu contenido.'
+                            : 'Sube una imagen, audio o video y volvera a aparecer aqui automaticamente.'}
+                        </p>
+                    </div>
+                    {debouncedSearch && (
+                      <Button variant="ghost" onClick={() => setSearch('')}>
+                        Limpiar busqueda
+                      </Button>
+                    )}
                 </div>
             ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">

@@ -10,6 +10,7 @@ interface ActiveSessionProps {
   currentExerciseIndex: number
   currentSet: number
   isResting: boolean
+  canAccessTutorial: boolean
   onExit: () => void
   onNextStep: () => void
 }
@@ -20,6 +21,7 @@ export function ActiveSession({
   currentExerciseIndex,
   currentSet,
   isResting,
+  canAccessTutorial,
   onExit,
   onNextStep
 }: ActiveSessionProps) {
@@ -110,6 +112,7 @@ export function ActiveSession({
       currentExerciseIndex={currentExerciseIndex}
       currentSet={currentSet}
       isResting={isResting}
+      canAccessTutorial={canAccessTutorial}
       onExit={onExit}
       onNextStep={onNextStep}
       onPrev={prevStep}

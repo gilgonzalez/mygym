@@ -179,7 +179,8 @@ function CreateWorkoutContent() {
   const [previewDevice, setPreviewDevice] = useState<'mobile' | 'desktop'>('mobile')
   const [uploadProgress, setUploadProgress] = useState(0)
   const [uploadStatus, setUploadStatus] = useState('')
-  const [, setSubmitStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
+  const [submitStatus, setSubmitStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
+  const [submitMessage, setSubmitMessage] = useState('')
   
   // Voice Input State
   const [isListening, setIsListening] = useState(false)
@@ -621,13 +622,14 @@ function CreateWorkoutContent() {
     },
     onSuccess: () => {
         setSubmitStatus('success')
+        setSubmitMessage(workoutId ? 'Workout actualizado correctamente. Redirigiendo al feed...' : 'Workout guardado correctamente. Redirigiendo al feed...')
         reset()
         router.push('/')
     },
     onError: (error: Error) => {
-        setSubmitStatus('idle')
+        setSubmitStatus('error')
         console.error(error)
-        alert("Failed to create workout: " + error.message)
+        setSubmitMessage(error.message || 'No pudimos guardar el workout. Revisa tu contenido y vuelve a intentarlo.')
         setIsSubmitting(false)
         setIsRetry(true)
     }
@@ -739,7 +741,8 @@ function CreateWorkoutContent() {
 
   const onSubmit = async (data: WorkoutFormValues) => {
     if (!user) {
-        alert("Please sign in to save workouts")
+        setSubmitStatus('error')
+        setSubmitMessage('Debes iniciar sesion para guardar workouts.')
         return
     }
     
@@ -751,6 +754,7 @@ function CreateWorkoutContent() {
     setIsRetry(false)
     setIsSubmitting(true)
     setSubmitStatus('loading')
+    setSubmitMessage(workoutId ? 'Actualizando workout y sincronizando media...' : 'Guardando workout y preparando archivos...')
     createWorkout(data)
   }
 
@@ -783,6 +787,19 @@ function CreateWorkoutContent() {
         </div>
         
         <div className="flex items-center gap-2 md:gap-3">
+          {submitStatus !== 'idle' && !isSubmitting && (
+            <div
+              className={cn(
+                'hidden max-w-[320px] rounded-full border px-3 py-1.5 text-xs md:flex',
+                submitStatus === 'success'
+                  ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                  : 'border-destructive/20 bg-destructive/10 text-destructive'
+              )}
+            >
+              {submitMessage}
+            </div>
+          )}
+
           <Button 
             variant={showPreview ? "secondary" : "ghost"}
             size="icon"
@@ -838,6 +855,47 @@ function CreateWorkoutContent() {
           showPreview ? (previewDevice === 'mobile' ? "hidden lg:block lg:mr-[420px]" : "hidden lg:block lg:mr-[65%]") : ""
         )}>
           <div className="max-w-5xl mx-auto space-y-10 pb-40">
+            {(isSubmitting || submitStatus === 'error') && (
+              <div
+                className={cn(
+                  'sticky top-4 z-20 rounded-2xl border px-4 py-3 shadow-sm backdrop-blur',
+                  submitStatus === 'error'
+                    ? 'border-destructive/20 bg-destructive/10'
+                    : 'border-primary/15 bg-background/90'
+                )}
+              >
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-foreground">
+                      {isSubmitting ? uploadStatus || 'Guardando workout...' : 'No pudimos completar el guardado'}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {isSubmitting
+                        ? submitMessage || 'No cierres esta pantalla mientras terminamos uploads y persistencia.'
+                        : submitMessage || 'Revisa los datos y vuelve a intentarlo.'}
+                    </p>
+                  </div>
+                  {isSubmitting ? (
+                    <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                      {uploadProgress}%
+                    </div>
+                  ) : (
+                    <Button variant="outline" size="sm" onClick={() => setSubmitStatus('idle')}>
+                      Cerrar
+                    </Button>
+                  )}
+                </div>
+                {isSubmitting && (
+                  <div className="mt-3 h-2 overflow-hidden rounded-full bg-secondary">
+                    <div
+                      className="h-full bg-primary transition-all duration-300 ease-out"
+                      style={{ width: `${uploadProgress}%` }}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
             
             {/* Sections (Step 1) */}
             <DragDropContext onDragEnd={onDragEnd}>
@@ -1192,9 +1250,9 @@ function CreateWorkoutContent() {
             <Button type="button" variant="ghost" onClick={() => setIsMetaOpen(false)}>
               Cancel
             </Button>
-            <Button type="button" onClick={handleSubmit(onSubmit)} className="gap-2">
-              <Save className="h-4 w-4" />
-              Save Workout
+            <Button type="button" onClick={handleSubmit(onSubmit)} className="gap-2" disabled={isSubmitting}>
+              {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              {isSubmitting ? 'Guardando...' : 'Save Workout'}
             </Button>
           </DialogFooter>
         </DialogContent>

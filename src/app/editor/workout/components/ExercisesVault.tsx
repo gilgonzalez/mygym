@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
-import { Loader2, Search, Plus, Dumbbell, Play } from 'lucide-react'
+import { Loader2, Search, Plus, Dumbbell, Play, AlertCircle, RefreshCcw } from 'lucide-react'
 
 interface ExercisesVaultProps {
   onSelect?: (exercise: Exercise) => void
@@ -23,6 +23,7 @@ export function ExercisesVault({ onSelect, trigger }: ExercisesVaultProps) {
   const [exercises, setExercises] = useState<Exercise[]>([])
   const [loading, setLoading] = useState(true)
   const [count, setCount] = useState(0)
+  const [fetchError, setFetchError] = useState<string | null>(null)
   
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
@@ -43,6 +44,7 @@ export function ExercisesVault({ onSelect, trigger }: ExercisesVaultProps) {
     if (!isOpen) return // Don't fetch if closed
     
     setLoading(true)
+    setFetchError(null)
     try {
       const result = await listExercises({
         page,
@@ -51,10 +53,16 @@ export function ExercisesVault({ onSelect, trigger }: ExercisesVaultProps) {
         difficulty: difficulty === 'all' ? undefined : difficulty,
         muscleGroup: muscleGroup === 'all' ? undefined : muscleGroup
       })
+      if (result.error) {
+        throw new Error(result.error)
+      }
       setExercises(result.data)
       setCount(result.count)
     } catch (error) {
       console.error('Failed to fetch exercises', error)
+      setExercises([])
+      setCount(0)
+      setFetchError(error instanceof Error ? error.message : 'No pudimos cargar la biblioteca de ejercicios.')
     } finally {
       setLoading(false)
     }
@@ -121,12 +129,50 @@ export function ExercisesVault({ onSelect, trigger }: ExercisesVaultProps) {
 
         <div className="flex-1 overflow-y-auto p-6">
           {loading ? (
-            <div className="flex h-full items-center justify-center">
+            <div className="flex h-full flex-col items-center justify-center gap-3 text-muted-foreground">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <p>Cargando biblioteca de ejercicios...</p>
+            </div>
+          ) : fetchError ? (
+            <div className="flex h-full flex-col items-center justify-center gap-4 text-center text-muted-foreground px-6">
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-destructive/10">
+                <AlertCircle className="h-6 w-6 text-destructive" />
+              </div>
+              <div className="space-y-1">
+                <p className="font-semibold text-foreground">No pudimos cargar los ejercicios</p>
+                <p className="text-sm">{fetchError}</p>
+              </div>
+              <Button variant="outline" onClick={() => fetchExercises()} className="gap-2">
+                <RefreshCcw className="h-4 w-4" />
+                Reintentar
+              </Button>
             </div>
           ) : exercises.length === 0 ? (
-            <div className="flex h-full flex-col items-center justify-center text-muted-foreground">
-              <p>No exercises found</p>
+            <div className="flex h-full flex-col items-center justify-center text-center text-muted-foreground px-6">
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-muted">
+                <Dumbbell className="h-6 w-6" />
+              </div>
+              <p className="mt-4 font-semibold text-foreground">
+                {search || muscleGroup || difficulty !== 'all' ? 'No encontramos ejercicios con esos filtros' : 'La biblioteca aun no tiene ejercicios visibles'}
+              </p>
+              <p className="mt-1 text-sm">
+                {search || muscleGroup || difficulty !== 'all'
+                  ? 'Prueba con otros filtros o limpia la busqueda para volver a explorar.'
+                  : 'Cuando agregues ejercicios a tu catalogo, apareceran aqui listos para reutilizar.'}
+              </p>
+              {(search || muscleGroup || difficulty !== 'all') && (
+                <Button
+                  variant="ghost"
+                  className="mt-3"
+                  onClick={() => {
+                    setSearch('')
+                    setMuscleGroup('')
+                    setDifficulty('all')
+                  }}
+                >
+                  Limpiar filtros
+                </Button>
+              )}
             </div>
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

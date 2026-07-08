@@ -207,6 +207,7 @@ export default function WorkoutSessionPage({ params }: { params: { id: string } 
         currentExerciseIndex={currentExerciseIndex}
         currentSet={currentSet}
         isResting={isResting}
+        canAccessTutorial={canSaveProgress}
         onExit={endSession}
         onNextStep={nextStep}
       />
