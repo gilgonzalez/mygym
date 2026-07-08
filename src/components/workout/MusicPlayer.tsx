@@ -99,7 +99,7 @@ export function MusicPlayer({ playlist, className }: MusicPlayerProps) {
            if (data.event === 'onStateChange' && data.info === 0) {
                handleNextTrack()
            }
-       } catch (e) {
+      } catch {
            // Ignore non-JSON messages
        }
     }

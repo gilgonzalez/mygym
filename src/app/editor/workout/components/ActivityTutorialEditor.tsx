@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { ChevronDown, Info, Lock, Trash2 } from 'lucide-react'
 import { Button } from '@/components/Button'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { PremiumFeatureDialog } from '@/components/premium/PremiumFeatureDialog'
 
 interface ActivityTutorialEditorProps {
   setValue: any
@@ -105,26 +105,11 @@ export function ActivityTutorialEditor({
         </>
       )}
     </div>
-    <Dialog open={isPremiumModalOpen} onOpenChange={setIsPremiumModalOpen}>
-      <DialogContent className="max-w-md rounded-[28px] border border-border/60 bg-background p-0 overflow-hidden">
-        <div className="border-b border-border/60 bg-gradient-to-br from-amber-500/10 via-background to-background p-6">
-          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-500/15 text-amber-600 dark:text-amber-400">
-            <Lock className="h-5 w-5" />
-          </div>
-          <DialogHeader className="space-y-2 text-left">
-            <DialogTitle className="text-xl font-bold">Funcionalidad premium</DialogTitle>
-            <DialogDescription className="text-sm leading-relaxed text-muted-foreground">
-              Los tutoriales de ejercicio estan disponibles solo para usuarios premium. Actualiza tu plan para crear, editar y gestionar media y pasos de realizacion.
-            </DialogDescription>
-          </DialogHeader>
-        </div>
-        <DialogFooter className="p-6 pt-4 sm:justify-end">
-          <Button type="button" onClick={() => setIsPremiumModalOpen(false)}>
-            Entendido
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <PremiumFeatureDialog
+      open={isPremiumModalOpen}
+      onOpenChange={setIsPremiumModalOpen}
+      description="Los tutoriales de ejercicio estan disponibles solo para usuarios premium. Actualiza tu plan para crear, editar y gestionar media y pasos de realizacion."
+    />
     </>
   )
 }

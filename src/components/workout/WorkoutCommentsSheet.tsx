@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { MessageSquare, Star, User } from 'lucide-react'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetDescription } from '@/components/ui/sheet'
-import { getWorkoutComments, Comment } from '@/app/actions/workout/get-comment'
+import { getWorkoutComments } from '@/app/actions/workout/get-comment'
 import { useInfiniteQuery } from '@tanstack/react-query'
 import { cn } from '@/lib/utils'
 import { FEELING_CONFIG } from '@/constants/feeling'
@@ -47,7 +47,6 @@ export function WorkoutCommentsSheet({ workoutId, children }: WorkoutCommentsShe
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
-    status,
     isLoading
   } = useInfiniteQuery({
     queryKey: ['workout-comments', workoutId],

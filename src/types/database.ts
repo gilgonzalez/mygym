@@ -123,19 +123,19 @@ export type Database = {
           created_at: string
           exercise_id: string
           id: string
-          media_id: string
+          media_id: string | null
         }
         Insert: {
           created_at?: string
           exercise_id: string
           id?: string
-          media_id: string
+          media_id?: string | null
         }
         Update: {
           created_at?: string
           exercise_id?: string
           id?: string
-          media_id?: string
+          media_id?: string | null
         }
         Relationships: [
           {
@@ -336,7 +336,9 @@ export type Database = {
           created_at: string | null
           email: string
           id: string
+          isPremium: boolean
           name: string | null
+          role: Database["public"]["Enums"]["user_role"]
           updated_at: string | null
           username: string
         }
@@ -346,7 +348,9 @@ export type Database = {
           created_at?: string | null
           email: string
           id: string
+          isPremium?: boolean
           name?: string | null
+          role?: Database["public"]["Enums"]["user_role"]
           updated_at?: string | null
           username: string
         }
@@ -356,7 +360,9 @@ export type Database = {
           created_at?: string | null
           email?: string
           id?: string
+          isPremium?: boolean
           name?: string | null
+          role?: Database["public"]["Enums"]["user_role"]
           updated_at?: string | null
           username?: string
         }
@@ -541,7 +547,7 @@ export type Database = {
       }
     }
     Enums: {
-      [_ in never]: never
+      user_role: "ADMIN" | "USER" | "CREATOR" | "COACH"
     }
     CompositeTypes: {
       [_ in never]: never

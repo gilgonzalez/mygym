@@ -2,11 +2,12 @@ import { createMediaAction } from "@/app/actions/media/create"
 
 export async function uploadFile(fileUrl: string | undefined | null): Promise<{ url: string, id?: string, filename?: string, bucket_path?: string } | null> {
   if (!fileUrl) return null
-    if (!fileUrl.startsWith('blob:')) return { url: fileUrl }
+  const normalizedFileUrl = fileUrl.replace(/#(audio|video|image)$/, '')
+  if (!normalizedFileUrl.startsWith('blob:')) return { url: normalizedFileUrl }
 
-    try {
+  try {
     // 1. Get the file blob
-    const response = await fetch(fileUrl)
+    const response = await fetch(normalizedFileUrl)
     const blob = await response.blob()
     const fileType = blob.type
     const fileExt = fileType.split('/')[1] || 'bin'
@@ -42,7 +43,7 @@ export async function uploadFile(fileUrl: string | undefined | null): Promise<{ 
     }
 
     // 4. Save to Media Library (DB)
-    const { data: mediaRecord } = await createMediaAction({
+    const { data: mediaRecord, error: mediaError } = await createMediaAction({
         url: publicUrl,
         type: fileType,
         filename: fileName,
@@ -50,14 +51,16 @@ export async function uploadFile(fileUrl: string | undefined | null): Promise<{ 
         size: blob.size
     })
 
+    if (mediaError) {
+        throw new Error(mediaError)
+    }
+
     return {
         url: publicUrl,
         id: mediaRecord?.id,
         filename: fileName,
         bucket_path: key
     }
-
-    return publicUrl
   } catch (error) {
     console.error('Error uploading file:', error)
     return null

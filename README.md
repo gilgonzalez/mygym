@@ -1,149 +1,88 @@
-# FitShare - Workout Social Network
+# MyGym
 
-A social network platform for sharing and discovering workout routines. Built with React, TypeScript, and Supabase.
+Aplicación social y de ejecución de entrenamientos construida con Next.js, Supabase, TypeScript y Tailwind CSS.
 
-## Features
+## Stack
 
-- **User Authentication**: Secure login and registration system
-- **Workout Feed**: View workouts from users you follow
-- **Explore**: Discover public workouts with search and filters
-- **Create Workouts**: Build detailed workout routines with sections and exercises
-- **Social Features**: Like workouts and follow other users
-- **Responsive Design**: Works seamlessly on desktop and mobile devices
+- Next.js 14 + App Router
+- React 18 + TypeScript
+- Tailwind CSS
+- Supabase Auth + Postgres
+- Zustand + React Query
+- Cloudflare R2 para media
 
-## Tech Stack
+## Funcionalidades
 
-- **Frontend**: React 18, TypeScript, Tailwind CSS
-- **Backend**: Supabase (Auth + PostgreSQL + Storage)
-- **State Management**: Zustand
-- **Icons**: Lucide React
-- **Build Tool**: Vite
+- Registro e inicio de sesión con email/password y Google
+- Feed y exploración de workouts públicos
+- Creación y edición de workouts con secciones, ejercicios y tutoriales
+- Ejecución guiada de workouts con estados de sesión
+- Perfil de usuario con métricas y gating premium
+- Upload y gestión de media vinculada a ejercicios/tutoriales
 
-## Project Structure
+## Estructura
 
-```
+```text
 src/
-├── components/          # Reusable UI components
-├── pages/              # Page components
-├── store/              # Zustand stores
-├── types/              # TypeScript type definitions
-├── lib/                # Utility functions and configurations
-└── App.tsx             # Main application component
+├── app/                  # Rutas, layouts, server actions y route handlers
+├── components/           # UI reusable y vistas de negocio
+├── lib/                  # Clientes externos, utilidades y lógica compartida
+├── services/             # Servicios cliente como uploads
+├── store/                # Stores de Zustand
+├── types/                # Tipos de dominio y DB
+└── constants/            # Constantes de UI y negocio
 ```
 
-## Database Schema
+## Variables de entorno
 
-The application uses the following tables (all in English):
-
-- **users**: User profiles and authentication
-- **workouts**: Workout routines with metadata
-- **sections**: Workout sections (e.g., warm-up, cardio, strength)
-- **exercises**: Individual exercises within sections
-- **followers**: User following relationships
-- **likes**: Workout likes from users
-
-## Setup Instructions
-
-### 1. Clone the repository
+1. Copia el archivo de ejemplo:
 
 ```bash
-git clone <repository-url>
-cd mygym
+cp .env.example .env.local
 ```
 
-### 2. Install dependencies
+2. Completa las variables necesarias:
+
+- `NEXT_PUBLIC_BASE_URL`
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `R2_ENDPOINT`
+- `R2_ACCESS_KEY_ID`
+- `R2_SECRET_ACCESS_KEY`
+- `R2_BUCKET_NAME`
+- `R2_PUBLIC_URL`
+- `OPENAI_API_KEY`
+
+## Desarrollo
 
 ```bash
 npm install
-```
-
-### 3. Set up Supabase
-
-1. Create a new Supabase project at [supabase.com](https://supabase.com)
-2. Copy the migration file from `supabase/migrations/20241219_initial_schema.sql`
-3. Run the migration in your Supabase SQL editor
-4. Get your project URL and anon key from Supabase dashboard
-
-### 4. Configure environment variables
-
-Copy the example environment file:
-
-```bash
-cp .env.example .env
-```
-
-Add your Supabase credentials:
-
-```
-VITE_SUPABASE_URL=your_supabase_project_url
-VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
-```
-
-### 5. Run the development server
-
-```bash
 npm run dev
 ```
 
-The application will be available at `http://localhost:5173`
+La app queda disponible en `http://localhost:3000`.
 
-## Available Scripts
+## Scripts
 
-- `npm run dev` - Start development server
-- `npm run build` - Build for production
-- `npm run preview` - Preview production build
-- `npm run lint` - Run ESLint
-- `npm run check` - Run TypeScript type checking
+- `npm run dev` inicia el entorno local
+- `npm run build` genera la build de producción
+- `npm run start` sirve la build compilada
+- `npm run lint` ejecuta ESLint
+- `npm run check` ejecuta TypeScript en modo validación
+- `npm run supabase:types` regenera tipos de Supabase
 
-## Features in Detail
+## Base de datos
 
-### Authentication
-- Email and password registration
-- Secure login with Supabase Auth
-- Protected routes for authenticated users
+- Las migraciones viven en `supabase/migrations`
+- El seed inicial vive en `supabase/seed.sql`
+- La tabla `users` incluye gating premium con `isPremium` y `role`
 
-### Workout Management
-- Create workouts with multiple sections
-- Add different types of exercises (repetitions, time-based, rest)
-- Set workout category, difficulty, and duration
-- Choose between public and private workouts
+## Despliegue
 
-### Social Features
-- Like workouts and see like counts
-- Follow other users to see their workouts in your feed
-- Explore public workouts with search and filters
+Checklist mínima antes de producción:
 
-### Responsive Design
-- Mobile-first approach with Tailwind CSS
-- Consistent design system with proper spacing and colors
-- Touch-optimized interactions
-
-## API Endpoints
-
-The application uses Supabase client SDK for all API operations:
-
-- **Authentication**: Supabase Auth
-- **Workouts**: CRUD operations on workouts table
-- **Sections**: Manage workout sections
-- **Exercises**: Handle individual exercises
-- **Social**: Follow users and like workouts
-
-## Deployment
-
-The application is ready for deployment on platforms like Vercel, Netlify, or any static hosting service that supports React applications.
-
-1. Build the application: `npm run build`
-2. Deploy the `dist` folder to your hosting service
-3. Configure environment variables in your hosting platform
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Run type checking: `npm run check`
-5. Submit a pull request
-
-## License
-
-This project is open source and available under the MIT License.
+1. Configurar todas las variables de entorno en la plataforma de despliegue.
+2. Ejecutar `npm run lint`, `npm run check` y `npm run build`.
+3. Aplicar migraciones de Supabase del directorio `supabase/migrations`.
+4. Verificar manualmente auth, create workout, update workout y workout view sobre el entorno desplegado.

@@ -41,10 +41,9 @@ export function WorkoutOverview({
   const [showShare, setShowShare] = useState(false)
 
   // Calculate derived stats
-  const { durationInMinutes, uniqueMuscleGroups, uniqueEquipment, totalExercises, totalSets } = useMemo(() => {
+  const { durationInMinutes, uniqueMuscleGroups, uniqueEquipment, totalExercises } = useMemo(() => {
     let totalSeconds = 0
     let exerciseCount = 0
-    let setsCount = 0
     const muscleGroups = new Set<string>()
     const equipment = new Set<string>()
 
@@ -52,7 +51,6 @@ export function WorkoutOverview({
       section.exercises.forEach(ex => {
         exerciseCount++
         const sets = ex.sets || 1
-        setsCount += sets
         const duration = ex.duration || 0
         const rest = ex.rest || 0
         const timePerSet = duration > 0 ? duration : 45 
@@ -67,8 +65,7 @@ export function WorkoutOverview({
       durationInMinutes: Math.ceil(totalSeconds / 60),
       uniqueMuscleGroups: Array.from(muscleGroups),
       uniqueEquipment: Array.from(equipment),
-      totalExercises: exerciseCount,
-      totalSets: setsCount
+      totalExercises: exerciseCount
     }
   }, [workout])
 

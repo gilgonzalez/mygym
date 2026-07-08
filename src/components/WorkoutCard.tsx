@@ -1,7 +1,7 @@
 'use client'
 import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
-import { Heart, Clock, BarChart, User, Play, MoreVertical, Edit, Trash2, Loader2, Zap,  Brain, Footprints, Swords, Shield, Share2, MessageSquare, Star } from 'lucide-react'
+import { Heart, Clock, User, Play, MoreVertical, Edit, Trash2, Loader2, Zap, Brain, Footprints, Swords, Shield, Share2, MessageSquare } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
 import { Workout } from '../types/workout/composite'
 import { Card } from './Card'
@@ -17,12 +17,11 @@ interface WorkoutCardProps {
 }
 
 export default function WorkoutCard({ workout }: WorkoutCardProps) {
-  const [likesCount, setLikesCount] = useState(workout.likes_count || 0)
-  const [isLiked, setIsLiked] = useState(workout.is_liked || false)
+  const likesCount = workout.likes_count || 0
+  const isLiked = workout.is_liked || false
   const [showShare, setShowShare] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
-  const [isLoadingEdit, setIsLoadingEdit] = useState(false)
   
   const { user } = useAuthStore()
   const router = useRouter()
@@ -34,6 +33,7 @@ export default function WorkoutCard({ workout }: WorkoutCardProps) {
   // @ts-ignore - estimated_time exists in DB but might be missing in type
   const duration = Math.ceil((workout.estimated_time || 0) / 60) || 45
   const xpEarned = Math.ceil(duration * 5) + 50
+  const hasCover = Boolean(workout.cover)
 
   const getAttributes = (tags: string[] = []) => {
       let strength = 0, agility = 0, endurance = 0, wisdom = 0
@@ -94,213 +94,219 @@ export default function WorkoutCard({ workout }: WorkoutCardProps) {
     }
   }
 
-  const getCategoryColor = (category: string) => {
-    switch (category) {
-      case 'cardio': return 'text-sky-500 bg-sky-500/10 border-sky-500/20'
-      case 'strength': return 'text-violet-500 bg-violet-500/10 border-violet-500/20'
-      case 'flexibility': return 'text-indigo-500 bg-indigo-500/10 border-indigo-500/20'
-      case 'mixed': return 'text-orange-500 bg-orange-500/10 border-orange-500/20'
-      default: return 'text-muted-foreground bg-muted border-muted-foreground/20'
-    }
-  }
-
   return (
-    <Card className="group overflow-hidden border-border/50 bg-card/50 backdrop-blur-sm glow-card hover:border-primary/50 transition-all duration-300 w-full flex flex-col md:flex-row">
-      {/* Left Column: Info & Details (60%) */}
-      <div className="flex flex-col justify-between p-6 md:w-3/5 relative z-10">
-        <div>
-           {/* User Header */}
-           <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center space-x-3">
-                <div className="relative w-10 h-10 rounded-full overflow-hidden ring-2 ring-primary/20 transition-transform group-hover:scale-105">
-                  {workout.user?.avatar_url ? (
-                    <img 
-                      src={workout.user.avatar_url} 
-                      alt={workout.user.name || 'User'} 
-                      className="w-full h-full object-cover" 
-                      referrerPolicy="no-referrer"
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-primary/10 flex items-center justify-center"><User className="w-5 h-5 text-primary" /></div>
-                  )}
-                </div>
-                <div className="flex flex-col">
-                  <span className="font-semibold text-sm text-foreground hover:text-primary cursor-pointer transition-colors duration-300">{workout.user?.name}</span>
-                  <span className="text-[11px] text-muted-foreground uppercase tracking-wider transition-colors duration-300">@{workout.user?.username}</span>
-                </div>
-              </div>
-
-              {/* Owner Actions */}
-              {isOwner && (
-                  <div className="relative" ref={menuRef}>
-                      <button 
-                        onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu) }}
-                        className="p-1 rounded-full hover:bg-muted/50 text-muted-foreground transition-colors"
-                      >
-                          {isDeleting || isLoadingEdit ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                              <MoreVertical className="h-4 w-4" />
-                          )}
-                      </button>
-                      
-                      {showMenu && (
-                          <div className="absolute right-0 top-8 w-32 bg-popover border border-border rounded-lg shadow-xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                              <div className="flex flex-col p-1">
-                                  <button 
-                                    onClick={(e) => router.push(`/editor/workout/create?id=${workout.id}`)}
-                                    className="flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted rounded-md transition-colors text-left"
-                                  >
-                                      <Edit className="h-3.5 w-3.5" />
-                                      Edit
-                                  </button>
-                                  <button 
-                                    onClick={(e) => { e.stopPropagation(); setShowMenu(false); handleDelete() }}
-                                    className="flex items-center gap-2 px-3 py-2 text-sm text-red-500 hover:bg-red-500/10 rounded-md transition-colors text-left"
-                                  >
-                                      <Trash2 className="h-3.5 w-3.5" />
-                                      Delete
-                                  </button>
-                              </div>
-                          </div>
-                      )}
-                  </div>
+    <Card className="group overflow-hidden border-border/50 bg-card/80 backdrop-blur-sm glow-card hover:border-primary/50 transition-all duration-300 w-full">
+      <div className="flex flex-col p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center space-x-3">
+            <div className="relative w-10 h-10 rounded-full overflow-hidden ring-2 ring-primary/20 transition-transform group-hover:scale-105">
+              {workout.user?.avatar_url ? (
+                <img
+                  src={workout.user.avatar_url}
+                  alt={workout.user.name || 'User'}
+                  className="w-full h-full object-cover"
+                  referrerPolicy="no-referrer"
+                />
+              ) : (
+                <div className="w-full h-full bg-primary/10 flex items-center justify-center"><User className="w-5 h-5 text-primary" /></div>
               )}
-           </div>
+            </div>
+            <div className="flex flex-col">
+              <span className="font-semibold text-sm text-foreground hover:text-primary cursor-pointer transition-colors duration-300">{workout.user?.name}</span>
+              <span className="text-[11px] text-muted-foreground uppercase tracking-wider transition-colors duration-300">@{workout.user?.username}</span>
+            </div>
+          </div>
 
-           {/* Main Content */}
-           <div className="space-y-3">
-              <h4 className="text-2xl font-bold leading-tight tracking-tight text-foreground group-hover:text-primary cursor-pointer transition-all duration-300">
+          {isOwner && (
+            <div className="relative" ref={menuRef}>
+              <button
+                onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu) }}
+                className="p-1 rounded-full hover:bg-muted/50 text-muted-foreground transition-colors"
+              >
+                {isDeleting ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <MoreVertical className="h-4 w-4" />
+                )}
+              </button>
+
+              {showMenu && (
+                <div className="absolute right-0 top-8 w-32 bg-popover border border-border rounded-lg shadow-xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                  <div className="flex flex-col p-1">
+                    <button
+                      onClick={() => router.push(`/editor/workout/create?id=${workout.id}`)}
+                      className="flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted rounded-md transition-colors text-left"
+                    >
+                      <Edit className="h-3.5 w-3.5" />
+                      Edit
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setShowMenu(false); handleDelete() }}
+                      className="flex items-center gap-2 px-3 py-2 text-sm text-red-500 hover:bg-red-500/10 rounded-md transition-colors text-left"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div className="space-y-3">
+          {workout.description ? (
+            <p className="text-sm text-muted-foreground line-clamp-3 transition-all duration-300">
+              {workout.description}
+            </p>
+          ) : null}
+        </div>
+
+        <div className="relative mt-5 overflow-hidden rounded-[28px] border border-border/60 shadow-[0_18px_45px_rgba(0,0,0,0.12)] dark:shadow-[0_20px_55px_rgba(0,0,0,0.34)]">
+          <div className={`absolute inset-0 ${hasCover ? '' : 'bg-white dark:bg-black'}`}>
+            {hasCover ? (
+              <>
+                <img
+                  src={workout.cover || ''}
+                  alt={`Cover de ${workout.title}`}
+                  className="h-full w-full object-contain"
+                />
+                <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(5,8,22,0.16)_0%,rgba(5,8,22,0.48)_26%,rgba(5,8,22,0.9)_100%)]" />
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(16,185,129,0.24),transparent_28%),radial-gradient(circle_at_bottom_left,rgba(59,130,246,0.22),transparent_32%)]" />
+                <div className="absolute inset-0 bg-black/10 backdrop-blur-[1.5px]" />
+              </>
+            ) : (
+              <>
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(16,185,129,0.10),transparent_24%),radial-gradient(circle_at_bottom_left,rgba(59,130,246,0.10),transparent_30%)] dark:bg-[radial-gradient(circle_at_top_right,rgba(16,185,129,0.14),transparent_24%),radial-gradient(circle_at_bottom_left,rgba(59,130,246,0.14),transparent_30%)]" />
+                <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.75),rgba(255,255,255,0.92))] dark:bg-[linear-gradient(180deg,rgba(10,14,28,0.76),rgba(5,8,22,0.95))]" />
+              </>
+            )}
+          </div>
+
+          <div className="relative z-10 flex min-h-[260px] sm:min-h-[300px] flex-col gap-5 p-4 sm:gap-6 sm:p-5">
+            <div className="flex items-start justify-between gap-4">
+              <h4 className="max-w-[18rem] text-2xl font-bold leading-tight tracking-tight text-white drop-shadow-md transition-all duration-300 group-hover:text-emerald-200 sm:text-[2rem]">
                 {workout.title}
               </h4>
-              <p className="text-sm text-muted-foreground line-clamp-3 transition-all duration-300">
-                {workout.description || "No description provided."}
-              </p>
-              
-              <div className="flex flex-wrap gap-2 pt-2">
-                <span className={`px-2.5 py-1 rounded-md text-[11px] font-medium uppercase tracking-wider border ${getDifficultyColor(workout.difficulty || 'beginner')}`}>
+              <div className="rounded-full border border-white/10 bg-black/25 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/85 backdrop-blur-md dark:bg-white/10 dark:text-white">
+                {duration} min
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              {workout.difficulty ? (
+                <span className={`inline-flex px-2.5 py-1 rounded-md text-[11px] font-medium uppercase tracking-wider border backdrop-blur-md ${getDifficultyColor(workout.difficulty)} ${hasCover ? 'bg-black/25 text-white border-white/10' : ''}`}>
                   {workout.difficulty}
                 </span>
-                {workout.tags?.map(tag => (
-                   <span key={tag} className="px-2.5 py-1 rounded-md text-[11px] font-medium uppercase tracking-wider border text-muted-foreground bg-muted border-muted-foreground/20">
-                     {tag}
-                   </span>
-                ))}
-              </div>
-           </div>
-        </div>
-
-        {/* Footer Info */}
-        <div className="mt-auto pt-6 space-y-4">
-            {/* Attributes Row */}
-            <div className="flex flex-wrap gap-2">
-                 {attributes.strength > 0 && (
-                    <div className="flex items-center gap-1.5 text-rose-500 bg-rose-500/10 px-2 py-1 rounded-md border border-rose-500/20" title="Strength">
-                        <Swords className="w-3.5 h-3.5" />
-                        <span className="text-xs font-bold">+{attributes.strength} STR</span>
-                    </div>
-                 )}
-                 {attributes.endurance > 0 && (
-                    <div className="flex items-center gap-1.5 text-sky-500 bg-sky-500/10 px-2 py-1 rounded-md border border-sky-500/20" title="Endurance">
-                        <Shield className="w-3.5 h-3.5" />
-                        <span className="text-xs font-bold">+{attributes.endurance} END</span>
-                    </div>
-                 )}
-                 {attributes.agility > 0 && (
-                    <div className="flex items-center gap-1.5 text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded-md border border-emerald-500/20" title="Agility">
-                        <Footprints className="w-3.5 h-3.5" />
-                        <span className="text-xs font-bold">+{attributes.agility} AGI</span>
-                    </div>
-                 )}
-                 {attributes.wisdom > 0 && (
-                    <div className="flex items-center gap-1.5 text-violet-500 bg-violet-500/10 px-2 py-1 rounded-md border border-violet-500/20" title="Wisdom">
-                        <Brain className="w-3.5 h-3.5" />
-                        <span className="text-xs font-bold">+{attributes.wisdom} WIS</span>
-                    </div>
-                 )}
+              ) : null}
             </div>
 
-            {/* Meta Row */}
-            <div className="flex items-center justify-between text-sm text-muted-foreground border-t border-border/50 pt-3">
-                <div className="flex items-center gap-4">
-                    <button onClick={handleLike} className={`flex items-center gap-2 transition-colors group/like ${isLiked ? 'text-red-500' : 'hover:text-red-500'}`}>
-                      <Heart className={`w-4 h-4 ${isLiked ? 'fill-current' : 'group-hover/like:scale-110 transition-transform'}`} />
-                      <span className="font-medium text-xs">{likesCount}</span>
-                    </button>
-                    <button onClick={() => setShowShare(true)} className="flex items-center gap-2 transition-colors hover:text-primary group/share">
-                      <Share2 className="w-4 h-4 group-hover/share:scale-110 transition-transform" />
-                    </button>
-                    <WorkoutCommentsSheet workoutId={workout.id}>
-                      <button className="flex items-center gap-2 transition-colors hover:text-primary group/comments">
-                        <MessageSquare className="w-4 h-4 group-hover/comments:scale-110 transition-transform" />
-                      </button>
-                    </WorkoutCommentsSheet>
-                    <div className="flex items-center gap-2">
-                      <Clock className="w-4 h-4" />
-                      <span className="text-xs">{duration} min</span>
-                    </div>
-                </div>
-                
-                <div className="flex items-center gap-1.5 text-amber-500">
-                    <Zap className="w-3.5 h-3.5 fill-current" />
-                    <span className="text-xs font-bold">{xpEarned} XP</span>
-                </div>
-            </div>
-        </div>
-      </div>
-
-      {/* Right Column: Preview & Action (40%) */}
-      <div className="md:w-2/5 bg-secondary/30 border-l border-border/50 p-6 flex flex-col relative overflow-hidden">
-         <div className="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-primary/5 pointer-events-none" />
-         
-         <div className="relative z-10 flex-1 flex flex-col">
-            <div className="flex items-center justify-between mb-4">
-              <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Routine Preview</span>
-              <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
-            </div>
-
-            <div className="space-y-3 flex-1 overflow-hidden">
-              {workout.sections && workout.sections.length > 0 ? (
-                workout.sections.slice(0, 4).map((section, i) => (
-                  <div key={i} className="group/item flex items-center gap-3 p-2 rounded-lg hover:bg-background/50 transition-colors border border-transparent hover:border-border/30">
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[10px] font-bold text-primary group-hover/item:bg-primary group-hover/item:text-primary-foreground transition-colors">
-                      {i + 1}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="truncate text-sm font-medium text-foreground">{section.name}</p>
-                      <p className="truncate text-[10px] text-muted-foreground">{section.total_exercises || 0} exercises</p>
+            {workout.sections && workout.sections.length > 0 ? (
+              <div className="flex flex-row flex-wrap gap-3">
+                {workout.sections.map((section, index) => (
+                  <div
+                    key={section.id || `${section.name}-${index}`}
+                    className="w-full sm:w-[calc(50%-0.375rem)] xl:w-[calc(25%-0.5625rem)] rounded-2xl border border-white/10 bg-black/20 p-3 backdrop-blur-md shadow-[0_10px_30px_rgba(0,0,0,0.14)] dark:bg-black/25"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-500/15 text-[11px] font-bold text-emerald-300 ring-1 ring-emerald-400/20">
+                        {index + 1}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-white dark:text-white">
+                          {section.name}
+                        </p>
+                        <p className="truncate text-[11px] text-white/70 dark:text-white/70">
+                          {section.total_exercises || 0} exercises
+                        </p>
+                      </div>
                     </div>
                   </div>
-                ))
-              ) : (
-                <div className="flex flex-col items-center justify-center h-full text-muted-foreground opacity-50 space-y-2">
-                   <BarChart className="w-8 h-8 opacity-20" />
-                   <span className="text-xs">No preview available</span>
+                ))}
+              </div>
+            ) : null}
+
+            {workout.tags?.[0] ? (
+              <div className="flex justify-start">
+                <span className="rounded-full border border-white/10 bg-black/25 px-3 py-1 text-[11px] font-medium uppercase tracking-wider text-white/80 backdrop-blur-md dark:bg-white/10 dark:text-white/80">
+                  {workout.tags[0]}
+                </span>
+              </div>
+            ) : null}
+          </div>
+        </div>
+
+        <div className="mt-6 grid gap-4 border-t border-border/50 pt-4 lg:grid-cols-[minmax(0,1fr)_220px] lg:items-start">
+          <div className="space-y-4">
+            <div className="flex flex-wrap gap-2">
+              {attributes.strength > 0 && (
+                <div className="flex items-center gap-1.5 text-rose-500 bg-rose-500/10 px-2 py-1 rounded-md border border-rose-500/20" title="Strength">
+                  <Swords className="w-3.5 h-3.5" />
+                  <span className="text-xs font-bold">+{attributes.strength} STR</span>
                 </div>
               )}
-              {workout.sections && workout.sections.length > 4 && (
-                 <div className="text-center text-[10px] text-muted-foreground pt-1">
-                    + {workout.sections.length - 4} more sections
-                 </div>
+              {attributes.endurance > 0 && (
+                <div className="flex items-center gap-1.5 text-sky-500 bg-sky-500/10 px-2 py-1 rounded-md border border-sky-500/20" title="Endurance">
+                  <Shield className="w-3.5 h-3.5" />
+                  <span className="text-xs font-bold">+{attributes.endurance} END</span>
+                </div>
+              )}
+              {attributes.agility > 0 && (
+                <div className="flex items-center gap-1.5 text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded-md border border-emerald-500/20" title="Agility">
+                  <Footprints className="w-3.5 h-3.5" />
+                  <span className="text-xs font-bold">+{attributes.agility} AGI</span>
+                </div>
+              )}
+              {attributes.wisdom > 0 && (
+                <div className="flex items-center gap-1.5 text-violet-500 bg-violet-500/10 px-2 py-1 rounded-md border border-violet-500/20" title="Wisdom">
+                  <Brain className="w-3.5 h-3.5" />
+                  <span className="text-xs font-bold">+{attributes.wisdom} WIS</span>
+                </div>
               )}
             </div>
 
-            <Link href={`/workout/${workout.id}`} className="mt-6">
-              <Button className="w-full gap-2 shadow-lg shadow-primary/20 group-hover:shadow-primary/40 transition-all duration-300">
-                  <Play className="w-4 h-4 fill-current" />
-                  Start Workout
+            <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+              <button onClick={handleLike} className={`flex items-center gap-2 transition-colors group/like ${isLiked ? 'text-red-500' : 'hover:text-red-500'}`}>
+                <Heart className={`w-4 h-4 ${isLiked ? 'fill-current' : 'group-hover/like:scale-110 transition-transform'}`} />
+                <span className="font-medium text-xs">{likesCount}</span>
+              </button>
+              <WorkoutCommentsSheet workoutId={workout.id}>
+                <button className="flex items-center gap-2 transition-colors hover:text-primary group/comments">
+                  <MessageSquare className="w-4 h-4 group-hover/comments:scale-110 transition-transform" />
+                  <span className="text-xs font-medium">Comments</span>
+                </button>
+              </WorkoutCommentsSheet>
+              <button onClick={() => setShowShare(true)} className="flex items-center gap-2 transition-colors hover:text-primary group/share">
+                <Share2 className="w-4 h-4 group-hover/share:scale-110 transition-transform" />
+                <span className="text-xs font-medium">Share</span>
+              </button>
+              <div className="flex items-center gap-2">
+                <Clock className="w-4 h-4" />
+                <span className="text-xs">{duration} min</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-amber-500">
+                <Zap className="w-3.5 h-3.5 fill-current" />
+                <span className="text-xs font-bold">{xpEarned} XP</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="lg:justify-self-end lg:w-full">
+            <Link href={`/workout/${workout.id}`} className="block">
+              <Button className="w-full gap-2 shadow-lg shadow-primary/20 group-hover:shadow-primary/40 transition-all duration-300 lg:h-11">
+                <Play className="w-4 h-4 fill-current" />
+                Start Workout
               </Button>
             </Link>
-         </div>
+          </div>
+        </div>
       </div>
-      
-      <ShareWorkoutDialog 
-        open={showShare} 
-        onOpenChange={setShowShare} 
-        workout={workout} 
-      />
 
-   
+      <ShareWorkoutDialog
+        open={showShare}
+        onOpenChange={setShowShare}
+        workout={workout}
+      />
     </Card>
   )
 }

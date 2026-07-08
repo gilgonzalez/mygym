@@ -1,6 +1,14 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'user_role') THEN
+    CREATE TYPE public.user_role AS ENUM ('ADMIN', 'USER', 'CREATOR', 'COACH');
+  END IF;
+END
+$$;
+
 CREATE OR REPLACE FUNCTION public.set_updated_at()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -18,6 +26,8 @@ CREATE TABLE public.users (
   name text,
   avatar_url text,
   bio text,
+  "isPremium" boolean NOT NULL DEFAULT false,
+  role public.user_role NOT NULL DEFAULT 'USER',
   created_at timestamp with time zone DEFAULT timezone('utc'::text, now()),
   updated_at timestamp with time zone DEFAULT timezone('utc'::text, now())
 );
@@ -57,7 +67,7 @@ CREATE TABLE public.exercises (
 CREATE TABLE public.exercise_tutorials (
   id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
   exercise_id uuid NOT NULL UNIQUE CONSTRAINT exercise_tutorials_exercise_id_fkey REFERENCES public.exercises(id) ON DELETE CASCADE,
-  media_id uuid NOT NULL CONSTRAINT exercise_tutorials_media_id_fkey REFERENCES public.media(id) ON DELETE RESTRICT,
+  media_id uuid CONSTRAINT exercise_tutorials_media_id_fkey REFERENCES public.media(id) ON DELETE RESTRICT,
   created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 

@@ -17,6 +17,20 @@ export async function completeWorkoutAction({ workoutId, durationMinutes, xpEarn
         return { success: false, error: 'Unauthorized' }
     }
 
+    const { data: profile, error: profileError } = await supabase
+      .from('users')
+      .select('"isPremium"')
+      .eq('id', user.id)
+      .single()
+
+    if (profileError) {
+      return { success: false, error: profileError.message }
+    }
+
+    if (!profile?.isPremium) {
+      return { success: false, error: 'Premium subscription required to save workout progress' }
+    }
+
     // Fallback Logic: Use workout defaults if calculated values are missing or zero
     if (!durationMinutes || durationMinutes <= 0 || !xpEarned || xpEarned <= 0) {
         const { data: workout } = await supabase

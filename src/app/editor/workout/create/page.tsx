@@ -53,12 +53,12 @@ const tutorialStepSchema = z.object({
 })
 
 const tutorialSchema = z.object({
-  media_url: z.string().min(1, "Tutorial media required"),
+  media_url: z.string().optional().nullable(),
   media_id: z.string().optional().nullable(),
   filename: z.string().optional().nullable(),
   bucket_path: z.string().optional().nullable(),
   media_type: z.enum(['image', 'video', 'audio']).optional().nullable(),
-  steps: z.array(tutorialStepSchema).min(1, "Add at least one step"),
+  steps: z.array(tutorialStepSchema).optional().default([]),
 })
 
 const exerciseSchema = z.object({
@@ -110,6 +110,38 @@ function inferMediaType(value?: string | null): 'image' | 'video' | 'audio' {
   if (value.includes('#audio') || /\.(mp3|wav|ogg|m4a|aac)($|\?)/i.test(value)) return 'audio'
   if (value.includes('#video') || /youtube\.com|youtu\.be/i.test(value) || /\.(mp4|webm|ogg|mov|mkv)($|\?)/i.test(value)) return 'video'
   return 'image'
+}
+
+function normalizeMediaUrl(value?: string | null) {
+  if (!value) return ''
+  return value.replace(/#(audio|video|image)$/, '')
+}
+
+function sanitizeTutorial(
+  tutorial?: WorkoutFormExercise['tutorial'] | null
+): WorkoutFormExercise['tutorial'] | null {
+  if (!tutorial) return null
+
+  const mediaUrl = normalizeMediaUrl(tutorial.media_url)
+  const steps = (tutorial.steps || []).filter((step) => {
+    const hasTitle = Boolean(step.title?.trim())
+    const hasDescription = Boolean(step.description?.trim())
+    return hasTitle || hasDescription
+  })
+
+  if (!mediaUrl && !tutorial.media_id && steps.length === 0) {
+    return null
+  }
+
+  return {
+    ...tutorial,
+    media_url: mediaUrl || null,
+    media_id: tutorial.media_id || null,
+    filename: tutorial.filename || null,
+    bucket_path: tutorial.bucket_path || null,
+    media_type: tutorial.media_type || (mediaUrl ? inferMediaType(mediaUrl) : null),
+    steps,
+  }
 }
 
 function createEmptyExercise() {
@@ -266,7 +298,7 @@ function CreateWorkoutContent() {
                     equipment: e.equipment || [],
                     difficulty: e.difficulty || 'beginner',
                     link_id: (e as any).link_id,
-                    tutorial: e.tutorial ? {
+                    tutorial: sanitizeTutorial(e.tutorial ? {
                       media_url: e.tutorial.media_url || '',
                       media_id: e.tutorial.media_id || null,
                       filename: e.tutorial.filename || null,
@@ -277,7 +309,7 @@ function CreateWorkoutContent() {
                         title: step.title,
                         description: step.description,
                       })),
-                    } : undefined,
+                    } : undefined) || undefined,
                 }))
             }))
         } as WorkoutFormValues
@@ -364,11 +396,11 @@ function CreateWorkoutContent() {
 
             // 1. Upload Media First (Client-side)
             // Upload Cover
-            let coverUrl = data.cover
+            let coverUrl = normalizeMediaUrl(data.cover)
             if (data.cover?.startsWith('blob:')) {
                 try {
                     setUploadStatus('Uploading cover image...')
-                    const res = await uploadFile(data.cover)
+                    const res = await uploadFile(normalizeMediaUrl(data.cover))
                     if (res) {
                         coverUrl = res.url
                     }
@@ -389,7 +421,7 @@ function CreateWorkoutContent() {
                         updateProgress('Audio track uploaded')
                         return res?.url
                     }
-                    return url
+                    return normalizeMediaUrl(url)
                 })
             )
             const validAudioUrls = audioUrls.filter((url: string | undefined): url is string => !!url)
@@ -397,19 +429,14 @@ function CreateWorkoutContent() {
             // Upload Exercise Media
             const sectionsWithMedia = await Promise.all(data.sections.map(async (section: WorkoutFormSection) => {
                 const exercisesWithMedia = await Promise.all(section.exercises.map(async (exercise: WorkoutFormExercise) => {
-                    let finalThumbnailUrl = exercise.thumbnail_url
+                    let finalThumbnailUrl = normalizeMediaUrl(exercise.thumbnail_url)
                     let finalThumbnailMediaId = exercise.thumbnail_media_id
                     let finalFilename = exercise.filename
                     let finalBucketPath = exercise.bucket_path
-                    let finalTutorial = exercise.tutorial
-                      ? {
-                          ...exercise.tutorial,
-                          media_type: exercise.tutorial.media_type || inferMediaType(exercise.tutorial.media_url),
-                        }
-                      : undefined
+                    let finalTutorial = sanitizeTutorial(exercise.tutorial)
 
                     if (exercise.thumbnail_url && exercise.thumbnail_url.startsWith('blob:')) {
-                        const res = await uploadFile(exercise.thumbnail_url)
+                        const res = await uploadFile(normalizeMediaUrl(exercise.thumbnail_url))
                         if (res) {
                             finalThumbnailUrl = res.url
                             finalThumbnailMediaId = res.id
@@ -419,16 +446,16 @@ function CreateWorkoutContent() {
                         updateProgress(`Thumbnail uploaded: ${exercise.name}`)
                     }
 
-                    if (exercise.tutorial?.media_url && exercise.tutorial.media_url.startsWith('blob:')) {
-                        const res = await uploadFile(exercise.tutorial.media_url)
+                    if (finalTutorial?.media_url && finalTutorial.media_url.startsWith('blob:')) {
+                        const res = await uploadFile(normalizeMediaUrl(finalTutorial.media_url))
                         if (res) {
                             finalTutorial = {
-                                ...exercise.tutorial,
+                                ...finalTutorial,
                                 media_url: res.url,
                                 media_id: res.id || null,
                                 filename: res.filename || null,
                                 bucket_path: res.bucket_path || null,
-                                media_type: exercise.tutorial.media_type || inferMediaType(exercise.tutorial.media_url),
+                                media_type: finalTutorial.media_type || inferMediaType(finalTutorial.media_url),
                             }
                         }
                         updateProgress(`Tutorial uploaded: ${exercise.name}`)
@@ -540,25 +567,31 @@ function CreateWorkoutContent() {
                     id: s.id,
                     name: s.name,
                     orderType: s.orderType,
-                    exercises: s.exercises.map((e: WorkoutFormExercise) => ({
-                        ...e,
-                        id: e.db_id || undefined, // Use db_id if available (existing), else undefined (new)
-                        thumbnail_url: e.thumbnail_url,
-                        thumbnail_media_id: e.thumbnail_media_id,
-                        filename: e.filename,
-                        bucket_path: e.bucket_path,
-                        tutorial: e.tutorial ? {
-                            media_url: e.tutorial.media_url,
-                            media_id: e.tutorial.media_id,
-                            filename: e.tutorial.filename,
-                            bucket_path: e.tutorial.bucket_path,
-                            media_type: e.tutorial.media_type || inferMediaType(e.tutorial.media_url),
-                            steps: (e.tutorial.steps || []).map((step: { title: string; description: string }) => ({
-                                title: step.title,
-                                description: step.description,
-                            }))
-                        } : null
-                    }))
+                    exercises: s.exercises.map((e: WorkoutFormExercise) => {
+                        const sanitizedTutorial = sanitizeTutorial(e.tutorial)
+
+                        return {
+                            ...e,
+                            id: e.db_id || undefined, // Use db_id if available (existing), else undefined (new)
+                            thumbnail_url: e.thumbnail_url,
+                            thumbnail_media_id: e.thumbnail_media_id,
+                            filename: e.filename,
+                            bucket_path: e.bucket_path,
+                            tutorial: sanitizedTutorial
+                              ? {
+                                  media_url: sanitizedTutorial.media_url,
+                                  media_id: sanitizedTutorial.media_id,
+                                  filename: sanitizedTutorial.filename,
+                                  bucket_path: sanitizedTutorial.bucket_path,
+                                  media_type: sanitizedTutorial.media_type,
+                                  steps: (sanitizedTutorial.steps || []).map((step: { title: string; description: string }) => ({
+                                      title: step.title,
+                                      description: step.description,
+                                  }))
+                                }
+                              : null
+                        }
+                    })
                 }))
             }
             
@@ -573,8 +606,12 @@ function CreateWorkoutContent() {
                 setUploadStatus('Creating workout...')
                 result = await createWorkoutAction(cleanData)
             }
-            
-            if (!result.success) throw new Error(result.error)
+
+            if (!result || typeof result !== 'object' || !('success' in result)) {
+                throw new Error('Invalid response while saving workout')
+            }
+
+            if (!result.success) throw new Error(result.error || 'Failed to save workout')
             
             updateProgress('Done!')
             return result
@@ -1260,7 +1297,7 @@ function ExercisesFieldArray({ nestIndex, control, register, setValue, watch, er
         equipment: exercise.equipment || [],
         thumbnail_media_id: exercise.thumbnail_media_id,
         thumbnail_url: exercise.thumbnail?.url,
-        tutorial: tutorialData ? {
+        tutorial: sanitizeTutorial(tutorialData ? {
           media_url: tutorialData.media?.url || '',
           media_id: null,
           filename: null,
@@ -1271,7 +1308,7 @@ function ExercisesFieldArray({ nestIndex, control, register, setValue, watch, er
             title: step.title,
             description: step.description,
           })),
-        } : undefined,
+        } : undefined) || undefined,
     })
   }
 

@@ -17,6 +17,7 @@ import { completeWorkoutAction } from '@/app/actions/user/completeWorkout'
 export default function WorkoutSessionPage({ params }: { params: { id: string } }) {
   const router = useRouter()
   const { user } = useAuthStore()
+  const canSaveProgress = Boolean(user?.isPremium)
   const hasLoggedRef = useRef(false)
   const [currentLogId, setCurrentLogId] = useState<string | null>(null)
   const [xpEarnedState, setXpEarnedState] = useState<number>(0)
@@ -121,6 +122,10 @@ export default function WorkoutSessionPage({ params }: { params: { id: string } 
         const xpEarned = Math.ceil(durationMinutes * 5) + 50 // Base 50 + 5 per minute
         setXpEarnedState(xpEarned)
 
+        if (!canSaveProgress) {
+            return
+        }
+
         // Call Server Action
         completeWorkoutAction({
             workoutId: activeWorkout.id,
@@ -130,7 +135,6 @@ export default function WorkoutSessionPage({ params }: { params: { id: string } 
             if (!result.success) {
                 console.error('Error logging workout stats:', result.error)
             } else {
-                console.log('Workout logged successfully:', result.data)
                 if (result.data && typeof result.data === 'object' && 'log_id' in result.data) {
                     setCurrentLogId((result.data as any).log_id)
                 }
@@ -144,7 +148,7 @@ export default function WorkoutSessionPage({ params }: { params: { id: string } 
         setCurrentLogId(null)
         setXpEarnedState(0)
     }
-  }, [isCompleted, activeWorkout, user])
+  }, [isCompleted, activeWorkout, user, canSaveProgress])
 
 
   // Helper to determine if we have a session in progress
@@ -172,6 +176,7 @@ export default function WorkoutSessionPage({ params }: { params: { id: string } 
         onRestart={restartWorkout} 
         initialLogId={currentLogId}
         xpEarned={xpEarnedState}
+        canSaveProgress={canSaveProgress}
       />
     )
   }

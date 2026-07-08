@@ -1,6 +1,13 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
+const PUBLIC_PATH_PREFIXES = [
+  '/auth',
+  '/_next',
+  '/api/upload',
+  '/api/media/delete',
+]
+
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
     request,
@@ -15,7 +22,7 @@ export async function updateSession(request: NextRequest) {
           return request.cookies.getAll()
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value))
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
           supabaseResponse = NextResponse.next({
             request,
           })
@@ -31,16 +38,21 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  if (
-    !user &&
-    !request.nextUrl.pathname.startsWith('/login') &&
-    !request.nextUrl.pathname.startsWith('/auth') && 
-    !request.nextUrl.pathname.startsWith('/')
-  ) {
-    
+  const pathname = request.nextUrl.pathname
+  const isPublicPath =
+    pathname === '/' ||
+    pathname.startsWith('/workout/') ||
+    PUBLIC_PATH_PREFIXES.some((prefix) => pathname.startsWith(prefix))
+
+  if (!user && !isPublicPath) {
     const url = request.nextUrl.clone()
-    url.pathname = '/'
+    url.pathname = '/auth/login'
+    const nextPath = `${pathname}${request.nextUrl.search}`
+    if (nextPath && nextPath !== '/auth/login') {
+      url.searchParams.set('next', nextPath)
+    }
     return NextResponse.redirect(url)
-  } 
+  }
+
   return supabaseResponse
 }

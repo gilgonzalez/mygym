@@ -1,8 +1,5 @@
 'use client'
 
-import { Workout } from '@/types/workout/composite'
-
-
 export default function ExplorePage() {
   return (
     <div className="space-y-4">
@@ -10,6 +7,5 @@ export default function ExplorePage() {
     </div>
   )
 }
-
 
 

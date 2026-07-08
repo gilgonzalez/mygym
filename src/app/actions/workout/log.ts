@@ -11,12 +11,29 @@ export async function logWorkoutCompletion(
   try {
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
-    console.log({userDatabase: user, authError})
     if (!user || authError) {
       return { success: false, error: 'User not authenticated: ' + (authError?.message || 'No session') }
     }
 
-    if (logId) {
+    const isUpdatingExistingLog = Boolean(logId)
+
+    const { data: profile, error: profileError } = await supabase
+      .from('users')
+      .select('"isPremium"')
+      .eq('id', user.id)
+      .single()
+
+    if (profileError) {
+      return { success: false, error: profileError.message }
+    }
+
+    if (!profile?.isPremium) {
+      return { success: false, error: 'Premium subscription required to save workout progress' }
+    }
+
+    if (isUpdatingExistingLog) {
+      const existingLogId = logId as string
+
       // Update existing log
       const { error } = await supabase
         .from('workout_logs')
@@ -25,7 +42,7 @@ export async function logWorkoutCompletion(
           rating: rating,
           feeling: feeling
         })
-        .eq('id', logId)
+        .eq('id', existingLogId)
         .eq('user_id', user.id)
 
       if (error) {
@@ -53,33 +70,36 @@ export async function logWorkoutCompletion(
       }
     }
 
-    // Update Workout Rating
-    try {
-      const { data: currentWorkout } = await supabase
-        .from('workouts')
-        .select('rating')
-        .eq('id', workoutId)
-        .single()
+    if (!isUpdatingExistingLog) {
+      // Avoid recalculating the aggregate on log edits. Rating aggregation
+      // still needs a dedicated counter in DB, but this prevents drift on updates.
+      try {
+        const { data: currentWorkout } = await supabase
+          .from('workouts')
+          .select('rating')
+          .eq('id', workoutId)
+          .single()
 
-      let newRating = rating
-      
-      if (currentWorkout && currentWorkout.rating !== null) {
-         newRating = (Number(currentWorkout.rating) + Number(rating)) / 2
-      }
-      
-      // Round to 1 decimal place
-      newRating = Math.round(newRating * 10) / 10
+        let newRating = rating
 
-      const { error: updateError } = await supabase
-        .from('workouts')
-        .update({ rating: newRating })
-        .eq('id', workoutId)
-        
-      if (updateError) {
-         console.error('Error updating workout rating:', updateError)
+        if (currentWorkout && currentWorkout.rating !== null) {
+          newRating = (Number(currentWorkout.rating) + Number(rating)) / 2
+        }
+
+        // Round to 1 decimal place
+        newRating = Math.round(newRating * 10) / 10
+
+        const { error: updateError } = await supabase
+          .from('workouts')
+          .update({ rating: newRating })
+          .eq('id', workoutId)
+
+        if (updateError) {
+          console.error('Error updating workout rating:', updateError)
+        }
+      } catch (err) {
+        console.error('Failed to calculate new rating', err)
       }
-    } catch (err) {
-      console.error('Failed to calculate new rating', err)
     }
 
     return { success: true }

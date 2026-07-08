@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '@/components/Button'
 import { ExerciseTutorialDialog } from './ExerciseTutorialDialog'
 import { MusicPlayer } from './MusicPlayer'
@@ -118,6 +118,7 @@ export function WorkoutExecutionView({
   const [timeLeft, setTimeLeft] = useState(5)
   const [isPaused, setIsPaused] = useState(false)
   const [isTutorialOpen, setIsTutorialOpen] = useState(false)
+  const previousTimeLeftRef = useRef(timeLeft)
 
   const currentSection = workout.sections[currentSectionIndex]
   const currentExercise = currentSection?.exercises[currentExerciseIndex]
@@ -189,7 +190,10 @@ export function WorkoutExecutionView({
   }, [hasTimer, isPaused, isTutorialOpen, timeLeft])
 
   useEffect(() => {
+    const previousTimeLeft = previousTimeLeftRef.current
+
     if (!hasTimer || timeLeft > 0) return
+    if (previousTimeLeft <= 0) return
 
     if (stage === 'prepare') {
       setIsPreparing(false)
@@ -198,6 +202,10 @@ export function WorkoutExecutionView({
 
     onNextStep()
   }, [hasTimer, onNextStep, stage, timeLeft])
+
+  useEffect(() => {
+    previousTimeLeftRef.current = timeLeft
+  }, [timeLeft])
 
   const tutorialData = displayExercise ? displayExercise.tutorial || createMockTutorial(displayExercise) : undefined
 
@@ -233,6 +241,20 @@ export function WorkoutExecutionView({
   )
   const activeRoadmapSection = flattenedRoadmap[activeCursor.sectionIndex]
 
+  const getVisibleSeriesNumber = (sectionIndex: number, exercises: typeof flattenedRoadmap[number]['exercises']) => {
+    const maxSets = Math.max(...exercises.map(({ exercise }) => exercise.sets || 1), 1)
+
+    if (sectionIndex < activeCursor.sectionIndex) {
+      return maxSets
+    }
+
+    if (sectionIndex > activeCursor.sectionIndex) {
+      return 1
+    }
+
+    return Math.min(activeCursor.set, maxSets)
+  }
+
   const progress = hasTimer && totalDuration > 0 ? 1 - timeLeft / totalDuration : 1
   const ringProgress = Math.max(0, Math.min(progress, 1))
   const circleSize = 420
@@ -259,7 +281,7 @@ export function WorkoutExecutionView({
       <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.03),transparent_20%,transparent_80%,rgba(255,255,255,0.02))]" />
 
       <header className="relative z-20 px-4 pb-2 pt-3 sm:px-6">
-        <div className="flex flex-wrap items-stretch gap-3 sm:items-center">
+        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
           <div className="hidden shrink-0 items-center gap-3 sm:flex">
             <Button
               variant="ghost"
@@ -273,7 +295,7 @@ export function WorkoutExecutionView({
           </div>
 
           <div className="w-full min-w-0 rounded-[22px] border border-white/10 bg-white/[0.04] px-3 py-2 backdrop-blur-xl sm:flex-1">
-            <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap gap-2 sm:hidden">
                   {flattenedRoadmap.map(({ section, sectionIndex, exercises }) => {
@@ -323,25 +345,15 @@ export function WorkoutExecutionView({
                     </div>
 
                     <div className="mt-2 flex items-center gap-1.5 overflow-hidden">
-                      {Array.from({ length: Math.max(...activeRoadmapSection.exercises.map(({ exercise }) => exercise.sets || 1), 1) }).map((_, seriesIndex) => {
-                        const seriesNumber = seriesIndex + 1
+                      {(() => {
+                        const seriesNumber = getVisibleSeriesNumber(activeCursor.sectionIndex, activeRoadmapSection.exercises)
                         const exercisesInSeries = activeRoadmapSection.exercises
                           .map((item, originalExerciseIndex) => ({ ...item, originalExerciseIndex }))
                           .filter(({ exercise }) => (exercise.sets || 1) >= seriesNumber)
-                        const isSeriesCompleted = activeCursor.set > seriesNumber
-                        const isSeriesActive = activeCursor.set === seriesNumber
 
                         return (
                           <div key={`${activeRoadmapSection.section.id}-mobile-series-${seriesNumber}`} className="flex items-center gap-1.5">
-                            <div
-                              className={`flex h-5 w-5 items-center justify-center rounded-full border text-[9px] font-bold transition-all ${
-                                isSeriesActive
-                                  ? 'animate-pulse border-orange-300/50 bg-orange-400 text-slate-950 shadow-[0_0_16px_rgba(249,115,22,0.45)]'
-                                  : isSeriesCompleted
-                                    ? 'border-emerald-300/40 bg-emerald-400 text-slate-950'
-                                    : 'border-white/70 bg-white text-slate-950'
-                              }`}
-                            >
+                            <div className="flex h-5 w-5 items-center justify-center rounded-full border border-orange-300/50 bg-orange-400 text-[9px] font-bold text-slate-950 shadow-[0_0_16px_rgba(249,115,22,0.45)]">
                               {seriesNumber}
                             </div>
 
@@ -373,7 +385,7 @@ export function WorkoutExecutionView({
                             })}
                           </div>
                         )
-                      })}
+                      })()}
                     </div>
                   </div>
                 )}
@@ -453,7 +465,7 @@ export function WorkoutExecutionView({
                 </div>
               </div>
 
-              <div className="shrink-0 text-left sm:text-right">
+              <div className="hidden shrink-0 text-right sm:block">
                 <div className="mb-1 flex items-center justify-between gap-3 sm:justify-end">
                   <MusicPlayer
                     playlist={workout.audio || []}
@@ -475,7 +487,7 @@ export function WorkoutExecutionView({
         </div>
       </header>
 
-      <main className="relative z-10 flex min-h-0 flex-1 flex-col justify-between px-4 pb-20 pt-2 sm:justify-center sm:px-6 sm:pb-4">
+      <main className="relative z-10 flex min-h-0 flex-1 flex-col justify-between px-4 pb-28 pt-2 sm:justify-center sm:px-6 sm:pb-4">
         <div className="mx-auto flex h-full w-full max-w-6xl flex-col items-center justify-between sm:justify-center">
           <div className="pt-1 text-center sm:mb-3 sm:pt-0">
             <div className="mb-2 flex flex-wrap items-center justify-center gap-2">
@@ -617,6 +629,22 @@ export function WorkoutExecutionView({
       >
         <ChevronLeft className="h-5 w-5" />
       </Button>
+
+      <div className="fixed bottom-4 left-16 right-4 z-30 sm:hidden">
+        <div className="rounded-[22px] border border-white/10 bg-slate-950/70 px-4 py-3 shadow-[0_18px_45px_rgba(0,0,0,0.35)] backdrop-blur-xl">
+          <div className="flex items-center justify-between gap-3">
+            <span className={`rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] ${stageTheme.badgeClass}`}>
+              {stageTheme.badge}
+            </span>
+            <p className="text-xs font-medium uppercase tracking-[0.22em] text-white/55">
+              {totalExercisesBeforeActive + 1} / {totalExerciseCount}
+            </p>
+          </div>
+          <p className="mt-2 truncate text-sm font-semibold text-white/85">
+            {displaySection?.name || workout.title}
+          </p>
+        </div>
+      </div>
 
       <ExerciseTutorialDialog
         open={isTutorialOpen}

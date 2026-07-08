@@ -7,6 +7,9 @@ import { Loader2, AlertCircle } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { Button } from '@/components/Button'
 
+const PROFILE_RETRY_DELAY_MS = 1000
+const MAX_PROFILE_RETRIES = 5
+
 function AuthCallbackContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -29,7 +32,7 @@ function AuthCallbackContent() {
         // Check if user profile exists in public table
         // Since a trigger creates the user, we should wait/retry if it's not found immediately
         let existingUser = null
-        let retries = 3
+        let retries = MAX_PROFILE_RETRIES
         
         while (retries > 0 && !existingUser) {
            const { data, error: fetchError } = await supabase
@@ -48,7 +51,7 @@ function AuthCallbackContent() {
            }
            
            // Wait 1s before retrying to allow trigger to complete
-           await new Promise(resolve => setTimeout(resolve, 1000))
+           await new Promise(resolve => setTimeout(resolve, PROFILE_RETRY_DELAY_MS))
            retries--
         }
         
@@ -67,6 +70,9 @@ function AuthCallbackContent() {
                 username: session.user.user_metadata.name?.split(' ').join('').toLowerCase() || session.user.email?.split('@')[0] || 'user',
                 name: session.user.user_metadata.name || session.user.email?.split('@')[0] || 'User',
                 avatar_url: session.user.user_metadata.avatar_url,
+                bio: null,
+                isPremium: false,
+                role: 'USER',
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString()
             }

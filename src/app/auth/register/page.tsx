@@ -47,23 +47,16 @@ function RegisterContent() {
 
       if (error) throw error
 
-      if (data.user) {
-        // Create user record in public.users table
-        const { error: dbError } = await supabase.from('users').insert([
-          {
-            id: data.user.id,
-            email: formData.email,
-            username: formData.username,
-            name: formData.name
-          }
-        ])
-        
-        if (dbError) {
-          console.error('Error creating user profile:', dbError)
-        }
+      if (!data.user) {
+        throw new Error('No se pudo crear la cuenta')
       }
 
-      router.push('/auth/login?registered=true')
+      const loginSearchParams = new URLSearchParams({ registered: 'true' })
+      if (redirect) {
+        loginSearchParams.set('next', redirect)
+      }
+
+      router.push(`/auth/login?${loginSearchParams.toString()}`)
     } catch (err: any) {
       setError(err.message)
     } finally {

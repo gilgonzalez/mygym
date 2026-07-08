@@ -13,7 +13,7 @@ type ExerciseTutorialInput = {
     filename?: string | null
     bucket_path?: string | null
     media_type?: 'image' | 'video' | 'audio' | null
-    steps: Array<{
+    steps?: Array<{
         title: string
         description: string
     }>
