@@ -302,6 +302,7 @@ export function WorkoutExecutionView({
   const timerLabel = hasTimer ? formatTime(timeLeft) : `${displayExercise?.reps || 0} reps`
   const exerciseDescription = displayExercise?.description?.trim()
   const circleFrameStyle = mobileCircleSize ? { width: `${mobileCircleSize}px`, height: `${mobileCircleSize}px` } : undefined
+  const innerCircleStyle = { inset: '5.25%' }
   const circleClassName = mobileCircleSize
     ? '-rotate-90 drop-shadow-[0_18px_50px_rgba(0,0,0,0.45)] h-full w-full'
     : '-rotate-90 drop-shadow-[0_18px_50px_rgba(0,0,0,0.45)] h-[min(40vh,76vw,22rem)] w-[min(40vh,76vw,22rem)] sm:h-[min(46vh,62vw,28rem)] sm:w-[min(46vh,62vw,28rem)] lg:h-[min(50vh,32rem)] lg:w-[min(50vh,32rem)]'
@@ -554,16 +555,17 @@ export function WorkoutExecutionView({
                 />
               </svg>
 
-              <div className="absolute inset-[28px] overflow-hidden rounded-full border border-white/10 bg-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] sm:inset-[32px] lg:inset-[36px]">
+              <div
+                className="absolute overflow-hidden rounded-full border border-white/10 bg-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
+                style={innerCircleStyle}
+              >
                 {displayExercise?.thumbnail_url ? (
-                  <div className="flex h-full w-full items-center justify-center p-[7%] sm:p-[8%]">
-                    <div className="flex h-full w-full items-center justify-center">
-                      <img
-                        src={displayExercise.thumbnail_url}
-                        alt={displayExercise.name}
-                        className="h-full w-full object-contain"
-                      />
-                    </div>
+                  <div className="flex h-full w-full items-center justify-center">
+                    <img
+                      src={displayExercise.thumbnail_url}
+                      alt={displayExercise.name}
+                      className="h-full w-full object-cover"
+                    />
                   </div>
                 ) : (
                   <div className="flex h-full w-full items-center justify-center bg-white">
@@ -572,8 +574,8 @@ export function WorkoutExecutionView({
                 )}
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.22),transparent_52%),linear-gradient(180deg,rgba(255,255,255,0.04),rgba(15,23,42,0.08))]" />
                 {stage === 'rest' ? (
-                  <div className="absolute inset-0 flex items-end justify-center bg-[radial-gradient(circle_at_center,rgba(251,191,36,0.28),rgba(251,191,36,0.42)_58%,rgba(180,83,9,0.56))] pb-[13%] sm:pb-[12%]">
-                    <div className="animate-pulse text-center text-[2.35rem] font-black uppercase tracking-[0.42em] text-amber-600 drop-shadow-[0_2px_12px_rgba(251,191,36,0.35)] sm:text-[2.6rem]">
+                  <div className="absolute inset-0 flex items-center justify-center bg-[radial-gradient(circle_at_center,rgba(251,191,36,0.28),rgba(251,191,36,0.42)_58%,rgba(180,83,9,0.56))]">
+                    <div className="animate-pulse text-center text-[clamp(2rem,14vw,4.2rem)] font-black uppercase leading-none tracking-[0.22em] text-amber-600 drop-shadow-[0_2px_12px_rgba(251,191,36,0.35)] sm:text-[clamp(2.5rem,9vw,4.7rem)] sm:tracking-[0.3em] lg:text-[4.9rem] lg:tracking-[0.36em]">
                       REST
                     </div>
                   </div>
