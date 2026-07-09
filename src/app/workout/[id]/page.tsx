@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Loader2 } from 'lucide-react'
 import { WorkoutOverview } from '@/components/workout/WorkoutOverview'
@@ -52,20 +52,22 @@ export default function WorkoutSessionPage({ params }: { params: { id: string } 
   })
 
   // Map DB data to View Type
-  const workout: LocalWorkout | null = workoutData ? {
-    id: workoutData.id,
-    title: workoutData.title,
-    cover: workoutData.cover || undefined,
-    description: workoutData.description || '',
-    tags: workoutData.tags || [],
-    difficulty: workoutData.difficulty || undefined,
-    audio: workoutData.audio || [],
-    sections: workoutData.sections.map(s => ({
-      id: s.id,
-      name: s.name,
-      orderType: (s.type as 'linear' | 'single') || 'single',
-      exercises: s.exercises.map(e => {
-        return ({
+  const workout: LocalWorkout | null = useMemo(() => {
+    if (!workoutData) return null
+
+    return {
+      id: workoutData.id,
+      title: workoutData.title,
+      cover: workoutData.cover || undefined,
+      description: workoutData.description || '',
+      tags: workoutData.tags || [],
+      difficulty: workoutData.difficulty || undefined,
+      audio: workoutData.audio || [],
+      sections: workoutData.sections.map(s => ({
+        id: s.id,
+        name: s.name,
+        orderType: (s.type as 'linear' | 'single') || 'single',
+        exercises: s.exercises.map(e => ({
           id: e.id,
           name: e.name,
           type: (e.type as 'reps' | 'time') || 'reps',
@@ -84,12 +86,10 @@ export default function WorkoutSessionPage({ params }: { params: { id: string } 
           description: e.description || '',
           muscle_groups: e.muscle_group || [],
           equipment: e.equipment || []
-        })
-      }
-      
-      )
-    }))
-  } : null
+        }))
+      }))
+    }
+  }, [workoutData])
 
   // Initialize store with workout data
   useEffect(() => {

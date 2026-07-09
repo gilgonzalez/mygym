@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '@/components/Button'
 import { PremiumFeatureDialog } from '@/components/premium/PremiumFeatureDialog'
 import { ExerciseTutorialDialog } from './ExerciseTutorialDialog'
@@ -123,6 +123,8 @@ export function WorkoutExecutionView({
   const [isTutorialOpen, setIsTutorialOpen] = useState(false)
   const [isPremiumDialogOpen, setIsPremiumDialogOpen] = useState(false)
   const previousTimeLeftRef = useRef(timeLeft)
+  const visualStageRef = useRef<HTMLDivElement | null>(null)
+  const [mobileCircleSize, setMobileCircleSize] = useState<number | null>(null)
 
   const currentSection = workout.sections[currentSectionIndex]
   const currentExercise = currentSection?.exercises[currentExerciseIndex]
@@ -209,6 +211,40 @@ export function WorkoutExecutionView({
     previousTimeLeftRef.current = timeLeft
   }, [timeLeft])
 
+  useLayoutEffect(() => {
+    if (typeof window === 'undefined') return
+
+    const visualStage = visualStageRef.current
+    if (!visualStage) return
+
+    const measure = () => {
+      if (window.innerWidth >= 640) {
+        setMobileCircleSize((current) => (current === null ? current : null))
+        return
+      }
+
+      const bounds = visualStage.getBoundingClientRect()
+      const nextSize = Math.max(220, Math.min(Math.floor(bounds.width * 0.76), Math.floor(bounds.height * 0.58), 352))
+
+      setMobileCircleSize((current) => (current === nextSize ? current : nextSize))
+    }
+
+    measure()
+
+    const frameId = window.requestAnimationFrame(measure)
+    const resizeObserver = new ResizeObserver(measure)
+    resizeObserver.observe(visualStage)
+    window.addEventListener('resize', measure)
+    window.visualViewport?.addEventListener('resize', measure)
+
+    return () => {
+      window.cancelAnimationFrame(frameId)
+      resizeObserver.disconnect()
+      window.removeEventListener('resize', measure)
+      window.visualViewport?.removeEventListener('resize', measure)
+    }
+  }, [])
+
   const tutorialData = displayExercise ? displayExercise.tutorial || createMockTutorial(displayExercise) : undefined
   const flattenedRoadmap = useMemo(() => {
     return workout.sections.map((section, sectionIndex) => ({
@@ -265,6 +301,10 @@ export function WorkoutExecutionView({
   const strokeColor = getStrokeColor(stage)
   const timerLabel = hasTimer ? formatTime(timeLeft) : `${displayExercise?.reps || 0} reps`
   const exerciseDescription = displayExercise?.description?.trim()
+  const circleFrameStyle = mobileCircleSize ? { width: `${mobileCircleSize}px`, height: `${mobileCircleSize}px` } : undefined
+  const circleClassName = mobileCircleSize
+    ? '-rotate-90 drop-shadow-[0_18px_50px_rgba(0,0,0,0.45)] h-full w-full'
+    : '-rotate-90 drop-shadow-[0_18px_50px_rgba(0,0,0,0.45)] h-[min(40vh,76vw,22rem)] w-[min(40vh,76vw,22rem)] sm:h-[min(46vh,62vw,28rem)] sm:w-[min(46vh,62vw,28rem)] lg:h-[min(50vh,32rem)] lg:w-[min(50vh,32rem)]'
 
   const nextButtonLabel =
     stage === 'prepare'
@@ -482,14 +522,15 @@ export function WorkoutExecutionView({
             <p className="text-4xl font-black tabular-nums tracking-[-0.06em] sm:text-5xl md:text-6xl lg:text-7xl">{timerLabel}</p>
           </div>
  
-          <div className="flex w-full min-h-0 flex-1 flex-col items-center justify-center py-4 sm:py-0">
-            <div className="relative flex items-center justify-center">
+          <div ref={visualStageRef} className="flex w-full min-h-0 flex-1 flex-col items-center justify-center py-4 sm:py-0">
+            <div className="relative flex items-center justify-center" style={circleFrameStyle}>
               <div className="absolute inset-0 rounded-full blur-3xl" style={{ backgroundColor: `${strokeColor}22` }} />
               <svg
                 width={circleSize}
                 height={circleSize}
                 viewBox={`0 0 ${circleSize} ${circleSize}`}
-                className="-rotate-90 drop-shadow-[0_18px_50px_rgba(0,0,0,0.45)] h-[min(40vh,76vw,22rem)] w-[min(40vh,76vw,22rem)] sm:h-[min(46vh,62vw,28rem)] sm:w-[min(46vh,62vw,28rem)] lg:h-[min(50vh,32rem)] lg:w-[min(50vh,32rem)]"
+                className={circleClassName}
+                style={circleFrameStyle}
               >
                 <circle
                   cx={circleSize / 2}

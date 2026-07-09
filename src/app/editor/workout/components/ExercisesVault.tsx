@@ -16,7 +16,7 @@ interface ExercisesVaultProps {
 
 const DIFFICULTIES = [
   'beginner', 'intermediate', 'advanced'
-] // Valores actualizados a minúsculas
+]
 
 export function ExercisesVault({ onSelect, trigger }: ExercisesVaultProps) {
   const [isOpen, setIsOpen] = useState(false)
@@ -30,9 +30,7 @@ export function ExercisesVault({ onSelect, trigger }: ExercisesVaultProps) {
   const [difficulty, setDifficulty] = useState<string>('all')
   const [muscleGroup, setMuscleGroup] = useState<string>('')
 
-  const limit = 9 // 3x3 grid
-
-  // Debounce search
+  const limit = 9
   const [debouncedSearch, setDebouncedSearch] = useState(search)
   
   useEffect(() => {
@@ -41,7 +39,7 @@ export function ExercisesVault({ onSelect, trigger }: ExercisesVaultProps) {
   }, [search])
 
   const fetchExercises = useCallback(async () => {
-    if (!isOpen) return // Don't fetch if closed
+    if (!isOpen) return
     
     setLoading(true)
     setFetchError(null)
@@ -74,7 +72,6 @@ export function ExercisesVault({ onSelect, trigger }: ExercisesVaultProps) {
     }
   }, [fetchExercises, isOpen])
 
-  // Reset page when filters change
   useEffect(() => {
     setPage(1)
   }, [debouncedSearch, difficulty, muscleGroup])
@@ -117,7 +114,6 @@ export function ExercisesVault({ onSelect, trigger }: ExercisesVaultProps) {
                 ))}
               </SelectContent>
             </Select>
-            {/* Nuevo input de búsqueda para músculos */}
             <Input
               placeholder="Search muscle..."
               className="w-full md:w-[150px]"
@@ -181,7 +177,6 @@ export function ExercisesVault({ onSelect, trigger }: ExercisesVaultProps) {
                   key={exercise.id}
                   className="group relative flex flex-col overflow-hidden rounded-lg border bg-card transition-colors hover:bg-accent/50"
                 >
-                  {/* Media Preview */}
                   <div className="relative aspect-video w-full overflow-hidden bg-muted">
                     {exercise.thumbnail?.url ? (
                       exercise.thumbnail.type?.startsWith('video') ? (
@@ -194,8 +189,8 @@ export function ExercisesVault({ onSelect, trigger }: ExercisesVaultProps) {
                             playsInline
                             onMouseOver={e => e.currentTarget.play()}
                             onMouseOut={e => {
-                              e.currentTarget.pause();
-                              e.currentTarget.currentTime = 0;
+                              e.currentTarget.pause()
+                              e.currentTarget.currentTime = 0
                             }}
                           />
                           <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:hidden pointer-events-none">
@@ -215,7 +210,6 @@ export function ExercisesVault({ onSelect, trigger }: ExercisesVaultProps) {
                       </div>
                     )}
                     
-                    {/* Add Button Overlay */}
                     {onSelect && (
                       <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
                         <Button

@@ -44,6 +44,7 @@ import { Exercise } from '@/app/actions/exercises/list'
 import { generateWorkoutAction } from '@/app/actions/workout/generate-by-ai'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { ActivityTutorialEditor } from '../components/ActivityTutorialEditor'
+import { PremiumFeatureDialog } from '@/components/premium/PremiumFeatureDialog'
 
 // --- Schema Definition ---
 const tutorialStepSchema = z.object({
@@ -167,11 +168,13 @@ function CreateWorkoutContent() {
   const workoutId = searchParams.get('id')
   
   const { user, isLoading } = useAuthStore()
+  const isPremiumUser = Boolean(user?.isPremium)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isMetaOpen, setIsMetaOpen] = useState(false)
   
   // AI Assistant State
   const [isAiOpen, setIsAiOpen] = useState(false)
+  const [isPremiumDialogOpen, setIsPremiumDialogOpen] = useState(false)
   const [aiPrompt, setAiPrompt] = useState('')
   const [isGenerating, setIsGenerating] = useState(false)
   const [isRetry, setIsRetry] = useState(false)
@@ -688,6 +691,12 @@ function CreateWorkoutContent() {
   }
 
   const handleAiGenerate = async () => {
+    if (!isPremiumUser) {
+      setIsAiOpen(false)
+      setIsPremiumDialogOpen(true)
+      return
+    }
+
     if (!aiPrompt.trim()) return
     
     setIsGenerating(true)
@@ -758,6 +767,15 @@ function CreateWorkoutContent() {
     createWorkout(data)
   }
 
+  const handleOpenAiAssistant = () => {
+    if (!isPremiumUser) {
+      setIsPremiumDialogOpen(true)
+      return
+    }
+
+    setIsAiOpen(true)
+  }
+
   return (
     <div className="h-screen flex flex-col overflow-hidden">
       {/* Header */}
@@ -773,11 +791,16 @@ function CreateWorkoutContent() {
             variant="outline" 
             size="sm" 
             className="flex md:ml-4 gap-2 text-indigo-600 border-indigo-200 hover:bg-indigo-50 hover:text-indigo-700 dark:text-indigo-400 dark:border-indigo-900/50 dark:hover:bg-indigo-950/50 shadow-sm bg-indigo-50/50 dark:bg-indigo-950/20"
-            onClick={() => setIsAiOpen(true)}
+            onClick={handleOpenAiAssistant}
           >
             <Sparkles className="h-4 w-4" />
             <span className="hidden sm:inline">AI Assistant</span>
             <span className="inline sm:hidden font-bold">AI</span>
+            {!isPremiumUser ? (
+              <span className="hidden rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.18em] text-amber-600 dark:text-amber-400 sm:inline-flex">
+                Premium
+              </span>
+            ) : null}
             
             {/* Voice Indicator */}
             <div className="flex items-center gap-1 pl-1 border-l border-indigo-200 dark:border-indigo-800 ml-1">
@@ -1257,6 +1280,13 @@ function CreateWorkoutContent() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <PremiumFeatureDialog
+        open={isPremiumDialogOpen}
+        onOpenChange={setIsPremiumDialogOpen}
+        title="Asistente de IA premium"
+        description="La generacion de rutinas con IA esta disponible solo para usuarios premium. Actualiza tu plan para desbloquear prompts, voz y creacion asistida."
+      />
 
       {/* AI Assistant Dialog */}
       <Dialog open={isAiOpen} onOpenChange={setIsAiOpen}>
@@ -2023,7 +2053,7 @@ function MediaInput({ value, onChange, placeholder, type = 'media', variant = 'd
              if (timerRef.current) clearInterval(timerRef.current)
              if (videoStream) videoStream.getTracks().forEach(t => t.stop())
         }
-    }, [])
+    }, [videoStream])
 
     // Autoplay logic
     React.useEffect(() => {

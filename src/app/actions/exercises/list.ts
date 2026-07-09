@@ -65,7 +65,6 @@ export async function listExercises({
   }
   
   if (muscleGroup && muscleGroup !== 'all') {
-    // muscle_group is an array in the DB, so we use contains
     query = query.contains('muscle_group', [muscleGroup])
   }
   
