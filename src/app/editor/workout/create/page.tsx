@@ -179,6 +179,8 @@ function CreateWorkoutContent() {
   const [isGenerating, setIsGenerating] = useState(false)
   const [isRetry, setIsRetry] = useState(false)
   const [showPreview, setShowPreview] = useState(true)
+  const [isDesktopViewport, setIsDesktopViewport] = useState(false)
+  const [isCompactMobileViewport, setIsCompactMobileViewport] = useState(false)
   const [previewDevice, setPreviewDevice] = useState<'mobile' | 'desktop'>('mobile')
   const [uploadProgress, setUploadProgress] = useState(0)
   const [uploadStatus, setUploadStatus] = useState('')
@@ -255,9 +257,22 @@ function CreateWorkoutContent() {
   }
 
   React.useLayoutEffect(() => {
-    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+    if (typeof window === 'undefined') return
+
+    const syncViewport = () => {
+      const isDesktop = window.innerWidth >= 1024
+      setIsDesktopViewport(isDesktop)
+      setIsCompactMobileViewport(window.innerWidth < 820)
+
+      if (!isDesktop) {
         setShowPreview(false)
+      }
     }
+
+    syncViewport()
+    window.addEventListener('resize', syncViewport)
+
+    return () => window.removeEventListener('resize', syncViewport)
   }, [])
 
   const { isLoading: isLoadingWorkout, data: loadedWorkout } = useQuery({
@@ -777,10 +792,11 @@ function CreateWorkoutContent() {
   }
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden">
+    <div className="flex h-[100dvh] min-h-[100dvh] flex-col overflow-hidden">
       {/* Header */}
-      <header className="h-16 border-b flex items-center justify-between px-6 bg-background shrink-0 z-10">
-        <div className="flex items-center gap-4">
+      <header className="shrink-0 border-b bg-background px-3 py-3 sm:px-4 md:px-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-4">
           <Link href="/" className="text-muted-foreground hover:text-foreground transition-colors">
             <ArrowLeft className="h-5 w-5" />
           </Link>
@@ -809,11 +825,11 @@ function CreateWorkoutContent() {
           </Button>
         </div>
         
-        <div className="flex items-center gap-2 md:gap-3">
+        <div className="flex w-full flex-wrap items-center justify-between gap-2 sm:w-auto sm:justify-end md:gap-3">
           {submitStatus !== 'idle' && !isSubmitting && (
             <div
               className={cn(
-                'hidden max-w-[320px] rounded-full border px-3 py-1.5 text-xs md:flex',
+                'order-3 hidden max-w-[320px] rounded-full border px-3 py-1.5 text-xs md:flex',
                 submitStatus === 'success'
                   ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
                   : 'border-destructive/20 bg-destructive/10 text-destructive'
@@ -823,15 +839,17 @@ function CreateWorkoutContent() {
             </div>
           )}
 
-          <Button 
-            variant={showPreview ? "secondary" : "ghost"}
-            size="icon"
-            className="rounded-full h-9 w-9"
-            onClick={() => setShowPreview(!showPreview)}
-            title={showPreview ? 'Hide Preview' : 'Show Preview'}
-          >
-            <Eye className="h-4 w-4" /> 
-          </Button>
+          {isDesktopViewport && (
+            <Button 
+              variant={showPreview ? "secondary" : "ghost"}
+              size="icon"
+              className="h-9 w-9 rounded-full"
+              onClick={() => setShowPreview(!showPreview)}
+              title={showPreview ? 'Hide Preview' : 'Show Preview'}
+            >
+              <Eye className="h-4 w-4" /> 
+            </Button>
+          )}
 
           {isSubmitting && (
              <div className="hidden sm:flex flex-col items-end mr-2 min-w-[100px] md:min-w-[120px]">
@@ -868,16 +886,17 @@ function CreateWorkoutContent() {
             )}
           </Button>
         </div>
+        </div>
       </header>
 
-      <div className="relative flex-1 flex overflow-hidden bg-neutral-50 dark:bg-zinc-950">
+      <div className="relative flex flex-1 overflow-hidden bg-neutral-50 dark:bg-zinc-950">
         
         {/* LEFT: Editor Panel */}
         <div className={cn(
-          "flex-1 overflow-y-auto p-4 md:p-8 transition-all duration-500 ease-&lsqb;cubic-bezier(0.32,0.72,0,1)&rsqb; scrollbar-hide",
-          showPreview ? (previewDevice === 'mobile' ? "hidden lg:block lg:mr-[420px]" : "hidden lg:block lg:mr-[65%]") : ""
+          "flex-1 overflow-x-hidden overflow-y-auto p-3 sm:p-4 md:p-8 transition-all duration-500 ease-&lsqb;cubic-bezier(0.32,0.72,0,1)&rsqb; scrollbar-hide",
+          showPreview && isDesktopViewport ? (previewDevice === 'mobile' ? "lg:mr-[420px]" : "lg:mr-[65%]") : ""
         )}>
-          <div className="max-w-5xl mx-auto space-y-10 pb-40">
+          <div className="mx-auto max-w-5xl space-y-6 pb-32 sm:space-y-8 md:space-y-10 md:pb-40">
             {(isSubmitting || submitStatus === 'error') && (
               <div
                 className={cn(
@@ -931,13 +950,13 @@ function CreateWorkoutContent() {
                           <div
                             ref={provided.innerRef}
                             {...provided.draggableProps}
-                            className="bg-white dark:bg-zinc-900/50 backdrop-blur-sm border border-border/50 rounded-[2rem] shadow-xl shadow-black/5 overflow-hidden group animate-in slide-in-from-bottom-8 duration-700 fill-mode-backwards"
+                            className="group overflow-hidden rounded-[24px] border border-border/50 bg-white shadow-xl shadow-black/5 backdrop-blur-sm animate-in slide-in-from-bottom-8 duration-700 fill-mode-backwards dark:bg-zinc-900/50 sm:rounded-[2rem]"
                             style={{ 
                                 ...provided.draggableProps.style,
                                 animationDelay: `${index * 100}ms` 
                             }}
                           >
-                            <div className="bg-gradient-to-r from-gray-50 to-white dark:from-zinc-900 dark:to-zinc-900/50 p-6 flex  items-center gap-4 border-b border-border/50">
+                            <div className="flex items-start gap-3 border-b border-border/50 bg-gradient-to-r from-gray-50 to-white p-4 dark:from-zinc-900 dark:to-zinc-900/50 sm:items-center sm:gap-4 sm:p-6">
                               <div {...provided.dragHandleProps} className="cursor-grab text-muted-foreground/30 hover:text-foreground transition-colors p-2 hover:bg-black/5 rounded-xl">
                                 <GripVertical className="h-6 w-6" />
                               </div>
@@ -1006,12 +1025,12 @@ function CreateWorkoutContent() {
                               <Button 
                                 type="button" variant="ghost" size="icon" 
                                 onClick={() => removeSection(index)}
-                                className="opacity-0 group-hover:opacity-100 transition-all h-10 w-10 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-full"
+                                className="h-10 w-10 rounded-full text-muted-foreground transition-all hover:bg-destructive/10 hover:text-destructive md:opacity-0 md:group-hover:opacity-100"
                               >
                                 <Trash2 className="h-5 w-5" />
                               </Button>
                             </div>
-                            <div className="p-6 md:p-8">
+                            <div className="p-4 sm:p-5 md:p-8">
                               <ExercisesFieldArray 
                                 nestIndex={index} 
                                 control={control} 
@@ -1019,6 +1038,7 @@ function CreateWorkoutContent() {
                                 setValue={setValue}
                                 watch={watch}
                                 errors={errors}
+                                isCompactMobile={isCompactMobileViewport}
                               />
                             </div>
                           </div>
@@ -1054,6 +1074,7 @@ function CreateWorkoutContent() {
         </div>
 
         {/* RIGHT: Live Preview Panel */}
+        {isDesktopViewport && (
         <div className={cn(
             "absolute inset-y-0 right-0 bg-white/80 dark:bg-black/80 backdrop-blur-xl border-l transform transition-all duration-500 ease-&lsqb;cubic-bezier(0.32,0.72,0,1)&rsqb; z-20 shadow-2xl",
             showPreview ? "translate-x-0" : "translate-x-full",
@@ -1112,6 +1133,7 @@ function CreateWorkoutContent() {
             </div>
           </div>
         </div>
+        )}
       </div>
 
       {/* Step 2: Metadata Dialog */}
@@ -1345,7 +1367,7 @@ function CreateWorkoutContent() {
 }
 
 
-function ExercisesFieldArray({ nestIndex, control, register, setValue, watch, errors }: { nestIndex: number, control: any, register: any, setValue: any, watch: any, errors: any }) {
+function ExercisesFieldArray({ nestIndex, control, register, setValue, watch, errors, isCompactMobile = false }: { nestIndex: number, control: any, register: any, setValue: any, watch: any, errors: any, isCompactMobile?: boolean }) {
   const { fields, append, remove } = useFieldArray({
     control,
     name: `sections.${nestIndex}.exercises`
@@ -1416,20 +1438,20 @@ function ExercisesFieldArray({ nestIndex, control, register, setValue, watch, er
                         <article
                             ref={provided.innerRef}
                             {...provided.draggableProps}
-                            className="group relative overflow-hidden rounded-[30px] border border-border/60 bg-gradient-to-br from-white via-white to-muted/20 p-4 shadow-sm transition-all hover:shadow-lg dark:from-zinc-950 dark:via-zinc-950 dark:to-zinc-900/80 md:p-6"
+                            className="group relative overflow-hidden rounded-[24px] border border-border/60 bg-gradient-to-br from-white via-white to-muted/20 p-3 shadow-sm transition-all hover:shadow-lg dark:from-zinc-950 dark:via-zinc-950 dark:to-zinc-900/80 sm:p-4 md:rounded-[30px] md:p-6"
                         >
                             <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
                             
                             {/* Drag Handle */}
                             <div 
                                 {...provided.dragHandleProps} 
-                                className="absolute left-3 top-4 z-10 rounded-xl p-2 text-muted-foreground/30 transition-colors hover:bg-black/5 hover:text-foreground"
+                                className="absolute left-2 top-3 z-10 rounded-xl p-1.5 text-muted-foreground/30 transition-colors hover:bg-black/5 hover:text-foreground sm:left-3 sm:top-4 sm:p-2"
                             >
                                 <GripVertical className="h-5 w-5" />
                             </div>
 
                             {/* Delete Button (Absolute Top Right) */}
-                            <div className="absolute top-4 right-4 z-10">
+                            <div className="absolute right-3 top-3 z-10 sm:right-4 sm:top-4">
                                 <Button 
                                     type="button" variant="ghost" size="icon" 
                                     onClick={() => remove(k)}
@@ -1439,7 +1461,7 @@ function ExercisesFieldArray({ nestIndex, control, register, setValue, watch, er
                                 </Button>
                             </div>
 
-                            <div className="pl-10 pr-10">
+                            <div className="pl-4 pr-4 sm:pl-10 sm:pr-10">
                               <div className="flex flex-wrap items-start justify-between gap-4 border-b border-border/60 pb-5">
                                 <div className="flex flex-wrap items-center gap-2">
                                   <span className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-primary">
@@ -1457,8 +1479,8 @@ function ExercisesFieldArray({ nestIndex, control, register, setValue, watch, er
                               </div>
 
                               <div className="mt-6 space-y-5">
-                                <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px] xl:items-stretch">
-                                  <div className="rounded-[28px] border border-border/60 bg-background/75 p-4 shadow-sm md:p-5">
+                                <div className="grid gap-3 sm:gap-5 xl:grid-cols-[minmax(0,1fr)_320px] xl:items-stretch">
+                                  <div className="rounded-[24px] border border-border/60 bg-background/75 p-3 shadow-sm sm:rounded-[28px] sm:p-4 md:p-5">
                                     <div className="mb-4 flex items-start justify-between gap-3">
                                       <div>
                                         <p className="text-sm font-semibold">Título y descripción</p>
@@ -1469,7 +1491,7 @@ function ExercisesFieldArray({ nestIndex, control, register, setValue, watch, er
                                     <Input
                                       {...register(`sections.${nestIndex}.exercises.${k}.name`)}
                                       placeholder="Nombre del ejercicio"
-                                      className="h-auto border-none bg-transparent px-0 text-2xl font-black tracking-tight shadow-none focus-visible:ring-0 placeholder:text-muted-foreground/30"
+                                      className="h-auto border-none bg-transparent px-0 text-[1.35rem] font-black tracking-tight shadow-none focus-visible:ring-0 placeholder:text-muted-foreground/30 sm:text-2xl"
                                     />
                                     <input type="hidden" {...register(`sections.${nestIndex}.exercises.${k}.id`)} />
                                     <input type="hidden" {...register(`sections.${nestIndex}.exercises.${k}.db_id`)} />
@@ -1482,12 +1504,12 @@ function ExercisesFieldArray({ nestIndex, control, register, setValue, watch, er
 
                                     <Textarea
                                       {...register(`sections.${nestIndex}.exercises.${k}.description`)}
-                                      placeholder="Ej. Mantén el core activo, baja controlado y evita encoger los hombros."
-                                      className="mt-4 min-h-[108px] resize-none rounded-[22px] border-border/60 bg-muted/20 shadow-none"
+                                      placeholder={isCompactMobile ? "Notas breves..." : "Ej. Mantén el core activo, baja controlado y evita encoger los hombros."}
+                                      className="mt-4 min-h-[96px] resize-none rounded-[22px] border-border/60 bg-muted/20 text-sm shadow-none sm:min-h-[108px]"
                                     />
                                   </div>
 
-                                  <div className="rounded-[28px] border border-border/60 bg-background/75 p-4 shadow-sm">
+                                  <div className="rounded-[24px] border border-border/60 bg-background/75 p-3 shadow-sm sm:rounded-[28px] sm:p-4">
                                     <div className="mb-3 flex items-start justify-between gap-3">
                                       <div className="flex items-center gap-2">
                                         <div className="rounded-2xl bg-primary/10 p-2 text-primary">
@@ -1504,7 +1526,7 @@ function ExercisesFieldArray({ nestIndex, control, register, setValue, watch, er
                                       control={control}
                                       name={`sections.${nestIndex}.exercises.${k}.thumbnail_url`}
                                       render={({ field }) => (
-                                        <div className="min-h-[212px] overflow-hidden rounded-[24px] border-2 border-dashed border-border/50 bg-muted/30 shadow-inner transition-colors hover:border-primary/20">
+                                        <div className="min-h-[132px] overflow-hidden rounded-[24px] border-2 border-dashed border-border/50 bg-muted/30 shadow-inner transition-colors hover:border-primary/20 sm:min-h-[168px] lg:min-h-[212px]">
                                           <MediaInput
                                             value={field.value}
                                             onChange={(value) => {
@@ -1515,6 +1537,7 @@ function ExercisesFieldArray({ nestIndex, control, register, setValue, watch, er
                                             }}
                                             type="thumbnail"
                                             variant="thumbnail"
+                                            compact={isCompactMobile}
                                           />
                                         </div>
                                       )}
@@ -1523,10 +1546,10 @@ function ExercisesFieldArray({ nestIndex, control, register, setValue, watch, er
                                 </div>
 
                                 <div className="space-y-5">
-                                  <div className="rounded-[28px] border border-border/60 bg-background/75 p-4 shadow-sm md:p-5">
+                                  <div className="rounded-[24px] border border-border/60 bg-background/75 p-3 shadow-sm sm:rounded-[28px] sm:p-4 md:p-5">
                                     <div className="mb-4 flex items-start justify-between gap-3">
                                       <div>
-                                        <p className="text-sm font-semibold">Cómo se realiza</p>
+                                        <p className="text-sm font-semibold">{isCompactMobile ? 'Formato' : 'Cómo se realiza'}</p>
                                       </div>
                                       <div className="flex items-center gap-2">
                                         <div className="rounded-2xl bg-primary/10 p-2 text-primary">
@@ -1540,66 +1563,72 @@ function ExercisesFieldArray({ nestIndex, control, register, setValue, watch, er
                                       control={control}
                                       name={`sections.${nestIndex}.exercises.${k}.type`}
                                       render={({ field }) => (
-                                        <div className="grid gap-3 md:grid-cols-2">
+                                        <div className="grid grid-cols-2 gap-2 sm:gap-3">
                                           <button
                                             type="button"
                                             onClick={() => field.onChange('reps')}
                                             className={cn(
-                                              'rounded-[24px] border p-4 text-left transition-all',
+                                              'rounded-[20px] border p-3 text-left transition-all sm:rounded-[24px] sm:p-4',
                                               field.value === 'reps'
                                                 ? 'border-primary/40 bg-primary/[0.08] shadow-sm'
                                                 : 'border-border/60 bg-muted/20 hover:border-primary/20 hover:bg-background'
                                             )}
                                           >
-                                            <div className="mb-3 flex items-center justify-between">
+                                            <div className="mb-2 flex items-center justify-between sm:mb-3">
                                               <div className="rounded-2xl bg-background/90 p-2 text-primary shadow-sm">
                                                 <List className="h-4 w-4" />
                                               </div>
-                                              <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
+                                              <span className="text-[9px] font-bold uppercase tracking-[0.18em] text-muted-foreground sm:text-[10px]">
                                                 Reps
                                               </span>
                                             </div>
-                                            <p className="text-sm font-semibold text-foreground">Por repeticiones</p>
+                                            <p className="text-xs font-semibold text-foreground sm:text-sm">
+                                              {isCompactMobile ? 'Reps' : 'Por repeticiones'}
+                                            </p>
                                           </button>
 
                                           <button
                                             type="button"
                                             onClick={() => field.onChange('time')}
                                             className={cn(
-                                              'rounded-[24px] border p-4 text-left transition-all',
+                                              'rounded-[20px] border p-3 text-left transition-all sm:rounded-[24px] sm:p-4',
                                               field.value === 'time'
                                                 ? 'border-primary/40 bg-primary/[0.08] shadow-sm'
                                                 : 'border-border/60 bg-muted/20 hover:border-primary/20 hover:bg-background'
                                             )}
                                           >
-                                            <div className="mb-3 flex items-center justify-between">
+                                            <div className="mb-2 flex items-center justify-between sm:mb-3">
                                               <div className="rounded-2xl bg-background/90 p-2 text-primary shadow-sm">
                                                 <Zap className="h-4 w-4" />
                                               </div>
-                                              <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
+                                              <span className="text-[9px] font-bold uppercase tracking-[0.18em] text-muted-foreground sm:text-[10px]">
                                                 Time
                                               </span>
                                             </div>
-                                            <p className="text-sm font-semibold text-foreground">Por tiempo</p>
+                                            <p className="text-xs font-semibold text-foreground sm:text-sm">
+                                              {isCompactMobile ? 'Tiempo' : 'Por tiempo'}
+                                            </p>
                                           </button>
                                         </div>
                                       )}
                                     />
 
-                                    <div className="mt-4 grid gap-3 md:grid-cols-3">
-                                      <div className="rounded-[24px] border border-border/60 bg-muted/20 p-4">
-                                        <div className="mb-3 flex items-center justify-between">
+                                    <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3">
+                                      <div className="rounded-[20px] border border-border/60 bg-muted/20 p-3 sm:rounded-[24px] sm:p-4">
+                                        <div className="mb-2 flex items-center justify-between sm:mb-3">
                                           <div className="rounded-2xl bg-background/90 p-2 text-primary shadow-sm">
                                             {selectedType === 'time' ? <Zap className="h-4 w-4" /> : <List className="h-4 w-4" />}
                                           </div>
-                                          <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
+                                          <span className="text-[9px] font-bold uppercase tracking-[0.16em] text-muted-foreground sm:text-[10px]">
                                             {selectedType === 'time' ? 'Seconds' : 'Reps'}
                                           </span>
                                         </div>
-                                        <p className="text-sm font-semibold text-foreground">
-                                          {selectedType === 'time' ? 'Tiempo de trabajo' : 'Repeticiones'}
+                                        <p className="text-xs font-semibold text-foreground sm:text-sm">
+                                          {selectedType === 'time'
+                                            ? (isCompactMobile ? 'Tiempo' : 'Tiempo de trabajo')
+                                            : (isCompactMobile ? 'Reps' : 'Repeticiones')}
                                         </p>
-                                        <div className="mt-2">
+                                        <div className={cn("mt-2", isCompactMobile && "hidden sm:block")}>
                                           {renderHint(selectedType === 'time' ? 'Indica los segundos que dura cada serie del ejercicio.' : 'Indica cuántas repeticiones debe completar el usuario en cada serie.')}
                                         </div>
                                         <Controller
@@ -1617,23 +1646,25 @@ function ExercisesFieldArray({ nestIndex, control, register, setValue, watch, er
                                               pattern="[0-9]*"
                                               min={0}
                                               placeholder="0"
-                                              className="mt-4 h-12 rounded-2xl border-border/60 bg-background text-base font-bold shadow-none"
+                                              className="mt-3 h-10 rounded-2xl border-border/60 bg-background text-sm font-bold shadow-none sm:mt-4 sm:h-12 sm:text-base"
                                             />
                                           )}
                                         />
                                       </div>
 
-                                      <div className="rounded-[24px] border border-border/60 bg-muted/20 p-4">
-                                        <div className="mb-3 flex items-center justify-between">
+                                      <div className="rounded-[20px] border border-border/60 bg-muted/20 p-3 sm:rounded-[24px] sm:p-4">
+                                        <div className="mb-2 flex items-center justify-between sm:mb-3">
                                           <div className="rounded-2xl bg-background/90 p-2 text-primary shadow-sm">
                                             <Repeat className="h-4 w-4" />
                                           </div>
-                                          <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
+                                          <span className="text-[9px] font-bold uppercase tracking-[0.16em] text-muted-foreground sm:text-[10px]">
                                             Sets
                                           </span>
                                         </div>
-                                        <p className="text-sm font-semibold text-foreground">Series</p>
-                                        <div className="mt-2">
+                                        <p className="text-xs font-semibold text-foreground sm:text-sm">
+                                          {isCompactMobile ? 'Series' : 'Series'}
+                                        </p>
+                                        <div className={cn("mt-2", isCompactMobile && "hidden sm:block")}>
                                           {renderHint('Número total de series o vueltas que se deben completar en este ejercicio.')}
                                         </div>
                                         <Input
@@ -1641,32 +1672,32 @@ function ExercisesFieldArray({ nestIndex, control, register, setValue, watch, er
                                           placeholder="0"
                                           type="number"
                                           min={0}
-                                          className="mt-4 h-12 rounded-2xl border-border/60 bg-background text-base font-bold shadow-none"
+                                          className="mt-3 h-10 rounded-2xl border-border/60 bg-background text-sm font-bold shadow-none sm:mt-4 sm:h-12 sm:text-base"
                                         />
                                       </div>
 
-                                      <div className="rounded-[24px] border border-border/60 bg-muted/20 p-4">
-                                        <div className="mb-3 flex items-center justify-between">
+                                      <div className="col-span-2 rounded-[20px] border border-border/60 bg-muted/20 p-3 sm:col-span-1 sm:rounded-[24px] sm:p-4">
+                                        <div className="mb-2 flex items-center justify-between sm:mb-3">
                                           <div className="rounded-2xl bg-background/90 p-2 text-primary shadow-sm">
                                             <RotateCw className="h-4 w-4" />
                                           </div>
-                                          <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
+                                          <span className="text-[9px] font-bold uppercase tracking-[0.16em] text-muted-foreground sm:text-[10px]">
                                             Rest
                                           </span>
                                         </div>
-                                        <p className="text-sm font-semibold text-foreground">Descanso</p>
-                                        <div className="mt-2">
+                                        <p className="text-xs font-semibold text-foreground sm:text-sm">Rest</p>
+                                        <div className={cn("mt-2", isCompactMobile && "hidden sm:block")}>
                                           {renderHint('Tiempo de recuperación entre una serie y la siguiente, expresado en segundos.')}
                                         </div>
-                                        <div className="relative mt-4">
+                                        <div className="relative mt-3 sm:mt-4">
                                           <Input
                                             {...register(`sections.${nestIndex}.exercises.${k}.rest`)}
                                             placeholder="0"
                                             type="number"
                                             min={0}
-                                            className="h-12 rounded-2xl border-border/60 bg-background pr-10 text-base font-bold shadow-none"
+                                            className="h-10 rounded-2xl border-border/60 bg-background pr-9 text-sm font-bold shadow-none sm:h-12 sm:pr-10 sm:text-base"
                                           />
-                                          <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-semibold text-muted-foreground">
+                                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-semibold text-muted-foreground sm:right-4 sm:text-xs">
                                             seg
                                           </span>
                                         </div>
@@ -1674,10 +1705,10 @@ function ExercisesFieldArray({ nestIndex, control, register, setValue, watch, er
                                     </div>
                                   </div>
 
-                                  <div className="rounded-[28px] border border-border/60 bg-background/75 p-4 shadow-sm md:p-5">
+                                  <div className="rounded-[24px] border border-border/60 bg-background/75 p-3 shadow-sm sm:rounded-[28px] sm:p-4 md:p-5">
                                     <div className="mb-4 flex items-start justify-between gap-3">
                                       <div>
-                                        <p className="text-sm font-semibold">Contexto del ejercicio</p>
+                                        <p className="text-sm font-semibold">{isCompactMobile ? 'Contexto' : 'Contexto del ejercicio'}</p>
                                       </div>
                                       <div className="flex items-center gap-2">
                                         <div className="rounded-2xl bg-muted p-2 text-muted-foreground">
@@ -1687,18 +1718,18 @@ function ExercisesFieldArray({ nestIndex, control, register, setValue, watch, er
                                       </div>
                                     </div>
 
-                                    <div className="grid gap-4 md:grid-cols-3">
+                                    <div className="grid gap-3 md:grid-cols-3">
                                       <div className="space-y-2">
                                         <label className="pl-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                                          Difficulty
+                                          {isCompactMobile ? 'Level' : 'Difficulty'}
                                         </label>
                                         <Controller
                                           control={control}
                                           name={`sections.${nestIndex}.exercises.${k}.difficulty`}
                                           render={({ field }) => (
                                             <Select onValueChange={field.onChange} value={field.value || 'beginner'}>
-                                              <SelectTrigger className="h-11 rounded-2xl border-border/60 bg-muted/20 text-sm font-medium shadow-none">
-                                                <SelectValue placeholder="Select difficulty" />
+                                              <SelectTrigger className="h-10 rounded-2xl border-border/60 bg-muted/20 text-sm font-medium shadow-none sm:h-11">
+                                                <SelectValue placeholder={isCompactMobile ? 'Nivel' : 'Select difficulty'} />
                                               </SelectTrigger>
                                               <SelectContent>
                                                 <SelectItem value="beginner">Beginner</SelectItem>
@@ -1712,7 +1743,7 @@ function ExercisesFieldArray({ nestIndex, control, register, setValue, watch, er
 
                                       <div className="space-y-2">
                                         <label className="pl-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                                          Target Muscles
+                                          {isCompactMobile ? 'Muscles' : 'Target Muscles'}
                                         </label>
                                         <Controller
                                           control={control}
@@ -1721,8 +1752,9 @@ function ExercisesFieldArray({ nestIndex, control, register, setValue, watch, er
                                             <TagInput
                                               value={field.value || []}
                                               onChange={field.onChange}
-                                              placeholder="Add muscles..."
+                                              placeholder={isCompactMobile ? "Muscles..." : "Add muscles..."}
                                               variant="orange"
+                                              compact={isCompactMobile}
                                             />
                                           )}
                                         />
@@ -1730,7 +1762,7 @@ function ExercisesFieldArray({ nestIndex, control, register, setValue, watch, er
 
                                       <div className="space-y-2">
                                         <label className="pl-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                                          Equipment
+                                          {isCompactMobile ? 'Equip' : 'Equipment'}
                                         </label>
                                         <Controller
                                           control={control}
@@ -1739,8 +1771,9 @@ function ExercisesFieldArray({ nestIndex, control, register, setValue, watch, er
                                             <TagInput
                                               value={field.value || []}
                                               onChange={field.onChange}
-                                              placeholder="Add equipment..."
+                                              placeholder={isCompactMobile ? "Equip..." : "Add equipment..."}
                                               variant="blue"
+                                              compact={isCompactMobile}
                                             />
                                           )}
                                         />
@@ -1803,13 +1836,15 @@ function TagInput({
     onChange, 
     placeholder, 
     icon,
-    variant = "default" 
+    variant = "default",
+    compact = false,
 }: { 
     value?: string[], 
     onChange: (val: string[]) => void, 
     placeholder?: string, 
     icon?: React.ReactNode,
-    variant?: "default" | "orange" | "blue"
+    variant?: "default" | "orange" | "blue",
+    compact?: boolean
 }) {
     const [input, setInput] = useState('')
 
@@ -1841,7 +1876,8 @@ function TagInput({
                     onKeyDown={handleKeyDown}
                     placeholder={placeholder}
                     className={cn(
-                        "h-9 text-sm border-transparent focus:bg-background focus-visible:ring-2 focus-visible:ring-primary/20 transition-all",
+                        "border-transparent focus:bg-background focus-visible:ring-2 focus-visible:ring-primary/20 transition-all",
+                        compact ? "h-8 text-xs" : "h-9 text-sm",
                         bgClass,
                         icon ? "pl-9 pr-9" : "pr-9"
                     )}
@@ -1850,7 +1886,10 @@ function TagInput({
                     type="button" 
                     size="icon" 
                     variant="ghost" 
-                    className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground hover:text-primary" 
+                    className={cn(
+                      "absolute right-1 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary",
+                      compact ? "h-6 w-6" : "h-7 w-7"
+                    )}
                     onClick={handleAdd}
                 >
                     <Plus className="h-3 w-3" />
@@ -1863,7 +1902,7 @@ function TagInput({
                             key={i} 
                             variant="secondary" 
                             className={cn(
-                                "gap-1 pr-1 font-medium", 
+                                compact ? "gap-1 pr-1 text-[10px] font-medium" : "gap-1 pr-1 font-medium",
                                 variant === "orange" ? "bg-orange-100 text-orange-700 hover:bg-orange-200" : 
                                 variant === "blue" ? "bg-blue-100 text-blue-700 hover:bg-blue-200" : ""
                             )}
@@ -1896,7 +1935,7 @@ export default function CreateWorkoutPage() {
   )
 }
 
-function MediaInput({ value, onChange, placeholder, type = 'media', variant = 'default' }: { value?: string | null, onChange: (val: string) => void, placeholder?: string, type?: 'media' | 'audio' | 'thumbnail' | 'tutorial', variant?: 'default' | 'thumbnail' }) {
+function MediaInput({ value, onChange, placeholder, type = 'media', variant = 'default', compact = false }: { value?: string | null, onChange: (val: string) => void, placeholder?: string, type?: 'media' | 'audio' | 'thumbnail' | 'tutorial', variant?: 'default' | 'thumbnail', compact?: boolean }) {
     const fileInputRef = React.useRef<HTMLInputElement>(null)
     const [isLibraryOpen, setIsLibraryOpen] = useState(false)
     
@@ -2216,58 +2255,113 @@ function MediaInput({ value, onChange, placeholder, type = 'media', variant = 'd
                         </div>
                     )
                 ) : (
-                    <div className="w-full h-full flex flex-col items-stretch divide-y divide-border/10">
+                    <div className={cn(
+                        "w-full h-full",
+                        compact ? "flex flex-col" : "flex flex-col items-stretch divide-y divide-border/10"
+                    )}>
                         <div className="p-2">
                             <Input 
-                                placeholder="Paste URL..." 
-                                className="h-8 text-xs bg-background/50 border-none shadow-sm"
+                                placeholder={compact ? "URL" : "Paste URL..."} 
+                                className={cn(
+                                  "bg-background/50 border-none shadow-sm",
+                                  compact ? "h-7 text-[11px]" : "h-8 text-xs"
+                                )}
                                 value={value || ''}
                                 onChange={(e) => onChange(e.target.value)}
                             />
                         </div>
-                        <button 
-                            type="button"
-                            className="flex-1 flex flex-col items-center justify-center gap-1 hover:bg-black/5 transition-colors text-muted-foreground hover:text-emerald-500"
-                            onClick={() => setIsLibraryOpen(true)}
-                            title="Select from Library"
-                        >
-                             <Library className="h-5 w-5 opacity-70" />
-                             <span className="text-[8px] font-bold uppercase">Lib</span>
-                        </button>
+                        {compact ? (
+                          <div className="grid flex-1 grid-cols-2 gap-2 p-2">
+                            <button 
+                                type="button"
+                                className="flex min-h-[38px] items-center justify-center gap-2 rounded-xl border border-border/40 bg-background/60 text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground transition-colors hover:text-emerald-500"
+                                onClick={() => setIsLibraryOpen(true)}
+                                title="Select from Library"
+                            >
+                                 <Library className="h-4 w-4 opacity-80" />
+                                 <span className="text-[9px] font-bold uppercase">Lib</span>
+                            </button>
 
-                        {!isThumbnailInput && (
-                          <button 
-                              type="button"
-                              className="flex-1 flex flex-col items-center justify-center gap-1 hover:bg-black/5 transition-colors text-muted-foreground hover:text-blue-500"
-                              onClick={() => openCamera()}
-                              title="Record Video"
-                          >
-                               <Camera className="h-5 w-5 opacity-70" />
-                               <span className="text-[8px] font-bold uppercase">Cam</span>
-                          </button>
-                        )}
-                        
-                        {/* Center: Upload */}
-                        <button 
-                            type="button"
-                            className="flex-1 flex flex-col items-center justify-center gap-1 hover:bg-black/5 transition-colors text-muted-foreground hover:text-foreground"
-                            onClick={() => fileInputRef.current?.click()}
-                            title="Upload File"
-                        >
-                             <Upload className="h-5 w-5 opacity-70" />
-                             <span className="text-[8px] font-bold uppercase">Up</span>
-                        </button>
-                        
-                        {!isThumbnailInput && (
-                          <button 
-                              type="button"
-                              className="flex-1 flex flex-col items-center justify-center gap-1 hover:bg-black/5 transition-colors text-muted-foreground hover:text-red-500"
-                              onClick={() => startAudioRecording()}
-                              title="Record Audio"
-                          >
-                               <Mic className="h-5 w-5 opacity-70" />
-                               <span className="text-[8px] font-bold uppercase">Mic</span>
-                          </button>
+                            {!isThumbnailInput && (
+                              <button 
+                                  type="button"
+                                  className="flex min-h-[38px] items-center justify-center gap-2 rounded-xl border border-border/40 bg-background/60 text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground transition-colors hover:text-blue-500"
+                                  onClick={() => openCamera()}
+                                  title="Record Video"
+                              >
+                                   <Camera className="h-4 w-4 opacity-80" />
+                                   <span className="text-[9px] font-bold uppercase">Cam</span>
+                              </button>
+                            )}
+                            
+                            <button 
+                                type="button"
+                                className="flex min-h-[38px] items-center justify-center gap-2 rounded-xl border border-border/40 bg-background/60 text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground transition-colors hover:text-foreground"
+                                onClick={() => fileInputRef.current?.click()}
+                                title="Upload File"
+                            >
+                                 <Upload className="h-4 w-4 opacity-80" />
+                                 <span className="text-[9px] font-bold uppercase">Up</span>
+                            </button>
+                            
+                            {!isThumbnailInput && (
+                              <button 
+                                  type="button"
+                                  className="flex min-h-[38px] items-center justify-center gap-2 rounded-xl border border-border/40 bg-background/60 text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground transition-colors hover:text-red-500"
+                                  onClick={() => startAudioRecording()}
+                                  title="Record Audio"
+                              >
+                                   <Mic className="h-4 w-4 opacity-80" />
+                                   <span className="text-[9px] font-bold uppercase">Mic</span>
+                              </button>
+                            )}
+                          </div>
+                        ) : (
+                          <>
+                            <button 
+                                type="button"
+                                className="flex-1 flex flex-col items-center justify-center gap-1 hover:bg-black/5 transition-colors text-muted-foreground hover:text-emerald-500"
+                                onClick={() => setIsLibraryOpen(true)}
+                                title="Select from Library"
+                            >
+                                 <Library className="h-5 w-5 opacity-70" />
+                                 <span className="text-[8px] font-bold uppercase">Lib</span>
+                            </button>
+
+                            {!isThumbnailInput && (
+                              <button 
+                                  type="button"
+                                  className="flex-1 flex flex-col items-center justify-center gap-1 hover:bg-black/5 transition-colors text-muted-foreground hover:text-blue-500"
+                                  onClick={() => openCamera()}
+                                  title="Record Video"
+                              >
+                                   <Camera className="h-5 w-5 opacity-70" />
+                                   <span className="text-[8px] font-bold uppercase">Cam</span>
+                              </button>
+                            )}
+                            
+                            <button 
+                                type="button"
+                                className="flex-1 flex flex-col items-center justify-center gap-1 hover:bg-black/5 transition-colors text-muted-foreground hover:text-foreground"
+                                onClick={() => fileInputRef.current?.click()}
+                                title="Upload File"
+                            >
+                                 <Upload className="h-5 w-5 opacity-70" />
+                                 <span className="text-[8px] font-bold uppercase">Up</span>
+                            </button>
+                            
+                            {!isThumbnailInput && (
+                              <button 
+                                  type="button"
+                                  className="flex-1 flex flex-col items-center justify-center gap-1 hover:bg-black/5 transition-colors text-muted-foreground hover:text-red-500"
+                                  onClick={() => startAudioRecording()}
+                                  title="Record Audio"
+                              >
+                                   <Mic className="h-5 w-5 opacity-70" />
+                                   <span className="text-[8px] font-bold uppercase">Mic</span>
+                              </button>
+                            )}
+                          </>
                         )}
                     </div>
                 )}
