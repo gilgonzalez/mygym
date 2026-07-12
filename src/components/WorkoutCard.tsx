@@ -11,6 +11,7 @@ import { useRouter } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
 import { ShareWorkoutDialog } from './share/ShareWorkoutDialog'
 import { WorkoutCommentsSheet } from './workout/WorkoutCommentsSheet'
+import { formatDuration } from '@/lib/time'
 
 interface WorkoutCardProps {
   workout: Workout
@@ -31,8 +32,10 @@ export default function WorkoutCard({ workout }: WorkoutCardProps) {
 
   // Calculate Stats & Rewards
   // @ts-ignore - estimated_time exists in DB but might be missing in type
-  const duration = Math.ceil((workout.estimated_time || 0) / 60) || 45
-  const xpEarned = Math.ceil(duration * 5) + 50
+  const durationSeconds = workout.estimated_time || 45 * 60
+  const durationLabel = formatDuration(durationSeconds)
+  const durationMinutes = Math.ceil(durationSeconds / 60)
+  const xpEarned = Math.ceil(durationMinutes * 5) + 50
   const hasCover = Boolean(workout.cover)
 
   const getAttributes = (tags: string[] = []) => {
@@ -189,7 +192,7 @@ export default function WorkoutCard({ workout }: WorkoutCardProps) {
                 {workout.title}
               </h4>
               <div className="rounded-full border border-white/10 bg-black/25 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/85 backdrop-blur-md dark:bg-white/10 dark:text-white">
-                {duration} min
+                {durationLabel}
               </div>
             </div>
 
@@ -282,7 +285,7 @@ export default function WorkoutCard({ workout }: WorkoutCardProps) {
               </button>
               <div className="flex items-center gap-2">
                 <Clock className="w-4 h-4" />
-                <span className="text-xs">{duration} min</span>
+                <span className="text-xs">{durationLabel}</span>
               </div>
               <div className="flex items-center gap-1.5 text-amber-500">
                 <Zap className="w-3.5 h-3.5 fill-current" />

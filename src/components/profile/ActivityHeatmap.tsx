@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 import { getWorkoutLogsAction } from "@/app/actions/user/getLogs"
 import { useQuery } from "@tanstack/react-query"
+import { formatDuration } from "@/lib/time"
 
 type WorkoutSession = {
   title: string
@@ -91,7 +92,7 @@ export function ActivityHeatmap({ userId, attributes }: ActivityHeatmapProps) {
                     // @ts-ignore
                     title: log.workouts?.title || "Workout Session",
                     xpEarned: log.xp_earned || 0,
-                    duration: (log.duration_seconds || 0) / 60,
+                    duration: log.duration_seconds || 0,
                     completedAt: log.completed_at || ''
                 }))
             }
@@ -314,7 +315,7 @@ export function ActivityHeatmap({ userId, attributes }: ActivityHeatmapProps) {
                         <div className="flex items-center gap-4 text-sm font-medium text-muted-foreground">
                             <span className="flex items-center gap-1.5 bg-secondary/30 px-2 py-0.5 rounded-md">
                                 <Clock className="w-3.5 h-3.5" />
-                                {Math.round(selectedDay?.workouts.reduce((acc, curr) => acc + curr.duration, 0) || 0)} mins total
+                                {formatDuration(selectedDay?.workouts.reduce((acc, curr) => acc + curr.duration, 0) || 0)} total
                             </span>
                             <span className="flex items-center gap-1.5 bg-amber-500/10 text-amber-600 dark:text-amber-500 px-2 py-0.5 rounded-md">
                                 <Zap className="w-3.5 h-3.5" />
@@ -336,7 +337,7 @@ export function ActivityHeatmap({ userId, attributes }: ActivityHeatmapProps) {
                             <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
                                 <span className="flex items-center gap-1">
                                     <Clock className="w-3 h-3" />
-                                    {Math.round(workout.duration)} mins
+                                    {formatDuration(workout.duration)}
                                 </span>
                                 <span className="w-1 h-1 rounded-full bg-muted-foreground/30" />
                                 <span>{new Date(workout.completedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>

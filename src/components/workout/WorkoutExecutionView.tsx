@@ -7,6 +7,7 @@ import { MusicPlayer } from './MusicPlayer'
 import { LocalExercise, LocalWorkout, ExerciseTutorial } from '@/types/workout/viewTypes'
 import { CheckCircle2, ChevronLeft, Dumbbell, Info, Pause, Play, Plus, SkipForward } from 'lucide-react'
 import { getNextWorkoutCursor, getStepInfo } from '@/lib/workout/sessionNavigation'
+import { formatDuration } from '@/lib/time'
 
 type SessionStage = 'prepare' | 'rest' | 'exercise-timed' | 'exercise-reps'
 
@@ -21,16 +22,10 @@ interface WorkoutExecutionViewProps {
   onPrev?: () => void
 }
 
-function formatTime(seconds: number) {
-  const mins = Math.floor(seconds / 60)
-  const secs = seconds % 60
-  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
-}
-
 function createMockTutorial(exercise: LocalExercise): ExerciseTutorial {
   const detailLine =
     exercise.type === 'time'
-      ? `Mantén la ejecución durante ${exercise.duration || 0} segundos con control y ritmo constante.`
+      ? `Mantén la ejecución durante ${formatDuration(exercise.duration || 0)} con control y ritmo constante.`
       : `Completa ${exercise.reps || 0} repeticiones manteniendo la técnica estable en cada una.`
 
   const equipmentLine =
@@ -262,7 +257,7 @@ export function WorkoutExecutionView({
   const circumference = 2 * Math.PI * radius
   const dashOffset = circumference * (1 - ringProgress)
   const strokeColor = getStrokeColor(stage)
-  const timerLabel = hasTimer ? formatTime(timeLeft) : `${displayExercise?.reps || 0} reps`
+  const timerLabel = hasTimer ? formatDuration(timeLeft, { style: 'clock' }) : `${displayExercise?.reps || 0} reps`
 
   const nextButtonLabel =
     stage === 'prepare'
@@ -497,7 +492,7 @@ export function WorkoutExecutionView({
               {displayExercise && (
                 <span className="rounded-full border border-white/10 bg-white/8 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-white/70">
                   {displayExercise.type === 'time'
-                    ? `${displayExercise.duration || 0}s`
+                    ? formatDuration(displayExercise.duration || 0)
                     : `${displayExercise.reps || 0} reps`}
                 </span>
               )}

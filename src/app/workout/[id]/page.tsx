@@ -14,6 +14,42 @@ import { getWorkoutById } from '@/app/actions/workout/get'
 import { useAuthStore } from '@/store/authStore'
 import { completeWorkoutAction } from '@/app/actions/user/completeWorkout'
 
+function normalizeExerciseKey(value: string) {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+}
+
+function buildExerciseDescriptionMap(workoutDescription?: string | null) {
+  const descriptionMap = new Map<string, string>()
+
+  if (!workoutDescription) return descriptionMap
+
+  workoutDescription
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .forEach((line) => {
+      const separatorIndex = line.indexOf(':')
+      if (separatorIndex <= 0) return
+
+      const rawKey = line.slice(0, separatorIndex).trim()
+      const rawDescription = line.slice(separatorIndex + 1).trim()
+
+      if (!rawKey || !rawDescription) return
+
+      const normalizedKey = normalizeExerciseKey(rawKey)
+      if (!normalizedKey) return
+
+      descriptionMap.set(normalizedKey, rawDescription)
+    })
+
+  return descriptionMap
+}
+
 export default function WorkoutSessionPage({ params }: { params: { id: string } }) {
   const router = useRouter()
   const { user } = useAuthStore()
@@ -51,6 +87,8 @@ export default function WorkoutSessionPage({ params }: { params: { id: string } 
     }
   })
 
+  const exerciseDescriptionMap = buildExerciseDescriptionMap(workoutData?.description)
+
   // Map DB data to View Type
   const workout: LocalWorkout | null = workoutData ? {
     id: workoutData.id,
@@ -81,7 +119,7 @@ export default function WorkoutSessionPage({ params }: { params: { id: string } 
             },
             steps: e.tutorial.steps || [],
           } : undefined,
-          description: e.description || '',
+          description: e.description || exerciseDescriptionMap.get(normalizeExerciseKey(e.name)) || '',
           muscle_groups: e.muscle_group || [],
           equipment: e.equipment || []
         })
@@ -154,6 +192,18 @@ export default function WorkoutSessionPage({ params }: { params: { id: string } 
   // Helper to determine if we have a session in progress
   const hasActiveSession = activeWorkout?.id === workout?.id && (currentSectionIndex > 0 || currentExerciseIndex > 0 || isResting)
 
+  const handleStartFromOverview = () => {
+    if (!workout) return
+    initializeWorkout(workout)
+    restartWorkout()
+  }
+
+  const handleJumpToExerciseFromOverview = (sectionIndex: number, exerciseIndex: number) => {
+    if (!workout) return
+    initializeWorkout(workout)
+    jumpToStep(sectionIndex, exerciseIndex)
+  }
+
   // Render Logic
   if (isLoading || (workout && !activeWorkout) || (activeWorkout && activeWorkout.id !== params.id)) {
     return (
@@ -182,16 +232,17 @@ export default function WorkoutSessionPage({ params }: { params: { id: string } 
   }
 
   // 2. Intro View
-  if (!hasStarted && activeWorkout) {
+  if (!hasStarted && workout) {
     return (
       <WorkoutOverview 
-        workout={activeWorkout}
-        onStart={restartWorkout}
+        workout={workout}
+        onStart={handleStartFromOverview}
         onResume={startSession}
         onBack={() => router.push('/')}
         hasActiveSession={hasActiveSession}
-        onExerciseClick={jumpToStep}
+        onExerciseClick={handleJumpToExerciseFromOverview}
         isAuthenticated={!!user}
+        canViewPremiumTutorial={!!user?.isPremium}
       />
     )
   }

@@ -3,6 +3,7 @@ import { Play, Dumbbell, TimerIcon, Info, ChevronLeft, Clock } from 'lucide-reac
 import { Button } from '@/components/Button'
 import { PreviewActivity } from './PreviewActivity'
 import { LocalWorkout } from '@/types/workout/viewTypes'
+import { formatDuration } from '@/lib/time'
 
 interface PreviewWorkoutProps {
   data: any
@@ -60,6 +61,22 @@ export function PreviewWorkout({ data, onClose }: PreviewWorkoutProps) {
     })
     return steps
   }, [workout])
+
+  const totalDurationSeconds = useMemo(() => {
+    let totalSeconds = 0
+
+    workout.sections.forEach((section) => {
+      section.exercises.forEach((exercise) => {
+        const sets = exercise.sets || 1
+        const duration = exercise.duration || 0
+        const rest = exercise.rest || 0
+        const timePerSet = duration > 0 ? duration : 45
+        totalSeconds += (timePerSet + rest) * sets
+      })
+    })
+
+    return totalSeconds
+  }, [workout.sections])
 
   if (isPlaying) {
     return (
@@ -125,7 +142,7 @@ export function PreviewWorkout({ data, onClose }: PreviewWorkoutProps) {
            </h1>
            <div className="flex items-center gap-4 text-xs md:text-sm text-muted-foreground font-medium">
              <span className="flex items-center gap-1">
-               <TimerIcon className="w-3 h-3 md:w-4 md:h-4" /> ~45 mins
+               <TimerIcon className="w-3 h-3 md:w-4 md:h-4" /> {formatDuration(totalDurationSeconds || 45 * 60)}
              </span>
              <span className="flex items-center gap-1">
                <Info className="w-3 h-3 md:w-4 md:h-4" /> {data.difficulty || 'Intermediate'}
@@ -179,10 +196,10 @@ export function PreviewWorkout({ data, onClose }: PreviewWorkoutProps) {
                        <h4 className="font-semibold text-sm text-foreground truncate pr-2">{ex.name}</h4>
                        <div className="flex items-center gap-2 mt-1 text-[10px] md:text-xs text-muted-foreground">
                          <span className="bg-secondary px-1.5 py-0.5 rounded-md font-medium">
-                           {ex.type === 'reps' ? `${ex.reps || 0} reps` : `${ex.duration || 0}s`}
+                           {ex.type === 'reps' ? `${ex.reps || 0} reps` : formatDuration(ex.duration || 0)}
                          </span>
                          {ex.sets && <span>{ex.sets} sets</span>}
-                         {ex.rest && <span className="flex items-center gap-0.5"><Clock className="w-3 h-3" /> {ex.rest}s</span>}
+                         {ex.rest && <span className="flex items-center gap-0.5"><Clock className="w-3 h-3" /> {formatDuration(ex.rest)}</span>}
                        </div>
                      </div>
                    </div>

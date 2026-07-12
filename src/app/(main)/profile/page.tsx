@@ -14,6 +14,7 @@ import { getUserStatsAction } from '@/app/actions/user/getStats'
 import SimplifiedWorkoutCard from '@/components/SimplifiedWorkoutCard'
 import { PremiumFeatureDialog } from '@/components/premium/PremiumFeatureDialog'
 import { PremiumLockedOverlay } from '@/components/premium/PremiumLockedOverlay'
+import { formatDurationFromMinutes } from '@/lib/time'
 
 interface UserStats {
     level: number
@@ -154,7 +155,7 @@ export default function ProfilePage() {
   }
 
   const xpPercentage = (currentStats.current_xp / currentStats.next_level_xp) * 100
-  const totalHours = (currentStats.total_minutes / 60).toFixed(1)
+  const totalTimeLabel = formatDurationFromMinutes(currentStats.total_minutes)
   const isPremiumUser = Boolean(user.isPremium)
   const displayName = user.name || 'Gym Enthusiast'
   const roleLabel = user.role.charAt(0) + user.role.slice(1).toLowerCase()
@@ -193,7 +194,7 @@ export default function ProfilePage() {
             <Timer className="h-5 w-5" />
           </div>
           <div>
-            <p className="text-2xl font-black tracking-tight text-foreground">{totalHours}h</p>
+            <p className="text-2xl font-black tracking-tight text-foreground">{totalTimeLabel}</p>
             <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-muted-foreground">Total Time</p>
           </div>
         </div>

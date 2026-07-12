@@ -1,8 +1,8 @@
 import { useState, useMemo } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { Button } from '@/components/Button'
-import { LocalWorkout } from '@/types/workout/viewTypes'
-import { ChevronLeft, Dumbbell, Info, Play, TimerIcon, Lock, Target, Layers, Share2 } from 'lucide-react'
+import { LocalExercise, LocalWorkout } from '@/types/workout/viewTypes'
+import { ChevronLeft, Dumbbell, Eye, Info, Play, TimerIcon, Lock, Target, Layers, Share2 } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -14,6 +14,8 @@ import {
 
 import { GoogleAuthButton } from '@/components/auth/GoogleAuthButton'
 import { ShareWorkoutDialog } from '../share/ShareWorkoutDialog'
+import { ExercisePreviewDialog } from './ExercisePreviewDialog'
+import { formatDuration } from '@/lib/time'
 
 interface WorkoutOverviewProps {
   workout: LocalWorkout
@@ -23,6 +25,7 @@ interface WorkoutOverviewProps {
   hasActiveSession?: boolean
   onExerciseClick: (sectionIndex: number, exerciseIndex: number) => void
   isAuthenticated?: boolean
+  canViewPremiumTutorial?: boolean
 }
 
 export function WorkoutOverview({ 
@@ -32,16 +35,19 @@ export function WorkoutOverview({
   onBack, 
   hasActiveSession, 
   onExerciseClick,
-  isAuthenticated = false 
+  isAuthenticated = false,
+  canViewPremiumTutorial = false,
 }: WorkoutOverviewProps) {
   const router = useRouter()
   const pathname = usePathname()
   const heroImage = workout.cover
   const [showLoginDialog, setShowLoginDialog] = useState(false)
   const [showShare, setShowShare] = useState(false)
+  const [previewExercise, setPreviewExercise] = useState<LocalExercise | null>(null)
+  const [previewSectionName, setPreviewSectionName] = useState<string | undefined>(undefined)
 
   // Calculate derived stats
-  const { durationInMinutes, uniqueMuscleGroups, uniqueEquipment, totalExercises } = useMemo(() => {
+  const { totalDurationSeconds, uniqueMuscleGroups, uniqueEquipment, totalExercises } = useMemo(() => {
     let totalSeconds = 0
     let exerciseCount = 0
     const muscleGroups = new Set<string>()
@@ -62,12 +68,14 @@ export function WorkoutOverview({
     })
 
     return {
-      durationInMinutes: Math.ceil(totalSeconds / 60),
+      totalDurationSeconds: totalSeconds,
       uniqueMuscleGroups: Array.from(muscleGroups),
       uniqueEquipment: Array.from(equipment),
       totalExercises: exerciseCount
     }
   }, [workout])
+
+  const durationLabel = formatDuration(totalDurationSeconds)
 
   const handleStart = () => {
     if (!isAuthenticated) {
@@ -91,6 +99,11 @@ export function WorkoutOverview({
       return
     }
     onExerciseClick(sectionIndex, exerciseIndex)
+  }
+
+  const handlePreviewOpen = (exercise: LocalExercise, sectionName: string) => {
+    setPreviewExercise(exercise)
+    setPreviewSectionName(sectionName)
   }
 
   return (
@@ -150,6 +163,19 @@ export function WorkoutOverview({
         workout={workout} 
       />
 
+      <ExercisePreviewDialog
+        open={!!previewExercise}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPreviewExercise(null)
+            setPreviewSectionName(undefined)
+          }
+        }}
+        exercise={previewExercise}
+        sectionName={previewSectionName}
+        canViewTutorial={canViewPremiumTutorial}
+      />
+
       <div className="relative h-[45vh] min-h-[350px] w-full overflow-hidden">
          <div className="absolute top-4 left-4 z-50">
            <Button 
@@ -191,7 +217,7 @@ export function WorkoutOverview({
            </h1>
            <div className="flex items-center gap-4 text-sm text-muted-foreground font-medium">
              <span className="flex items-center gap-1">
-               <TimerIcon className="w-4 h-4" /> {durationInMinutes} mins
+               <TimerIcon className="w-4 h-4" /> {durationLabel}
              </span>
              <span className="flex items-center gap-1 capitalize">
                <Info className="w-4 h-4" /> {workout.difficulty || 'General'}
@@ -268,12 +294,25 @@ export function WorkoutOverview({
                      onClick={() => handleExerciseClick(idx, exIdx)}
                    >
                      {!isAuthenticated && (
-                       <div className="absolute inset-0 z-20 flex items-center justify-center bg-background/10 backdrop-blur-[1px]">
+                       <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center bg-background/10 backdrop-blur-[1px]">
                          <div className="bg-background/90 p-2 rounded-full shadow-lg border border-border/50">
                            <Lock className="w-5 h-5 text-muted-foreground" />
                          </div>
                        </div>
                      )}
+                     <Button
+                       variant="outline"
+                       size="icon"
+                       aria-label={`Vista previa de ${ex.name}`}
+                       title={`Vista previa de ${ex.name}`}
+                       className="absolute right-3 top-3 z-30 h-8 w-8 rounded-full bg-background/90 shadow-sm backdrop-blur-sm"
+                       onClick={(event) => {
+                         event.stopPropagation()
+                         handlePreviewOpen(ex, section.name)
+                       }}
+                     >
+                       <Eye className="h-3.5 w-3.5" />
+                     </Button>
                      <div className="w-16 h-16 rounded-lg bg-muted overflow-hidden shrink-0 border border-border/30">
                       {ex.thumbnail_url ? (
                         /\.(mp4|webm|ogg|mov)($|\?)/i.test(ex.thumbnail_url) ? (
@@ -299,7 +338,7 @@ export function WorkoutOverview({
                        <h4 className="font-semibold text-foreground truncate pr-2">{ex.name}</h4>
                        <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
                          <span className="bg-secondary px-2 py-0.5 rounded-md font-medium">
-                           {ex.type === 'reps' ? `${ex.reps} reps` : `${ex.duration}s`}
+                           {ex.type === 'reps' ? `${ex.reps} reps` : formatDuration(ex.duration || 0)}
                          </span>
                          {ex.sets && <span>{ex.sets} sets</span>}
                        </div>

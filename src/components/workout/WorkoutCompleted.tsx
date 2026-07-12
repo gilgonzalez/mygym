@@ -12,6 +12,7 @@ import { logWorkoutCompletion } from '@/app/actions/workout/log'
 import { useWorkoutStore } from '@/store/workOutStore'
 import { FEELING_CONFIG } from '@/constants/feeling'
 import { PremiumFeatureDialog } from '@/components/premium/PremiumFeatureDialog'
+import { formatDuration } from '@/lib/time'
 
 
 interface WorkoutCompletedProps {
@@ -36,9 +37,7 @@ export function WorkoutCompleted({ workout, onRestart, initialLogId, xpEarned, c
 
   // Calculate Duration
   const durationMs = (endTime || Date.now()) - (startTime || Date.now())
-  const durationMinutes = Math.floor(durationMs / 60000)
-  const durationSeconds = Math.floor((durationMs % 60000) / 1000)
-  const timeString = `${durationMinutes}:${durationSeconds.toString().padStart(2, '0')}`
+  const timeString = formatDuration(Math.floor(durationMs / 1000), { style: 'clock' })
 
   // Calculate Stats
   const totalSets = workout.sections.reduce((acc, section) => 

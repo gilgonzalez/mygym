@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/Button'
 import { Play, Pause, SkipForward } from 'lucide-react'
+import { formatDuration } from '@/lib/time'
 
 interface WorkoutTimerProps {
   duration: number
@@ -86,12 +87,6 @@ export function WorkoutTimer({ duration, mode, onComplete, onSkip }: WorkoutTime
     return () => clearInterval(interval)
   }, [isRunning, timeLeft, onComplete])
 
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60)
-    const secs = seconds % 60
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
-  }
-
   const toggleTimer = () => setIsRunning(!isRunning)
   const addTime = () => setTimeLeft(t => t + 10)
 
@@ -130,7 +125,7 @@ export function WorkoutTimer({ duration, mode, onComplete, onSkip }: WorkoutTime
       {/* Time Text & Controls Side-by-Side */}
       <div className="flex flex-col items-center gap-2">
         <div className={`text-2xl font-mono font-bold tracking-tighter tabular-nums leading-none drop-shadow-md ${mode === 'exercise' ? 'text-white' : 'text-foreground'}`}>
-           {formatTime(timeLeft)}
+           {formatDuration(timeLeft, { style: 'clock' })}
         </div>
         
         {/* Minimal Controls */}

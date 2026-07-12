@@ -4,6 +4,7 @@ import { CheckCircle2, ChevronLeft, Dumbbell, Info, Volume2, VolumeX } from 'luc
 import { LocalExercise, LocalSection } from '@/types/workout/viewTypes'
 import { useState, useRef } from 'react'
 import { ExerciseTutorialDialog } from './ExerciseTutorialDialog'
+import { formatDuration } from '@/lib/time'
 
 interface ExerciseViewProps {
   currentExercise: LocalExercise
@@ -185,11 +186,8 @@ export function ExerciseView({
                         </>
                     ) : (
                         <>
-                             <span className="text-6xl sm:text-7xl font-black tracking-tighter leading-none">
-                                {currentExercise.duration}
-                            </span>
-                            <span className="text-xl sm:text-2xl font-medium text-white/60 uppercase tracking-widest ml-2">
-                                Sec
+                            <span className="text-4xl sm:text-5xl font-black tracking-tighter leading-none">
+                              {formatDuration(currentExercise.duration || 0)}
                             </span>
                         </>
                     )}

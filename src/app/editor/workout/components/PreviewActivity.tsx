@@ -2,6 +2,7 @@ import React from 'react'
 import { X, ChevronLeft, ChevronRight, Clock, CheckCircle2, Info } from 'lucide-react'
 import { Button } from '@/components/Button'
 import { ExerciseTutorialDialog } from '@/components/workout/ExerciseTutorialDialog'
+import { formatDuration } from '@/lib/time'
 
 interface PreviewActivityProps {
   exercise: any
@@ -91,7 +92,9 @@ export function PreviewActivity({
             <div className="space-y-2">
               <h2 className="text-3xl md:text-4xl font-bold">{exercise.name}</h2>
               <p className="text-xl text-gray-400">
-                {exercise.sets} Sets × {exercise.reps} Reps
+                {exercise.type === 'time'
+                  ? `${exercise.sets} Sets × ${formatDuration(exercise.duration || 0)}`
+                  : `${exercise.sets} Sets × ${exercise.reps} Reps`}
               </p>
             </div>
 
@@ -101,8 +104,8 @@ export function PreviewActivity({
                 <span className="text-xs text-gray-400 uppercase">Kg</span>
               </div>
               <div className="bg-white/5 rounded-2xl p-4 flex flex-col items-center">
-                <span className="text-3xl font-bold text-green-400">{exercise.rest || '60'}</span>
-                <span className="text-xs text-gray-400 uppercase">Rest (s)</span>
+                <span className="text-3xl font-bold text-green-400">{formatDuration(exercise.rest || 60)}</span>
+                <span className="text-xs text-gray-400 uppercase">Rest</span>
               </div>
             </div>
 
@@ -134,7 +137,7 @@ export function PreviewActivity({
 
         <div className="text-center">
           <span className="block text-xs text-gray-500 uppercase tracking-widest mb-1">Timer</span>
-          <span className="font-mono text-2xl font-bold">00:00</span>
+          <span className="font-mono text-2xl font-bold">{formatDuration(0, { style: 'clock' })}</span>
         </div>
 
         <Button

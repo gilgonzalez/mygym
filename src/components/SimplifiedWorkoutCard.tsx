@@ -10,6 +10,7 @@ import { deleteWorkoutAction } from '@/app/actions/workout/delete'
 import { useRouter } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
 import { ShareWorkoutDialog } from './share/ShareWorkoutDialog'
+import { formatDuration } from '@/lib/time'
 
 interface SimplifiedWorkoutCardProps {
   workout: Workout
@@ -31,8 +32,10 @@ export default function SimplifiedWorkoutCard({ workout }: SimplifiedWorkoutCard
 
   // Calculate Stats & Rewards
   // @ts-ignore
-  const duration = Math.ceil((workout.estimated_time || 0) / 60) || 45
-  const xpEarned = Math.ceil(duration * 5) + 50
+  const durationSeconds = workout.estimated_time || 45 * 60
+  const durationLabel = formatDuration(durationSeconds)
+  const durationMinutes = Math.ceil(durationSeconds / 60)
+  const xpEarned = Math.ceil(durationMinutes * 5) + 50
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -186,7 +189,7 @@ export default function SimplifiedWorkoutCard({ workout }: SimplifiedWorkoutCard
                 </button>
                 <div className="flex items-center gap-1">
                   <Clock className="w-3.5 h-3.5" />
-                  <span>{duration}m</span>
+                  <span>{durationLabel}</span>
                 </div>
             </div>
             
