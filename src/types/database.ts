@@ -28,6 +28,8 @@ export type Database = {
           reps: number | null
           rest: number | null
           sets: number | null
+          source_id: string | null
+          source_provider: string | null
           thumbnail_media_id: string | null
           type: string | null
           user_id: string | null
@@ -45,6 +47,8 @@ export type Database = {
           reps?: number | null
           rest?: number | null
           sets?: number | null
+          source_id?: string | null
+          source_provider?: string | null
           thumbnail_media_id?: string | null
           type?: string | null
           user_id?: string | null
@@ -62,6 +66,8 @@ export type Database = {
           reps?: number | null
           rest?: number | null
           sets?: number | null
+          source_id?: string | null
+          source_provider?: string | null
           thumbnail_media_id?: string | null
           type?: string | null
           user_id?: string | null

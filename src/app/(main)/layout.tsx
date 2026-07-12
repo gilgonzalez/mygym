@@ -4,10 +4,9 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useAuthStore } from '@/store/authStore'
 import { supabase } from '@/lib/supabase'
-import { Home, Search, User, LogOut, Dumbbell, PlusSquare } from 'lucide-react'
+import { Home, User, LogOut, Dumbbell, PlusSquare } from 'lucide-react'
 import { Button } from '@/components/Button'
 
-import { Input } from '@/components/ui/input'
 import { ModeToggle } from '@/components/ModeSwitcher'
 
 export default function MainLayout({
@@ -23,17 +22,6 @@ export default function MainLayout({
     await supabase.auth.signOut()
     logout()
     router.push('/auth/login')
-  }
-
-  const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    const formData = new FormData(e.currentTarget)
-    const query = formData.get('q')
-    if (query) {
-      router.push(`/explore?q=${query}`)
-    } else {
-      router.push('/explore')
-    }
   }
 
   const isActive = (path: string) => pathname === path
@@ -53,19 +41,6 @@ export default function MainLayout({
               </Link>
             </div>
             
-            {/* Middle: Search Bar (Explore) */}
-            <div className="hidden md:flex flex-1 max-w-md mx-8">
-              <form onSubmit={handleSearch} className="w-full relative group">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                <Input
-                  name="q"
-                  type="search"
-                  placeholder="Search workouts, users..."
-                  className="w-full pl-9 bg-muted/50 focus:bg-background transition-colors rounded-full"
-                />
-              </form>
-            </div>
-
             {/* Right: Actions */}
             <div className="flex items-center gap-4">
               {/* Create Workout Action */}
@@ -86,13 +61,6 @@ export default function MainLayout({
 
               {/* User Utilities Group */}
               <div className="flex items-center gap-1 sm:gap-2">
-                {/* Mobile Search Trigger */}
-                <Link href="/explore" className="md:hidden">
-                  <Button variant="ghost" size="icon">
-                    <Search className="h-5 w-5" />
-                  </Button>
-                </Link>
-
                 <Link href="/profile">
                   <Button variant="ghost" size="icon" className={isActive('/profile') ? 'text-primary' : ''}>
                     <User className="h-5 w-5" />
@@ -123,7 +91,7 @@ export default function MainLayout({
       </main>
       
       {/* Mobile Navigation Bar (Bottom) */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 border-t bg-background p-2 grid grid-cols-3 gap-1 z-50 pb-safe">
+      <div className="md:hidden fixed bottom-0 left-0 right-0 border-t bg-background p-2 grid grid-cols-2 gap-1 z-50 pb-safe">
         <Link
             href="/"
             className={`flex flex-col items-center justify-center p-2 rounded-md text-xs font-medium ${
@@ -134,17 +102,6 @@ export default function MainLayout({
         >
             <Home className="h-5 w-5 mb-1" />
             Feed
-        </Link>
-        <Link
-            href="/explore"
-            className={`flex flex-col items-center justify-center p-2 rounded-md text-xs font-medium ${
-            isActive('/explore') 
-                ? 'text-primary' 
-                : 'text-muted-foreground'
-            }`}
-        >
-            <Search className="h-5 w-5 mb-1" />
-            Explore
         </Link>
         <Link
             href="/profile"

@@ -1,12 +1,37 @@
 'use server'
 
 import OpenAI from 'openai'
+import { createClient } from '@/lib/supabase/server'
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 })
 
 export async function generateWorkoutAction(prompt: string, language: string = 'es-ES') {
+  const supabase = await createClient()
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser()
+
+  if (authError || !user) {
+    return { success: false, error: 'Debes iniciar sesion para usar el asistente de IA.' }
+  }
+
+  const { data: profile, error: profileError } = await supabase
+    .from('users')
+    .select('"isPremium"')
+    .eq('id', user.id)
+    .single()
+
+  if (profileError) {
+    return { success: false, error: profileError.message }
+  }
+
+  if (!profile?.isPremium) {
+    return { success: false, error: 'El asistente de IA esta disponible solo para usuarios premium.' }
+  }
+
   if (!process.env.OPENAI_API_KEY) {
     return { success: false, error: 'OpenAI API Key not configured' }
   }

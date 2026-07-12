@@ -1,7 +1,8 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '@/components/Button'
+import { PremiumFeatureDialog } from '@/components/premium/PremiumFeatureDialog'
 import { ExerciseTutorialDialog } from './ExerciseTutorialDialog'
 import { MusicPlayer } from './MusicPlayer'
 import { LocalExercise, LocalWorkout, ExerciseTutorial } from '@/types/workout/viewTypes'
@@ -17,6 +18,7 @@ interface WorkoutExecutionViewProps {
   currentExerciseIndex: number
   currentSet: number
   isResting: boolean
+  canAccessTutorial: boolean
   onExit: () => void
   onNextStep: () => void
   onPrev?: () => void
@@ -105,6 +107,7 @@ export function WorkoutExecutionView({
   currentExerciseIndex,
   currentSet,
   isResting,
+  canAccessTutorial,
   onExit,
   onNextStep,
   onPrev,
@@ -113,7 +116,10 @@ export function WorkoutExecutionView({
   const [timeLeft, setTimeLeft] = useState(5)
   const [isPaused, setIsPaused] = useState(false)
   const [isTutorialOpen, setIsTutorialOpen] = useState(false)
+  const [isPremiumDialogOpen, setIsPremiumDialogOpen] = useState(false)
   const previousTimeLeftRef = useRef(timeLeft)
+  const visualStageRef = useRef<HTMLDivElement | null>(null)
+  const [mobileCircleSize, setMobileCircleSize] = useState<number | null>(null)
 
   const currentSection = workout.sections[currentSectionIndex]
   const currentExercise = currentSection?.exercises[currentExerciseIndex]
@@ -140,8 +146,6 @@ export function WorkoutExecutionView({
 
   const displaySection = isResting ? upcomingStep?.section || currentSection : currentSection
   const displayExercise = isResting ? upcomingStep?.exercise || currentExercise : currentExercise
-  const displaySet = isResting ? upcomingStep?.set || currentSet : currentSet
-  const totalSets = displayExercise?.sets || 1
 
   const stage: SessionStage = isPreparing
     ? 'prepare'
@@ -202,8 +206,41 @@ export function WorkoutExecutionView({
     previousTimeLeftRef.current = timeLeft
   }, [timeLeft])
 
-  const tutorialData = displayExercise ? displayExercise.tutorial || createMockTutorial(displayExercise) : undefined
+  useLayoutEffect(() => {
+    if (typeof window === 'undefined') return
 
+    const visualStage = visualStageRef.current
+    if (!visualStage) return
+
+    const measure = () => {
+      if (window.innerWidth >= 640) {
+        setMobileCircleSize((current) => (current === null ? current : null))
+        return
+      }
+
+      const bounds = visualStage.getBoundingClientRect()
+      const nextSize = Math.max(220, Math.min(Math.floor(bounds.width * 0.76), Math.floor(bounds.height * 0.58), 352))
+
+      setMobileCircleSize((current) => (current === nextSize ? current : nextSize))
+    }
+
+    measure()
+
+    const frameId = window.requestAnimationFrame(measure)
+    const resizeObserver = new ResizeObserver(measure)
+    resizeObserver.observe(visualStage)
+    window.addEventListener('resize', measure)
+    window.visualViewport?.addEventListener('resize', measure)
+
+    return () => {
+      window.cancelAnimationFrame(frameId)
+      resizeObserver.disconnect()
+      window.removeEventListener('resize', measure)
+      window.visualViewport?.removeEventListener('resize', measure)
+    }
+  }, [])
+
+  const tutorialData = displayExercise ? displayExercise.tutorial || createMockTutorial(displayExercise) : undefined
   const flattenedRoadmap = useMemo(() => {
     return workout.sections.map((section, sectionIndex) => ({
       section,
@@ -261,14 +298,10 @@ export function WorkoutExecutionView({
 
   const nextButtonLabel =
     stage === 'prepare'
-      ? 'Empezar ya'
-      : stage === 'rest'
-        ? 'Saltar descanso'
-        : stage === 'exercise-reps'
-          ? 'Completar serie'
-          : currentSet < totalSets
-            ? 'Siguiente serie'
-            : 'Siguiente ejercicio'
+      ? 'Iniciar'
+      : stage === 'exercise-reps'
+        ? 'Hecho'
+        : 'Seguir'
 
   return (
     <div className="relative flex h-[100dvh] flex-col overflow-hidden bg-[#050816] text-white">
@@ -276,8 +309,8 @@ export function WorkoutExecutionView({
       <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.03),transparent_20%,transparent_80%,rgba(255,255,255,0.02))]" />
 
       <header className="relative z-20 px-4 pb-2 pt-3 sm:px-6">
-        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-          <div className="hidden shrink-0 items-center gap-3 sm:flex">
+        <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+          <div className="hidden shrink-0 items-center gap-3 lg:flex">
             <Button
               variant="ghost"
               size="icon"
@@ -290,9 +323,9 @@ export function WorkoutExecutionView({
           </div>
 
           <div className="w-full min-w-0 rounded-[22px] border border-white/10 bg-white/[0.04] px-3 py-2 backdrop-blur-xl sm:flex-1">
-            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap gap-2 sm:hidden">
+            <div className="flex flex-col gap-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex min-w-0 flex-1 flex-wrap gap-2 lg:hidden">
                   {flattenedRoadmap.map(({ section, sectionIndex, exercises }) => {
                     const isSectionCompleted = sectionIndex < activeCursor.sectionIndex
                     const isSectionActive = sectionIndex === activeCursor.sectionIndex
@@ -328,161 +361,152 @@ export function WorkoutExecutionView({
                   })}
                 </div>
 
-                {activeRoadmapSection && (
-                  <div className="mt-2 rounded-2xl border border-white/10 bg-white/[0.04] px-2.5 py-2 sm:hidden">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="truncate text-[9px] font-bold uppercase tracking-[0.18em] text-white/55">
-                        {activeRoadmapSection.section.name}
-                      </span>
-                      <span className="text-[9px] font-semibold text-white/45">
-                        {activeCursor.sectionIndex + 1}/{flattenedRoadmap.length}
-                      </span>
-                    </div>
+                <div className="hidden min-w-0 flex-1 flex-wrap items-center gap-3 lg:flex">
+                  {flattenedRoadmap.map(({ section, sectionIndex, exercises }) => (
+                    <div key={section.id} className="flex items-center gap-3">
+                      <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-2.5 py-2">
+                        <span className="block truncate text-[9px] font-bold uppercase tracking-[0.18em] text-white/45">
+                          {section.name}
+                        </span>
 
-                    <div className="mt-2 flex items-center gap-1.5 overflow-hidden">
-                      {(() => {
-                        const seriesNumber = getVisibleSeriesNumber(activeCursor.sectionIndex, activeRoadmapSection.exercises)
-                        const exercisesInSeries = activeRoadmapSection.exercises
-                          .map((item, originalExerciseIndex) => ({ ...item, originalExerciseIndex }))
-                          .filter(({ exercise }) => (exercise.sets || 1) >= seriesNumber)
+                        <div className="mt-2 flex items-center gap-1.5">
+                          {Array.from({ length: Math.max(...exercises.map(({ exercise }) => exercise.sets || 1), 1) }).map((_, seriesIndex) => {
+                            const seriesNumber = seriesIndex + 1
+                            const exercisesInSeries = exercises
+                              .map((item, originalExerciseIndex) => ({ ...item, originalExerciseIndex }))
+                              .filter(({ exercise }) => (exercise.sets || 1) >= seriesNumber)
+                            const isSeriesCompleted =
+                              sectionIndex < activeCursor.sectionIndex ||
+                              (sectionIndex === activeCursor.sectionIndex && activeCursor.set > seriesNumber)
+                            const isSeriesActive =
+                              sectionIndex === activeCursor.sectionIndex && activeCursor.set === seriesNumber
 
-                        return (
-                          <div key={`${activeRoadmapSection.section.id}-mobile-series-${seriesNumber}`} className="flex items-center gap-1.5">
-                            <div className="flex h-5 w-5 items-center justify-center rounded-full border border-orange-300/50 bg-orange-400 text-[9px] font-bold text-slate-950 shadow-[0_0_16px_rgba(249,115,22,0.45)]">
-                              {seriesNumber}
-                            </div>
-
-                            {exercisesInSeries.map(({ exercise, originalExerciseIndex }) => {
-                              const isExerciseCompleted =
-                                activeCursor.set > seriesNumber ||
-                                (activeCursor.set === seriesNumber && originalExerciseIndex < activeCursor.exerciseIndex)
-                              const isExerciseActive =
-                                activeCursor.set === seriesNumber && originalExerciseIndex === activeCursor.exerciseIndex
-
-                              return (
+                            return (
+                              <div key={`${section.id}-series-${seriesNumber}`} className="flex items-center gap-1.5">
                                 <div
-                                  key={`${activeRoadmapSection.section.id}-${exercise.id}-mobile-${seriesNumber}`}
-                                  className="flex items-center gap-1.5"
+                                  className={`flex h-5 w-5 items-center justify-center rounded-full border text-[9px] font-bold transition-all ${
+                                    isSeriesActive
+                                      ? 'animate-pulse border-orange-300/50 bg-orange-400 text-slate-950 shadow-[0_0_16px_rgba(249,115,22,0.45)]'
+                                      : isSeriesCompleted
+                                        ? 'border-emerald-300/40 bg-emerald-400 text-slate-950'
+                                        : 'border-white/70 bg-white text-slate-950'
+                                  }`}
                                 >
-                                  <div className="h-px w-2 bg-white/15" />
-                                  <div
-                                    className={`h-2.5 w-2.5 rounded-full transition-all ${
-                                      isExerciseActive
-                                        ? 'animate-pulse bg-orange-400 shadow-[0_0_10px_rgba(249,115,22,0.45)]'
-                                        : isExerciseCompleted
-                                          ? 'bg-emerald-400'
-                                          : 'bg-white'
-                                    }`}
-                                    title={exercise.name}
-                                  />
+                                  {seriesNumber}
                                 </div>
-                              )
-                            })}
-                          </div>
-                        )
-                      })()}
-                    </div>
-                  </div>
-                )}
 
-                <div className="hidden min-w-0 flex-1 flex-wrap items-center gap-3 sm:flex">
-                {flattenedRoadmap.map(({ section, sectionIndex, exercises }) => (
-                  <div key={section.id} className="flex items-center gap-3">
-                    <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-2.5 py-2">
-                      <span className="block truncate text-[9px] font-bold uppercase tracking-[0.18em] text-white/45">
-                        {section.name}
-                      </span>
+                                {exercisesInSeries.map(({ exercise, originalExerciseIndex }) => {
+                                  const isExerciseCompleted =
+                                    sectionIndex < activeCursor.sectionIndex ||
+                                    (sectionIndex === activeCursor.sectionIndex &&
+                                      (activeCursor.set > seriesNumber ||
+                                        (activeCursor.set === seriesNumber && originalExerciseIndex < activeCursor.exerciseIndex)))
+                                  const isExerciseActive =
+                                    sectionIndex === activeCursor.sectionIndex &&
+                                    activeCursor.set === seriesNumber &&
+                                    originalExerciseIndex === activeCursor.exerciseIndex
 
-                      <div className="mt-2 flex items-center gap-1.5">
-                        {Array.from({ length: Math.max(...exercises.map(({ exercise }) => exercise.sets || 1), 1) }).map((_, seriesIndex) => {
-                          const seriesNumber = seriesIndex + 1
-                          const exercisesInSeries = exercises
-                            .map((item, originalExerciseIndex) => ({ ...item, originalExerciseIndex }))
-                            .filter(({ exercise }) => (exercise.sets || 1) >= seriesNumber)
-                          const isSeriesCompleted =
-                            sectionIndex < activeCursor.sectionIndex ||
-                            (sectionIndex === activeCursor.sectionIndex && activeCursor.set > seriesNumber)
-                          const isSeriesActive =
-                            sectionIndex === activeCursor.sectionIndex && activeCursor.set === seriesNumber
-
-                          return (
-                            <div key={`${section.id}-series-${seriesNumber}`} className="flex items-center gap-1.5">
-                              <div
-                                className={`flex h-5 w-5 items-center justify-center rounded-full border text-[9px] font-bold transition-all ${
-                                  isSeriesActive
-                                    ? 'animate-pulse border-orange-300/50 bg-orange-400 text-slate-950 shadow-[0_0_16px_rgba(249,115,22,0.45)]'
-                                    : isSeriesCompleted
-                                      ? 'border-emerald-300/40 bg-emerald-400 text-slate-950'
-                                      : 'border-white/70 bg-white text-slate-950'
-                                }`}
-                              >
-                                {seriesNumber}
+                                  return (
+                                    <div key={`${section.id}-${exercise.id}-${seriesNumber}`} className="flex items-center gap-1.5">
+                                      <div className="h-px w-2 bg-white/15" />
+                                      <div
+                                        className={`h-2.5 w-2.5 rounded-full transition-all ${
+                                          isExerciseActive
+                                            ? 'animate-pulse bg-orange-400 shadow-[0_0_10px_rgba(249,115,22,0.45)]'
+                                            : isExerciseCompleted
+                                              ? 'bg-emerald-400'
+                                              : 'bg-white'
+                                        }`}
+                                        title={exercise.name}
+                                      />
+                                    </div>
+                                  )
+                                })}
                               </div>
-
-                              {exercisesInSeries.map(({ exercise, originalExerciseIndex }) => {
-                                const isExerciseCompleted =
-                                  sectionIndex < activeCursor.sectionIndex ||
-                                  (sectionIndex === activeCursor.sectionIndex &&
-                                    (activeCursor.set > seriesNumber ||
-                                      (activeCursor.set === seriesNumber && originalExerciseIndex < activeCursor.exerciseIndex)))
-                                const isExerciseActive =
-                                  sectionIndex === activeCursor.sectionIndex &&
-                                  activeCursor.set === seriesNumber &&
-                                  originalExerciseIndex === activeCursor.exerciseIndex
-
-                                return (
-                                  <div key={`${section.id}-${exercise.id}-${seriesNumber}`} className="flex items-center gap-1.5">
-                                    <div className="h-px w-2 bg-white/15" />
-                                    <div
-                                      className={`h-2.5 w-2.5 rounded-full transition-all ${
-                                        isExerciseActive
-                                          ? 'animate-pulse bg-orange-400 shadow-[0_0_10px_rgba(249,115,22,0.45)]'
-                                          : isExerciseCompleted
-                                            ? 'bg-emerald-400'
-                                            : 'bg-white'
-                                      }`}
-                                      title={exercise.name}
-                                    />
-                                  </div>
-                                )
-                              })}
-                            </div>
-                          )
-                        })}
+                            )
+                          })}
+                        </div>
                       </div>
+
+                      {sectionIndex < flattenedRoadmap.length - 1 ? (
+                        <div className="hidden h-6 w-px bg-white/10 xl:block" />
+                      ) : null}
                     </div>
+                  ))}
+                </div>
 
-                    {sectionIndex < flattenedRoadmap.length - 1 && (
-                      <div className="hidden h-6 w-px bg-white/10 xl:block" />
-                    )}
+                <div className="hidden shrink-0 text-right sm:block">
+                  <p className="text-xs font-medium uppercase tracking-[0.22em] text-white/45">
+                    {totalExercisesBeforeActive + 1} / {totalExerciseCount}
+                  </p>
+                  <p className="max-w-[180px] truncate text-sm font-semibold text-white/80">
+                    {displaySection?.name || workout.title}
+                  </p>
+                </div>
+              </div>
+
+              {activeRoadmapSection ? (
+                <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-2.5 py-2 lg:hidden">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="truncate text-[9px] font-bold uppercase tracking-[0.18em] text-white/55">
+                      {activeRoadmapSection.section.name}
+                    </span>
+                    <span className="text-[9px] font-semibold text-white/45">
+                      {activeCursor.sectionIndex + 1}/{flattenedRoadmap.length}
+                    </span>
                   </div>
-                ))}
-                </div>
-              </div>
 
-              <div className="hidden shrink-0 text-right sm:block">
-                <div className="mb-1 flex items-center justify-between gap-3 sm:justify-end">
-                  <MusicPlayer
-                    playlist={workout.audio || []}
-                    className="!fixed-none !top-auto !left-auto !translate-x-0 sm:hidden"
-                  />
-                  <span className={`rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] ${stageTheme.badgeClass}`}>
-                    {stageTheme.badge}
-                  </span>
+                  <div className="mt-2 flex items-center gap-1.5 overflow-hidden">
+                    {(() => {
+                      const seriesNumber = getVisibleSeriesNumber(activeCursor.sectionIndex, activeRoadmapSection.exercises)
+                      const exercisesInSeries = activeRoadmapSection.exercises
+                        .map((item, originalExerciseIndex) => ({ ...item, originalExerciseIndex }))
+                        .filter(({ exercise }) => (exercise.sets || 1) >= seriesNumber)
+
+                      return (
+                        <div key={`${activeRoadmapSection.section.id}-mobile-series-${seriesNumber}`} className="flex items-center gap-1.5">
+                          <div className="flex h-5 w-5 items-center justify-center rounded-full border border-orange-300/50 bg-orange-400 text-[9px] font-bold text-slate-950 shadow-[0_0_16px_rgba(249,115,22,0.45)]">
+                            {seriesNumber}
+                          </div>
+
+                          {exercisesInSeries.map(({ exercise, originalExerciseIndex }) => {
+                            const isExerciseCompleted =
+                              activeCursor.set > seriesNumber ||
+                              (activeCursor.set === seriesNumber && originalExerciseIndex < activeCursor.exerciseIndex)
+                            const isExerciseActive =
+                              activeCursor.set === seriesNumber && originalExerciseIndex === activeCursor.exerciseIndex
+
+                            return (
+                              <div
+                                key={`${activeRoadmapSection.section.id}-${exercise.id}-mobile-${seriesNumber}`}
+                                className="flex items-center gap-1.5"
+                              >
+                                <div className="h-px w-2 bg-white/15" />
+                                <div
+                                  className={`h-2.5 w-2.5 rounded-full transition-all ${
+                                    isExerciseActive
+                                      ? 'animate-pulse bg-orange-400 shadow-[0_0_10px_rgba(249,115,22,0.45)]'
+                                      : isExerciseCompleted
+                                        ? 'bg-emerald-400'
+                                        : 'bg-white'
+                                  }`}
+                                  title={exercise.name}
+                                />
+                              </div>
+                            )
+                          })}
+                        </div>
+                      )
+                    })()}
+                  </div>
                 </div>
-                <p className="text-xs font-medium uppercase tracking-[0.22em] text-white/45">
-                  {totalExercisesBeforeActive + 1} / {totalExerciseCount}
-                </p>
-                <p className="max-w-[180px] truncate text-sm font-semibold text-white/80">
-                  {displaySection?.name || workout.title}
-                </p>
-              </div>
+              ) : null}
             </div>
           </div>
         </div>
       </header>
 
-      <main className="relative z-10 flex min-h-0 flex-1 flex-col justify-between px-4 pb-28 pt-2 sm:justify-center sm:px-6 sm:pb-4">
+      <main className="relative z-10 flex min-h-0 flex-1 flex-col justify-between px-4 pb-28 pt-4 sm:justify-center sm:px-6 sm:pb-4 sm:pt-6">
         <div className="mx-auto flex h-full w-full max-w-6xl flex-col items-center justify-between sm:justify-center">
           <div className="pt-1 text-center sm:mb-3 sm:pt-0">
             <div className="mb-2 flex flex-wrap items-center justify-center gap-2">
@@ -504,15 +528,16 @@ export function WorkoutExecutionView({
             </div>
             <p className="text-4xl font-black tabular-nums tracking-[-0.06em] sm:text-5xl md:text-6xl lg:text-7xl">{timerLabel}</p>
           </div>
-
-          <div className="flex w-full flex-1 min-h-0 flex-col items-center justify-center py-4 sm:py-0">
-            <div className="relative flex items-center justify-center">
+ 
+          <div ref={visualStageRef} className="flex w-full min-h-0 flex-1 flex-col items-center justify-center py-4 sm:py-0">
+            <div className="relative flex items-center justify-center" style={circleFrameStyle}>
               <div className="absolute inset-0 rounded-full blur-3xl" style={{ backgroundColor: `${strokeColor}22` }} />
               <svg
                 width={circleSize}
                 height={circleSize}
                 viewBox={`0 0 ${circleSize} ${circleSize}`}
-                className="-rotate-90 drop-shadow-[0_18px_50px_rgba(0,0,0,0.45)] h-[min(40vh,76vw,22rem)] w-[min(40vh,76vw,22rem)] sm:h-[min(46vh,62vw,28rem)] sm:w-[min(46vh,62vw,28rem)] lg:h-[min(50vh,32rem)] lg:w-[min(50vh,32rem)]"
+                className={circleClassName}
+                style={circleFrameStyle}
               >
                 <circle
                   cx={circleSize / 2}
@@ -536,23 +561,41 @@ export function WorkoutExecutionView({
                 />
               </svg>
 
-              <div className="absolute inset-[28px] overflow-hidden rounded-full border border-white/10 bg-white/[0.05] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] sm:inset-[32px] lg:inset-[36px]">
+              <div
+                className="absolute overflow-hidden rounded-full border border-white/10 bg-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
+                style={innerCircleStyle}
+              >
                 {displayExercise?.thumbnail_url ? (
-                  <img
-                    src={displayExercise.thumbnail_url}
-                    alt={displayExercise.name}
-                    className="h-full w-full object-cover"
-                  />
+                  <div className="flex h-full w-full items-center justify-center">
+                    <img
+                      src={displayExercise.thumbnail_url}
+                      alt={displayExercise.name}
+                      className="h-full w-full object-cover"
+                    />
+                  </div>
                 ) : (
-                  <div className="flex h-full w-full items-center justify-center bg-white/[0.04]">
-                    <Dumbbell className="h-16 w-16 text-white/25 sm:h-20 sm:w-20" />
+                  <div className="flex h-full w-full items-center justify-center bg-white">
+                    <Dumbbell className="h-16 w-16 text-slate-300 sm:h-20 sm:w-20" />
                   </div>
                 )}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-white/5" />
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.22),transparent_52%),linear-gradient(180deg,rgba(255,255,255,0.04),rgba(15,23,42,0.08))]" />
+                {stage === 'rest' ? (
+                  <div className="absolute inset-0 flex items-center justify-center bg-[radial-gradient(circle_at_center,rgba(251,191,36,0.28),rgba(251,191,36,0.42)_58%,rgba(180,83,9,0.56))]">
+                    <div className="animate-pulse text-center text-[clamp(2rem,14vw,4.2rem)] font-black uppercase leading-none tracking-[0.22em] text-amber-600 drop-shadow-[0_2px_12px_rgba(251,191,36,0.35)] sm:text-[clamp(2.5rem,9vw,4.7rem)] sm:tracking-[0.3em] lg:text-[4.9rem] lg:tracking-[0.36em]">
+                      REST
+                    </div>
+                  </div>
+                ) : null}
               </div>
             </div>
 
             <div className="mt-4 flex flex-wrap items-center justify-center gap-2.5">
+              {workout.audio?.length ? (
+                <div className="w-full sm:hidden">
+                  <MusicPlayer playlist={workout.audio || []} className="!fixed-none !top-auto !left-auto !translate-x-0" />
+                </div>
+              ) : null}
+
               {onPrev && (
                 <Button
                   variant="ghost"
@@ -589,7 +632,13 @@ export function WorkoutExecutionView({
                 variant="ghost"
                 size="icon"
                 className="h-11 w-11 rounded-full border border-white/10 bg-white/10 text-white backdrop-blur-xl hover:bg-white/20"
-                onClick={() => setIsTutorialOpen(true)}
+                onClick={() => {
+                  if (!canAccessTutorial) {
+                    setIsPremiumDialogOpen(true)
+                    return
+                  }
+                  setIsTutorialOpen(true)
+                }}
               >
                 <Info className="h-4 w-4" />
               </Button>
@@ -598,7 +647,9 @@ export function WorkoutExecutionView({
                 className="h-11 rounded-full px-4 font-semibold shadow-[0_18px_40px_rgba(59,130,246,0.28)]"
                 onClick={onNextStep}
               >
-                {stage === 'exercise-reps' ? (
+                {stage === 'prepare' ? (
+                  <Play className="mr-2 h-5 w-5 fill-current" />
+                ) : stage === 'exercise-reps' ? (
                   <CheckCircle2 className="mr-2 h-5 w-5" />
                 ) : (
                   <SkipForward className="mr-2 h-5 w-5" />
@@ -611,33 +662,58 @@ export function WorkoutExecutionView({
               <h1 className="text-xl font-black tracking-tight sm:text-2xl md:text-3xl">
                 {displayExercise?.name || stageTheme.headline}
               </h1>
+              <div className="mt-2 hidden max-w-2xl sm:block">
+                <p className="text-sm leading-6 text-white/60">
+                  {exerciseDescription || stageTheme.subline}
+                </p>
+              </div>
+              <div className="mt-2 h-14 w-full max-w-[22rem] overflow-y-auto px-2 sm:hidden">
+                <p className="text-sm leading-5 text-white/60">
+                  {exerciseDescription || stageTheme.subline}
+                </p>
+              </div>
             </div>
           </div>
         </div>
       </main>
 
-      <Button
-        variant="ghost"
-        size="icon"
-        className="fixed bottom-4 left-4 z-30 h-11 w-11 rounded-full border border-white/10 bg-white/10 text-white backdrop-blur-xl hover:bg-white/20 sm:hidden"
-        onClick={onExit}
-      >
-        <ChevronLeft className="h-5 w-5" />
-      </Button>
+      <div className="fixed bottom-4 left-4 right-4 z-30 sm:hidden">
+        <div className="overflow-hidden rounded-[28px] border border-white/10 bg-[linear-gradient(135deg,rgba(15,23,42,0.88),rgba(6,12,28,0.84))] shadow-[0_24px_60px_rgba(0,0,0,0.38)] backdrop-blur-xl">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.16),transparent_32%),radial-gradient(circle_at_bottom_right,rgba(249,115,22,0.14),transparent_28%)]" />
+          <div className="relative grid grid-cols-[auto_minmax(0,1fr)_auto] gap-x-3 gap-y-2 px-3 py-3">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="row-span-2 h-11 w-11 shrink-0 self-center rounded-2xl border border-white/10 bg-white/10 text-white shadow-[0_14px_30px_rgba(0,0,0,0.24)] backdrop-blur-xl hover:bg-white/20"
+              onClick={onExit}
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </Button>
 
-      <div className="fixed bottom-4 left-16 right-4 z-30 sm:hidden">
-        <div className="rounded-[22px] border border-white/10 bg-slate-950/70 px-4 py-3 shadow-[0_18px_45px_rgba(0,0,0,0.35)] backdrop-blur-xl">
-          <div className="flex items-center justify-between gap-3">
-            <span className={`rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] ${stageTheme.badgeClass}`}>
-              {stageTheme.badge}
-            </span>
-            <p className="text-xs font-medium uppercase tracking-[0.22em] text-white/55">
-              {totalExercisesBeforeActive + 1} / {totalExerciseCount}
-            </p>
+            <div className="min-w-0 self-center">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/35">
+                Seccion actual
+              </p>
+              <p className="truncate text-sm font-semibold leading-tight text-white/88">
+                {displaySection?.name || workout.title}
+              </p>
+            </div>
+
+            <div className="justify-self-end self-center text-right">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/35">
+                Progreso
+              </p>
+              <p className="rounded-full border border-white/10 bg-white/[0.06] px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-white/70">
+                {totalExercisesBeforeActive + 1} / {totalExerciseCount}
+              </p>
+            </div>
+
+            <div className="col-start-2 col-end-4 min-w-0 self-center">
+              <p className="mt-0.5 truncate text-xs leading-tight text-white/45">
+                {displayExercise?.name || stageTheme.headline}
+              </p>
+            </div>
           </div>
-          <p className="mt-2 truncate text-sm font-semibold text-white/85">
-            {displaySection?.name || workout.title}
-          </p>
         </div>
       </div>
 
@@ -646,6 +722,12 @@ export function WorkoutExecutionView({
         onOpenChange={setIsTutorialOpen}
         exerciseName={displayExercise?.name || 'Ejercicio'}
         tutorial={tutorialData}
+      />
+      <PremiumFeatureDialog
+        open={isPremiumDialogOpen}
+        onOpenChange={setIsPremiumDialogOpen}
+        title="Tutorial premium"
+        description="Los tutoriales guiados durante la sesion estan disponibles solo para usuarios premium. Actualiza tu plan para desbloquear esta ayuda visual."
       />
     </div>
   )

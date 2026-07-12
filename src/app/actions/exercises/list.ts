@@ -28,6 +28,7 @@ interface ListExercisesParams {
   search?: string
   difficulty?: string
   muscleGroup?: string
+  sourceProvider?: string
 }
 
 interface ListExercisesResult {
@@ -41,7 +42,8 @@ export async function listExercises({
   limit = 10,
   search = '',
   difficulty,
-  muscleGroup
+  muscleGroup,
+  sourceProvider
 }: ListExercisesParams): Promise<ListExercisesResult> {
   const supabase = await createClient()
   
@@ -65,8 +67,13 @@ export async function listExercises({
   }
   
   if (muscleGroup && muscleGroup !== 'all') {
-    // muscle_group is an array in the DB, so we use contains
     query = query.contains('muscle_group', [muscleGroup])
+  }
+
+  if (sourceProvider === 'exercisedb') {
+    query = query.or('source_provider.eq.exercise_db,source_provider.ilike.%exercisedb%')
+  } else if (sourceProvider === 'other') {
+    query = query.or('source_provider.is.null,source_provider.neq.exercise_db,source_provider.not.ilike.%exercisedb%')
   }
   
   const from = (page - 1) * limit

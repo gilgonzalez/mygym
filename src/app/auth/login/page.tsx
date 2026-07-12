@@ -6,7 +6,7 @@ import { Button } from '@/components/Button'
 import { Input } from '@/components/ui/input'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { Loader2, AlertCircle, CheckCircle2 } from 'lucide-react'
+import { Loader2, AlertCircle, CheckCircle2, ArrowRight, ShieldCheck } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { GoogleAuthButton } from '@/components/auth/GoogleAuthButton'
 
@@ -20,6 +20,7 @@ function LoginForm() {
   const searchParams = useSearchParams()
   const redirect = searchParams?.get('redirect') || searchParams?.get('next')
   const { setUser } = useAuthStore()
+  const [supportMessage, setSupportMessage] = useState('')
 
   const [formData, setFormData] = useState({
     email: '',
@@ -91,6 +92,20 @@ function LoginForm() {
         </p>
       </div>
 
+      {redirect && (
+        <div className="rounded-2xl border border-primary/15 bg-primary/5 px-4 py-3 text-sm text-primary">
+          <div className="flex items-start gap-3">
+            <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />
+            <div>
+              <p className="font-semibold">Acceso protegido</p>
+              <p className="text-primary/80">
+                Al iniciar sesion volveras automaticamente al flujo que intentabas abrir.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="mt-8 space-y-6">
         <div className="space-y-4">
           <GoogleAuthButton 
@@ -115,6 +130,13 @@ function LoginForm() {
               <div className="flex items-center gap-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 px-4 py-3 rounded text-sm">
                 <AlertCircle className="h-4 w-4" />
                 {error}
+              </div>
+            )}
+
+            {supportMessage && !error && (
+              <div className="flex items-center gap-2 rounded-xl border border-border/60 bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
+                <AlertCircle className="h-4 w-4" />
+                {supportMessage}
               </div>
             )}
             
@@ -148,9 +170,16 @@ function LoginForm() {
                   <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                     Password
                   </label>
-                  <Link href="#" className="text-sm font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400">
+                  <button
+                    type="button"
+                    className="text-sm font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400"
+                    onClick={() => {
+                      setSupportMessage('La recuperacion de contrasena se activara pronto. Mientras tanto, usa Google o crea una cuenta nueva para pruebas.')
+                      setError('')
+                    }}
+                  >
                     Forgot password?
-                  </Link>
+                  </button>
                 </div>
                 <Input
                   id="password"
@@ -168,12 +197,17 @@ function LoginForm() {
 
             <Button
               type="submit"
-              className="w-full h-11"
+              className="w-full h-11 gap-2"
               disabled={isLoading}
             >
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Sign in
+              {!isLoading && <ArrowRight className="h-4 w-4" />}
             </Button>
+
+            <p className="text-center text-xs text-muted-foreground">
+              Si acabas de registrarte, primero confirma tu email antes de volver a intentar entrar.
+            </p>
           </form>
         </div>
       </div>

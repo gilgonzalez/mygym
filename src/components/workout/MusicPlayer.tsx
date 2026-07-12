@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { Button } from '@/components/Button'
-import { Volume2, VolumeX, Play, Pause, Music2, SkipForward, SkipBack } from 'lucide-react'
+import { Volume2, VolumeX, Play, Pause, Music2, SkipForward, SkipBack, ChevronUp, ChevronDown } from 'lucide-react'
 import { useWorkoutStore } from '@/store/workOutStore'
 
 interface MusicPlayerProps {
@@ -16,6 +16,7 @@ export function MusicPlayer({ playlist, className }: MusicPlayerProps) {
   const [muted, setMuted] = useState(false)
   const [volume, setVolume] = useState(50)
   const [isHovered, setIsHovered] = useState(false)
+  const [isExpandedMobile, setIsExpandedMobile] = useState(false)
   const [currentTrackIndex, setCurrentTrackIndex] = useState(0)
   
   const iframeRef = useRef<HTMLIFrameElement>(null)
@@ -41,7 +42,7 @@ export function MusicPlayer({ playlist, className }: MusicPlayerProps) {
   const embedUrl = `https://www.youtube.com/embed/${currentVideoId}?enablejsapi=1&controls=0&showinfo=0&rel=0&autoplay=0&loop=0&playsinline=1`
 
   // Send Command to YouTube Iframe
-  const sendCommand = (func: string, args: any[] = []) => {
+  const sendCommand = useCallback((func: string, args: any[] = []) => {
     if (iframeRef.current && iframeRef.current.contentWindow) {
       iframeRef.current.contentWindow.postMessage(JSON.stringify({
         'event': 'command',
@@ -49,7 +50,7 @@ export function MusicPlayer({ playlist, className }: MusicPlayerProps) {
         'args': args
       }), '*')
     }
-  }
+  }, [])
 
   useEffect(() => {
     if (playing) {
@@ -57,7 +58,7 @@ export function MusicPlayer({ playlist, className }: MusicPlayerProps) {
     } else {
       sendCommand('pauseVideo')
     }
-  }, [playing, currentTrackIndex])
+  }, [playing, currentTrackIndex, sendCommand])
 
   useEffect(() => {
     if (muted) {
@@ -66,7 +67,7 @@ export function MusicPlayer({ playlist, className }: MusicPlayerProps) {
       sendCommand('unMute')
       sendCommand('setVolume', [volume])
     }
-  }, [muted])
+  }, [muted, volume, sendCommand])
 
   useEffect(() => {
     if (!muted) {
@@ -74,13 +75,13 @@ export function MusicPlayer({ playlist, className }: MusicPlayerProps) {
       const targetVolume = isSpeaking ? Math.min(volume, 20) : volume
       sendCommand('setVolume', [targetVolume])
     }
-  }, [volume, isSpeaking])
+  }, [volume, isSpeaking, muted, sendCommand])
 
-  const handleNextTrack = () => {
+  const handleNextTrack = useCallback(() => {
     const nextIndex = (currentTrackIndex + 1) % playlist.length
     setCurrentTrackIndex(nextIndex)
     setPlaying(true) 
-  }
+  }, [currentTrackIndex, playlist.length])
 
   const handlePrevTrack = () => {
     const prevIndex = (currentTrackIndex - 1 + playlist.length) % playlist.length
@@ -106,10 +107,13 @@ export function MusicPlayer({ playlist, className }: MusicPlayerProps) {
     
     window.addEventListener('message', handleMessage)
     return () => window.removeEventListener('message', handleMessage)
-  }, [currentTrackIndex])
+  }, [handleNextTrack])
 
 
   if (!playlist || playlist.length === 0) return null
+
+  const showExpandedControls = isHovered || isExpandedMobile
+  const trackLabel = `Pista ${currentTrackIndex + 1} de ${playlist.length}`
   
   return (
     <div 
@@ -152,7 +156,7 @@ export function MusicPlayer({ playlist, className }: MusicPlayerProps) {
 
         {/* Floating Controls */}
         <div className={`
-            flex items-center gap-2 bg-background/90 backdrop-blur-md border border-border 
+            flex max-w-[calc(100vw-1.5rem)] items-center gap-2 bg-background/90 backdrop-blur-md border border-border 
             p-2 rounded-full shadow-2xl transition-all duration-300
             ${playing ? 'border-primary/50 shadow-primary/20' : ''}
         `}>
@@ -160,8 +164,13 @@ export function MusicPlayer({ playlist, className }: MusicPlayerProps) {
                 <Music2 className={`h-4 w-4 text-primary ${playing ? 'animate-pulse' : ''}`} />
              </div>
 
+             <div className="hidden min-w-0 sm:block">
+                <p className="max-w-[150px] truncate text-[11px] font-semibold text-foreground">{trackLabel}</p>
+                <p className="text-[10px] text-muted-foreground">{playing ? 'Reproduciendo' : 'En pausa'}</p>
+             </div>
+
              {/* Hidden Controls (Revealed on Hover) */}
-             <div className={`flex items-center gap-1 overflow-hidden transition-all duration-300 ${isHovered ? 'w-auto opacity-100 max-w-[500px]' : 'w-0 opacity-0 max-w-0'}`}>
+             <div className={`hidden items-center gap-1 overflow-hidden transition-all duration-300 sm:flex ${showExpandedControls ? 'w-auto opacity-100 max-w-[500px]' : 'w-0 opacity-0 max-w-0'}`}>
                 
                 <Button
                   variant="ghost"
@@ -184,8 +193,18 @@ export function MusicPlayer({ playlist, className }: MusicPlayerProps) {
                 {playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 ml-0.5" />}
              </Button>
 
+             <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 rounded-full sm:hidden hover:bg-primary/10 hover:text-primary"
+                onClick={() => setIsExpandedMobile((value) => !value)}
+                aria-label={isExpandedMobile ? 'Ocultar controles de audio' : 'Mostrar controles de audio'}
+             >
+                {isExpandedMobile ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
+             </Button>
+
              {/* More Hidden Controls (Next & Volume) */}
-             <div className={`flex items-center gap-2 overflow-hidden transition-all duration-300 ${isHovered ? 'w-auto opacity-100 max-w-[500px]' : 'w-0 opacity-0 max-w-0'}`}>
+             <div className={`hidden items-center gap-2 overflow-hidden transition-all duration-300 sm:flex ${showExpandedControls ? 'w-auto opacity-100 max-w-[500px]' : 'w-0 opacity-0 max-w-0'}`}>
                  <Button
                     variant="ghost"
                     size="icon"
@@ -221,6 +240,78 @@ export function MusicPlayer({ playlist, className }: MusicPlayerProps) {
                   </div>
              </div>
         </div>
+
+        {isExpandedMobile && (
+          <div className="mt-2 w-[min(92vw,320px)] rounded-3xl border border-border bg-background/95 p-3 shadow-2xl backdrop-blur-md sm:hidden">
+            <div className="mb-3 flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-foreground">{trackLabel}</p>
+                <p className="text-xs text-muted-foreground">
+                  {playing ? 'Reproduciendo en segundo plano' : 'Pausado'}
+                </p>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 rounded-full"
+                onClick={() => setIsExpandedMobile(false)}
+              >
+                <ChevronDown className="h-4 w-4" />
+              </Button>
+            </div>
+
+            <div className="flex items-center justify-between gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-10 w-10 rounded-full"
+                onClick={handlePrevTrack}
+                disabled={playlist.length <= 1}
+              >
+                <SkipBack className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-10 w-10 rounded-full"
+                onClick={() => setPlaying(!playing)}
+              >
+                {playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 ml-0.5" />}
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-10 w-10 rounded-full"
+                onClick={handleNextTrack}
+                disabled={playlist.length <= 1}
+              >
+                <SkipForward className="h-4 w-4" />
+              </Button>
+            </div>
+
+            <div className="mt-3 flex items-center gap-3">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 rounded-full"
+                onClick={() => setMuted(!muted)}
+              >
+                {muted || volume === 0 ? <VolumeX className="h-3.5 w-3.5" /> : <Volume2 className="h-3.5 w-3.5" />}
+              </Button>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                value={muted ? 0 : volume}
+                onChange={(e) => {
+                  setVolume(Number(e.target.value))
+                  if (muted) setMuted(false)
+                }}
+                className="w-full h-1 bg-secondary rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:rounded-full"
+              />
+            </div>
+          </div>
+        )}
     </div>
   )
 }
