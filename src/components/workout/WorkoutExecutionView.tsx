@@ -295,6 +295,19 @@ export function WorkoutExecutionView({
   const dashOffset = circumference * (1 - ringProgress)
   const strokeColor = getStrokeColor(stage)
   const timerLabel = hasTimer ? formatDuration(timeLeft, { style: 'clock' }) : `${displayExercise?.reps || 0} reps`
+  const totalSets = Math.max(displayExercise?.sets || 1, 1)
+  const displaySet = Math.min(Math.max(activeCursor.set, 1), totalSets)
+  const exerciseDescription = displayExercise?.description?.trim() || ''
+  const resolvedCircleSize = mobileCircleSize || circleSize
+  const circleFrameStyle = {
+    width: `${resolvedCircleSize}px`,
+    height: `${resolvedCircleSize}px`,
+  }
+  const circleClassName = 'h-full w-full'
+  const innerInset = mobileCircleSize ? Math.max(Math.round(resolvedCircleSize * 0.055), 14) : 18
+  const innerCircleStyle = {
+    inset: `${innerInset}px`,
+  }
 
   const nextButtonLabel =
     stage === 'prepare'
