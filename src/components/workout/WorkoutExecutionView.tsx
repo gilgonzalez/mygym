@@ -101,6 +101,10 @@ function getStageTheme(stage: SessionStage) {
   }
 }
 
+function isGifUrl(url?: string) {
+  return Boolean(url && /\.gif($|\?)/i.test(url))
+}
+
 export function WorkoutExecutionView({
   workout,
   currentSectionIndex,
@@ -120,6 +124,7 @@ export function WorkoutExecutionView({
   const previousTimeLeftRef = useRef(timeLeft)
   const visualStageRef = useRef<HTMLDivElement | null>(null)
   const [mobileCircleSize, setMobileCircleSize] = useState<number | null>(null)
+  const [isCompactMobileViewport, setIsCompactMobileViewport] = useState(false)
 
   const currentSection = workout.sections[currentSectionIndex]
   const currentExercise = currentSection?.exercises[currentExerciseIndex]
@@ -146,6 +151,14 @@ export function WorkoutExecutionView({
 
   const displaySection = isResting ? upcomingStep?.section || currentSection : currentSection
   const displayExercise = isResting ? upcomingStep?.exercise || currentExercise : currentExercise
+  const executionCircleMediaUrl = useMemo(() => {
+    const tutorialMediaUrl = displayExercise?.tutorial?.media?.url
+    if (isGifUrl(tutorialMediaUrl)) {
+      return tutorialMediaUrl
+    }
+
+    return displayExercise?.thumbnail_url
+  }, [displayExercise])
 
   const stage: SessionStage = isPreparing
     ? 'prepare'
@@ -215,12 +228,17 @@ export function WorkoutExecutionView({
     const measure = () => {
       if (window.innerWidth >= 640) {
         setMobileCircleSize((current) => (current === null ? current : null))
+        setIsCompactMobileViewport(false)
         return
       }
 
       const bounds = visualStage.getBoundingClientRect()
-      const nextSize = Math.max(220, Math.min(Math.floor(bounds.width * 0.76), Math.floor(bounds.height * 0.58), 352))
+      const compactViewport = window.innerWidth < 360 || window.innerHeight < 620
+      const nextSize = compactViewport
+        ? Math.max(128, Math.min(Math.floor(bounds.width * 0.56), Math.floor(bounds.height * 0.34), 196))
+        : Math.max(168, Math.min(Math.floor(bounds.width * 0.7), Math.floor(bounds.height * 0.5), 308))
 
+      setIsCompactMobileViewport(compactViewport)
       setMobileCircleSize((current) => (current === nextSize ? current : nextSize))
     }
 
@@ -298,6 +316,7 @@ export function WorkoutExecutionView({
   const totalSets = Math.max(displayExercise?.sets || 1, 1)
   const displaySet = Math.min(Math.max(activeCursor.set, 1), totalSets)
   const exerciseDescription = displayExercise?.description?.trim() || ''
+  const showCompactTimerLabel = !isCompactMobileViewport || hasTimer
   const resolvedCircleSize = mobileCircleSize || circleSize
   const circleFrameStyle = {
     width: `${resolvedCircleSize}px`,
@@ -338,40 +357,41 @@ export function WorkoutExecutionView({
           <div className="w-full min-w-0 rounded-[22px] border border-white/10 bg-white/[0.04] px-3 py-2 backdrop-blur-xl sm:flex-1">
             <div className="flex flex-col gap-3">
               <div className="flex items-start justify-between gap-3">
-                <div className="flex min-w-0 flex-1 flex-wrap gap-2 lg:hidden">
-                  {flattenedRoadmap.map(({ section, sectionIndex, exercises }) => {
-                    const isSectionCompleted = sectionIndex < activeCursor.sectionIndex
-                    const isSectionActive = sectionIndex === activeCursor.sectionIndex
+                <div className="flex min-w-0 flex-1 items-start gap-3 lg:hidden">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-11 w-11 shrink-0 rounded-2xl border border-white/10 bg-white/10 text-white shadow-[0_14px_30px_rgba(0,0,0,0.24)] backdrop-blur-xl hover:bg-white/20"
+                    onClick={onExit}
+                  >
+                    <ChevronLeft className="h-5 w-5" />
+                  </Button>
 
-                    return (
-                      <div
-                        key={`${section.id}-mobile`}
-                        className={`flex min-w-0 items-center gap-2 rounded-full border px-2.5 py-1.5 ${
-                          isSectionActive
-                            ? 'border-orange-300/40 bg-orange-400/12'
-                            : isSectionCompleted
-                              ? 'border-emerald-300/30 bg-emerald-400/12'
-                              : 'border-white/15 bg-white/[0.03]'
-                        }`}
-                      >
-                        <span
-                          className={`h-2 w-2 rounded-full ${
-                            isSectionActive
-                              ? 'animate-pulse bg-orange-400 shadow-[0_0_10px_rgba(249,115,22,0.45)]'
-                              : isSectionCompleted
-                                ? 'bg-emerald-400'
-                                : 'bg-white'
-                          }`}
-                        />
-                        <span className="max-w-[88px] truncate text-[9px] font-bold uppercase tracking-[0.16em] text-white/75">
-                          {section.name}
-                        </span>
-                        <span className="rounded-full bg-white/8 px-1.5 py-0.5 text-[8px] font-semibold text-white/55">
-                          {exercises.length}
-                        </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/35">
+                          Seccion actual
+                        </p>
+                        <p className="truncate text-sm font-semibold leading-tight text-white/90">
+                          {displaySection?.name || workout.title}
+                        </p>
                       </div>
-                    )
-                  })}
+
+                      <div className="shrink-0 text-right">
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/35">
+                          Progreso
+                        </p>
+                        <p className="rounded-full border border-white/10 bg-white/[0.06] px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-white/70">
+                          {totalExercisesBeforeActive + 1} / {totalExerciseCount}
+                        </p>
+                      </div>
+                    </div>
+
+                    <p className="mt-1 truncate text-xs leading-tight text-white/45">
+                      {displayExercise?.name || stageTheme.headline}
+                    </p>
+                  </div>
                 </div>
 
                 <div className="hidden min-w-0 flex-1 flex-wrap items-center gap-3 lg:flex">
@@ -519,9 +539,9 @@ export function WorkoutExecutionView({
         </div>
       </header>
 
-      <main className="relative z-10 flex min-h-0 flex-1 flex-col justify-between px-4 pb-28 pt-4 sm:justify-center sm:px-6 sm:pb-4 sm:pt-6">
-        <div className="mx-auto flex h-full w-full max-w-6xl flex-col items-center justify-between sm:justify-center">
-          <div className="pt-1 text-center sm:mb-3 sm:pt-0">
+      <main className="relative z-10 flex min-h-0 flex-1 flex-col px-4 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)] pt-3 sm:justify-center sm:px-6 sm:pb-4 sm:pt-6">
+        <div className="mx-auto flex h-full w-full max-w-6xl flex-col items-center gap-3 sm:justify-center sm:gap-6">
+          <div className="shrink-0 pt-1 text-center sm:mb-3 sm:pt-0">
             <div className="mb-2 flex flex-wrap items-center justify-center gap-2">
               <span className={`rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] ${stageTheme.badgeClass}`}>
                 {stageTheme.badge}
@@ -539,11 +559,19 @@ export function WorkoutExecutionView({
                 </span>
               )}
             </div>
-            <p className="text-4xl font-black tabular-nums tracking-[-0.06em] sm:text-5xl md:text-6xl lg:text-7xl">{timerLabel}</p>
+            {showCompactTimerLabel ? (
+              <p
+                className={`font-black tabular-nums tracking-[-0.06em] sm:text-5xl md:text-6xl lg:text-7xl ${
+                  isCompactMobileViewport ? 'text-[clamp(1.75rem,8vw,2.25rem)]' : 'text-[clamp(2.25rem,10vw,3.4rem)]'
+                }`}
+              >
+                {timerLabel}
+              </p>
+            ) : null}
           </div>
  
-          <div ref={visualStageRef} className="flex w-full min-h-0 flex-1 flex-col items-center justify-center py-4 sm:py-0">
-            <div className="relative flex items-center justify-center" style={circleFrameStyle}>
+          <div ref={visualStageRef} className="flex w-full min-h-0 flex-1 flex-col items-center justify-center py-1 sm:py-0">
+            <div className="relative flex max-h-full items-center justify-center" style={circleFrameStyle}>
               <div className="absolute inset-0 rounded-full blur-3xl" style={{ backgroundColor: `${strokeColor}22` }} />
               <svg
                 width={circleSize}
@@ -578,11 +606,11 @@ export function WorkoutExecutionView({
                 className="absolute overflow-hidden rounded-full border border-white/10 bg-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
                 style={innerCircleStyle}
               >
-                {displayExercise?.thumbnail_url ? (
+                {executionCircleMediaUrl ? (
                   <div className="flex h-full w-full items-center justify-center">
                     <img
-                      src={displayExercise.thumbnail_url}
-                      alt={displayExercise.name}
+                      src={executionCircleMediaUrl}
+                      alt={displayExercise?.name || 'Exercise preview'}
                       className="h-full w-full object-cover"
                     />
                   </div>
@@ -602,7 +630,7 @@ export function WorkoutExecutionView({
               </div>
             </div>
 
-            <div className="mt-4 flex flex-wrap items-center justify-center gap-2.5">
+            <div className="mt-4 hidden flex-wrap items-center justify-center gap-2.5 sm:flex">
               {workout.audio?.length ? (
                 <div className="w-full sm:hidden">
                   <MusicPlayer playlist={workout.audio || []} className="!fixed-none !top-auto !left-auto !translate-x-0" />
@@ -671,64 +699,99 @@ export function WorkoutExecutionView({
               </Button>
             </div>
 
-            <div className="mt-4 text-center">
-              <h1 className="text-xl font-black tracking-tight sm:text-2xl md:text-3xl">
-                {displayExercise?.name || stageTheme.headline}
-              </h1>
-              <div className="mt-2 hidden max-w-2xl sm:block">
-                <p className="text-sm leading-6 text-white/60">
-                  {exerciseDescription || stageTheme.subline}
-                </p>
+            <div className="mt-4 w-full text-center">
+              {workout.audio?.length ? (
+                <div className="mb-3 flex justify-center sm:hidden">
+                  <MusicPlayer playlist={workout.audio || []} className="!fixed-none !top-auto !left-auto !translate-x-0" />
+                </div>
+              ) : null}
+
+              <div className="grid w-full max-w-sm grid-cols-4 gap-2.5 sm:hidden">
+                {onPrev ? (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-12 w-full rounded-2xl border border-white/10 bg-white/10 text-white backdrop-blur-xl hover:bg-white/20"
+                    onClick={onPrev}
+                    disabled={stage === 'prepare'}
+                  >
+                    <ChevronLeft className="h-5 w-5" />
+                  </Button>
+                ) : (
+                  <div />
+                )}
+
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-12 w-full rounded-2xl border border-white/10 bg-white/10 text-white backdrop-blur-xl hover:bg-white/20"
+                  onClick={() => setIsPaused((value) => !value)}
+                  disabled={!hasTimer}
+                >
+                  {isPaused ? <Play className="h-5 w-5 fill-current" /> : <Pause className="h-5 w-5 fill-current" />}
+                </Button>
+
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-12 w-full rounded-2xl border border-white/10 bg-white/10 text-white backdrop-blur-xl hover:bg-white/20"
+                  onClick={() => setTimeLeft((value) => value + 10)}
+                  disabled={!hasTimer}
+                >
+                  <Plus className="h-5 w-5" />
+                </Button>
+
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-12 w-full rounded-2xl border border-white/10 bg-white/10 text-white backdrop-blur-xl hover:bg-white/20"
+                  onClick={() => {
+                    if (!canAccessTutorial) {
+                      setIsPremiumDialogOpen(true)
+                      return
+                    }
+                    setIsTutorialOpen(true)
+                  }}
+                >
+                  <Info className="h-4 w-4" />
+                </Button>
+
+                <Button
+                  className="col-span-4 h-12 rounded-2xl px-4 font-semibold shadow-[0_18px_40px_rgba(59,130,246,0.28)]"
+                  onClick={onNextStep}
+                >
+                  {stage === 'prepare' ? (
+                    <Play className="mr-2 h-5 w-5 fill-current" />
+                  ) : stage === 'exercise-reps' ? (
+                    <CheckCircle2 className="mr-2 h-5 w-5" />
+                  ) : (
+                    <SkipForward className="mr-2 h-5 w-5" />
+                  )}
+                  {nextButtonLabel}
+                </Button>
               </div>
-              <div className="mt-2 h-14 w-full max-w-[22rem] overflow-y-auto px-2 sm:hidden">
-                <p className="text-sm leading-5 text-white/60">
-                  {exerciseDescription || stageTheme.subline}
-                </p>
-              </div>
+
+              {!isCompactMobileViewport && (
+                <>
+                  <h1 className="mt-4 text-xl font-black tracking-tight sm:mt-0 sm:text-2xl md:text-3xl">
+                    {displayExercise?.name || stageTheme.headline}
+                  </h1>
+                  <div className="mt-2 hidden max-w-2xl sm:block">
+                    <p className="text-sm leading-6 text-white/60">
+                      {exerciseDescription || stageTheme.subline}
+                    </p>
+                  </div>
+                  <div className="mx-auto mt-2 w-full max-w-sm px-2 sm:hidden">
+                    <p className="line-clamp-3 text-sm leading-5 text-white/60">
+                      {exerciseDescription || stageTheme.subline}
+                    </p>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
       </main>
-
-      <div className="fixed bottom-4 left-4 right-4 z-30 sm:hidden">
-        <div className="overflow-hidden rounded-[28px] border border-white/10 bg-[linear-gradient(135deg,rgba(15,23,42,0.88),rgba(6,12,28,0.84))] shadow-[0_24px_60px_rgba(0,0,0,0.38)] backdrop-blur-xl">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.16),transparent_32%),radial-gradient(circle_at_bottom_right,rgba(249,115,22,0.14),transparent_28%)]" />
-          <div className="relative grid grid-cols-[auto_minmax(0,1fr)_auto] gap-x-3 gap-y-2 px-3 py-3">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="row-span-2 h-11 w-11 shrink-0 self-center rounded-2xl border border-white/10 bg-white/10 text-white shadow-[0_14px_30px_rgba(0,0,0,0.24)] backdrop-blur-xl hover:bg-white/20"
-              onClick={onExit}
-            >
-              <ChevronLeft className="h-5 w-5" />
-            </Button>
-
-            <div className="min-w-0 self-center">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/35">
-                Seccion actual
-              </p>
-              <p className="truncate text-sm font-semibold leading-tight text-white/88">
-                {displaySection?.name || workout.title}
-              </p>
-            </div>
-
-            <div className="justify-self-end self-center text-right">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/35">
-                Progreso
-              </p>
-              <p className="rounded-full border border-white/10 bg-white/[0.06] px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-white/70">
-                {totalExercisesBeforeActive + 1} / {totalExerciseCount}
-              </p>
-            </div>
-
-            <div className="col-start-2 col-end-4 min-w-0 self-center">
-              <p className="mt-0.5 truncate text-xs leading-tight text-white/45">
-                {displayExercise?.name || stageTheme.headline}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
 
       <ExerciseTutorialDialog
         open={isTutorialOpen}

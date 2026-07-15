@@ -659,6 +659,8 @@ function CreateWorkoutContent() {
     control,
     name: "sections"
   })
+  const totalExercises = (formValues.sections || []).reduce((sum, section) => sum + (section.exercises?.length || 0), 0)
+  const builderLabel = workoutId ? 'Editar workout' : 'Nuevo workout'
 
   React.useEffect(() => {
     if (!isLoading && !user) {
@@ -795,97 +797,114 @@ function CreateWorkoutContent() {
     <div className="flex h-[100dvh] min-h-[100dvh] flex-col overflow-hidden">
       {/* Header */}
       <header className="shrink-0 border-b bg-background px-3 py-3 sm:px-4 md:px-6">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-4">
-          <Link href="/" className="text-muted-foreground hover:text-foreground transition-colors">
-            <ArrowLeft className="h-5 w-5" />
-          </Link>
-          <div className="h-6 w-px bg-border mx-2 hidden md:block" />
-          <h1 className="font-semibold text-lg hidden md:block">Workout Builder</h1>
-          
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="flex md:ml-4 gap-2 text-indigo-600 border-indigo-200 hover:bg-indigo-50 hover:text-indigo-700 dark:text-indigo-400 dark:border-indigo-900/50 dark:hover:bg-indigo-950/50 shadow-sm bg-indigo-50/50 dark:bg-indigo-950/20"
-            onClick={handleOpenAiAssistant}
-          >
-            <Sparkles className="h-4 w-4" />
-            <span className="hidden sm:inline">AI Assistant</span>
-            <span className="inline sm:hidden font-bold">AI</span>
-            {!isPremiumUser ? (
-              <span className="hidden rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.18em] text-amber-600 dark:text-amber-400 sm:inline-flex">
-                Premium
-              </span>
-            ) : null}
-            
-            {/* Voice Indicator */}
-            <div className="flex items-center gap-1 pl-1 border-l border-indigo-200 dark:border-indigo-800 ml-1">
-                 <Mic className="h-3.5 w-3.5 opacity-70" />
+        <div className="flex flex-col gap-3">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex min-w-0 flex-1 items-start gap-3">
+              <Link
+                href="/"
+                className="rounded-full border border-border/60 p-2 text-muted-foreground transition-colors hover:text-foreground"
+              >
+                <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" />
+              </Link>
+
+              <div className="min-w-0">
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                  {builderLabel}
+                </p>
+                <h1 className="truncate text-base font-semibold text-foreground sm:text-lg">Workout Builder</h1>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {sectionFields.length} secciones · {totalExercises} ejercicios
+                </p>
+              </div>
             </div>
-          </Button>
-        </div>
-        
-        <div className="flex w-full flex-wrap items-center justify-between gap-2 sm:w-auto sm:justify-end md:gap-3">
-          {submitStatus !== 'idle' && !isSubmitting && (
-            <div
-              className={cn(
-                'order-3 hidden max-w-[320px] rounded-full border px-3 py-1.5 text-xs md:flex',
-                submitStatus === 'success'
-                  ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-                  : 'border-destructive/20 bg-destructive/10 text-destructive'
+
+            <Button
+              onClick={() => setIsMetaOpen(true)}
+              disabled={isSubmitting}
+              size="sm"
+              className="h-11 shrink-0 rounded-2xl px-4 font-bold sm:h-10 sm:rounded-full md:px-6"
+            >
+              {isSubmitting ? (
+                <>
+                  <RotateCw className="mr-2 h-4 w-4 animate-spin" />
+                  <span className="hidden sm:inline">Guardando...</span>
+                  <span className="sm:hidden">{uploadProgress}%</span>
+                </>
+              ) : isRetry ? (
+                <>
+                  <RotateCw className="mr-2 h-4 w-4" />
+                  <span className="hidden sm:inline">Reintentar</span>
+                  <span className="sm:hidden">Retry</span>
+                </>
+              ) : (
+                <>
+                  <Save className="mr-2 h-4 w-4" />
+                  <span className="hidden sm:inline">Detalles y guardar</span>
+                  <span className="sm:hidden">Guardar</span>
+                </>
               )}
-            >
-              {submitMessage}
-            </div>
-          )}
-
-          {isDesktopViewport && (
-            <Button 
-              variant={showPreview ? "secondary" : "ghost"}
-              size="icon"
-              className="h-9 w-9 rounded-full"
-              onClick={() => setShowPreview(!showPreview)}
-              title={showPreview ? 'Hide Preview' : 'Show Preview'}
-            >
-              <Eye className="h-4 w-4" /> 
             </Button>
-          )}
+          </div>
 
-          {isSubmitting && (
-             <div className="hidden sm:flex flex-col items-end mr-2 min-w-[100px] md:min-w-[120px]">
-                 <div className="flex justify-between w-full text-[10px] text-muted-foreground mb-1">
-                    <span>{uploadStatus || 'Saving...'}</span>
-                    <span>{uploadProgress}%</span>
-                 </div>
-                 <div className="h-1.5 w-full bg-secondary rounded-full overflow-hidden">
-                    <div 
-                        className="h-full bg-primary transition-all duration-300 ease-out" 
-                        style={{ width: `${uploadProgress}%` }} 
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+            <div className="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap sm:items-center">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-11 justify-start gap-2 rounded-2xl border-indigo-200 bg-indigo-50/50 text-indigo-600 shadow-sm hover:bg-indigo-50 hover:text-indigo-700 dark:border-indigo-900/50 dark:bg-indigo-950/20 dark:text-indigo-400 dark:hover:bg-indigo-950/50 sm:h-10 sm:rounded-full"
+                onClick={handleOpenAiAssistant}
+              >
+                <Sparkles className="h-4 w-4" />
+                <span>Asistente IA</span>
+                {!isPremiumUser ? (
+                  <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.18em] text-amber-600 dark:text-amber-400">
+                    Premium
+                  </span>
+                ) : null}
+                <span className="ml-auto flex items-center gap-1 border-l border-indigo-200 pl-2 dark:border-indigo-800 sm:ml-1">
+                  <Mic className="h-3.5 w-3.5 opacity-70" />
+                </span>
+              </Button>
+
+              {isDesktopViewport && (
+                <Button
+                  variant={showPreview ? "secondary" : "ghost"}
+                  size="icon"
+                  className="hidden h-9 w-9 rounded-full lg:inline-flex"
+                  onClick={() => setShowPreview(!showPreview)}
+                  title={showPreview ? 'Ocultar preview' : 'Mostrar preview'}
+                >
+                  <Eye className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+
+            {(submitStatus !== 'idle' || isSubmitting) && (
+              <div
+                className={cn(
+                  'rounded-2xl border px-3 py-2 text-xs',
+                  submitStatus === 'error'
+                    ? 'border-destructive/20 bg-destructive/10 text-destructive'
+                    : submitStatus === 'success'
+                      ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                      : 'border-primary/15 bg-primary/[0.04] text-muted-foreground'
+                )}
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <span className="min-w-0 truncate">{isSubmitting ? uploadStatus || 'Guardando...' : submitMessage}</span>
+                  {isSubmitting ? <span className="shrink-0 font-semibold">{uploadProgress}%</span> : null}
+                </div>
+                {isSubmitting ? (
+                  <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-secondary">
+                    <div
+                      className="h-full bg-primary transition-all duration-300 ease-out"
+                      style={{ width: `${uploadProgress}%` }}
                     />
-                 </div>
-             </div>
-          )}
-
-          <Button onClick={() => setIsMetaOpen(true)} disabled={isSubmitting} size="sm" className="gap-2 rounded-full px-4 md:px-6 font-bold">
-            {isSubmitting ? (
-                <>
-                    <RotateCw className="h-4 w-4 animate-spin" />
-                    <span className="hidden md:inline">Saving...</span>
-                </>
-            ) : isRetry ? (
-                <>
-                    <RotateCw className="h-4 w-4" />
-                    <span className="hidden md:inline">Retry</span>
-                </>
-            ) : (
-                <>
-                    <Save className="h-4 w-4" />
-                    <span className="hidden md:inline">Save Workout</span>
-                    <span className="md:hidden">Save</span>
-                </>
+                  </div>
+                ) : null}
+              </div>
             )}
-          </Button>
-        </div>
+          </div>
         </div>
       </header>
 
@@ -897,6 +916,39 @@ function CreateWorkoutContent() {
           showPreview && isDesktopViewport ? (previewDevice === 'mobile' ? "lg:mr-[420px]" : "lg:mr-[65%]") : ""
         )}>
           <div className="mx-auto max-w-5xl space-y-6 pb-32 sm:space-y-8 md:space-y-10 md:pb-40">
+            <section className="rounded-[28px] border border-border/60 bg-white/90 p-4 shadow-sm dark:bg-zinc-900/70 sm:hidden">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Resumen</p>
+                  <h2 className="mt-1 text-base font-semibold text-foreground">
+                    {formValues.title?.trim() || 'Tu workout todavia no tiene titulo'}
+                  </h2>
+                </div>
+                <Badge variant="outline" className="rounded-full border-border/60 bg-background text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+                  {builderLabel}
+                </Badge>
+              </div>
+
+              <div className="mt-4 grid grid-cols-3 gap-2">
+                <div className="rounded-2xl border border-border/60 bg-muted/20 px-3 py-2">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">Secciones</p>
+                  <p className="mt-1 text-lg font-semibold text-foreground">{sectionFields.length}</p>
+                </div>
+                <div className="rounded-2xl border border-border/60 bg-muted/20 px-3 py-2">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">Ejercicios</p>
+                  <p className="mt-1 text-lg font-semibold text-foreground">{totalExercises}</p>
+                </div>
+                <div className="rounded-2xl border border-border/60 bg-muted/20 px-3 py-2">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">Preview</p>
+                  <p className="mt-1 text-sm font-semibold text-foreground">Desktop</p>
+                </div>
+              </div>
+
+              <p className="mt-4 text-sm leading-5 text-muted-foreground">
+                Empieza por nombrar cada sección, añade ejercicios y abre "Detalles y guardar" cuando quieras completar portada, tags y visibilidad.
+              </p>
+            </section>
+
             {(isSubmitting || submitStatus === 'error') && (
               <div
                 className={cn(
@@ -964,8 +1016,8 @@ function CreateWorkoutContent() {
                                 <div className="flex-1">
                                     <Input 
                                         {...register(`sections.${index}.name` as const)} 
-                                        placeholder="SECTION NAME" 
-                                        className="bg-transparent border-none shadow-none font-black text-2xl tracking-tight focus-visible:ring-0 px-0 h-auto w-full placeholder:text-muted-foreground/20 uppercase"
+                                        placeholder="Nombre de la seccion" 
+                                        className="h-auto w-full bg-transparent px-0 text-xl font-black tracking-tight shadow-none focus-visible:ring-0 placeholder:text-muted-foreground/25 sm:text-2xl"
                                     />
                                     <input type="hidden" {...register(`sections.${index}.id` as const)} />
                                     {errors.sections?.[index]?.name && (
@@ -978,8 +1030,7 @@ function CreateWorkoutContent() {
                                     control={control}
                                     name={`sections.${index}.orderType` as const}
                                     render={({ field }) => (
-                                <div className="flex flex-col bg-muted/50 p-1 rounded-lg shrink-0 gap-1 h-auto">
-                                    {/* Straight Sets (Single) */}
+                                <div className="flex flex-col gap-1 rounded-xl bg-muted/50 p-1 sm:rounded-lg">
                                     <Tooltip>
                                         <TooltipTrigger asChild>
                                             <button 
@@ -991,15 +1042,14 @@ function CreateWorkoutContent() {
                                                 )}
                                             >
                                                 <List className="h-3.5 w-3.5" />
-                                                Straight Sets
+                                                Series seguidas
                                             </button>
                                         </TooltipTrigger>
                                         <TooltipContent className="bg-zinc-900 text-white border-white/10 text-xs">
-                                            <p>Complete all sets of one exercise before moving to the next.</p>
+                                            <p>Completa todas las series de un ejercicio antes de pasar al siguiente.</p>
                                         </TooltipContent>
                                     </Tooltip>
 
-                                    {/* Circuit (Linear) */}
                                     <Tooltip>
                                         <TooltipTrigger asChild>
                                             <button 
@@ -1011,11 +1061,11 @@ function CreateWorkoutContent() {
                                                 )}
                                             >
                                                 <Repeat className="h-3.5 w-3.5" />
-                                                Circuit
+                                                Circuito
                                             </button>
                                         </TooltipTrigger>
                                         <TooltipContent className="bg-zinc-900 text-white border-white/10 text-xs">
-                                            <p>Perform one set of each exercise in sequence, then repeat the cycle.</p>
+                                            <p>Haz una serie de cada ejercicio y luego repite la vuelta completa.</p>
                                         </TooltipContent>
                                     </Tooltip>
                                 </div>
@@ -1065,7 +1115,7 @@ function CreateWorkoutContent() {
                     >
                         <span className="flex items-center gap-2 group-hover:gap-3 transition-all">
                             <Plus className="h-4 w-4" />
-                            Add New Section
+                            Agregar seccion
                         </span>
                     </Button>
                 </div>
@@ -1138,34 +1188,43 @@ function CreateWorkoutContent() {
 
       {/* Step 2: Metadata Dialog */}
       <Dialog open={isMetaOpen} onOpenChange={setIsMetaOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Workout Details</DialogTitle>
+        <DialogContent className="flex max-h-[94dvh] w-[calc(100vw-16px)] max-w-3xl flex-col gap-0 overflow-hidden rounded-[28px] p-0 sm:w-full">
+          <DialogHeader className="shrink-0 border-b border-border/60 bg-background px-4 py-4 sm:px-6">
+            <DialogTitle>Detalles del workout</DialogTitle>
             <DialogDescription>
-              Define the main information of your workout: title, description, cover, audio, tags, difficulty and visibility.
+              Completa la informacion principal para que el workout se entienda bien en móvil: titulo, objetivo, portada, tags y visibilidad.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-6 mt-2">
-            <div className="space-y-3">
+          <div className="flex-1 space-y-6 overflow-y-auto px-4 py-4 sm:px-6">
+            <div className="rounded-[24px] border border-border/60 bg-muted/20 p-4 sm:p-5">
+              <div className="mb-4">
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Identidad</p>
+                <p className="mt-1 text-sm text-muted-foreground">Pon un titulo claro y explica el objetivo de la sesion en pocas lineas.</p>
+              </div>
+
+              <div className="space-y-3">
               <Input 
                 {...register('title')} 
-                placeholder="Workout Title" 
-                className="text-2xl md:text-3xl font-black tracking-tighter border-none px-0 h-auto focus-visible:ring-0 placeholder:text-muted-foreground/40 bg-transparent text-foreground"
+                placeholder="Titulo del workout" 
+                className="h-auto border-none bg-transparent px-0 text-2xl font-black tracking-tighter text-foreground focus-visible:ring-0 placeholder:text-muted-foreground/40 md:text-3xl"
               />
               {errors.title && <p className="text-red-500 text-xs font-medium">{errors.title.message}</p>}
               <Textarea 
                 {...register('description')} 
-                placeholder="What's the goal of this session?" 
-                className="resize-none border-none px-0 min-h-[60px] focus-visible:ring-0 text-sm text-muted-foreground bg-transparent font-medium"
+                placeholder="Que objetivo tiene esta sesion y que sensacion deberia tener al ejecutarla?" 
+                className="min-h-[88px] resize-none rounded-[22px] border-border/60 bg-background text-sm font-medium text-foreground shadow-none focus-visible:ring-0"
               />
               {errors.description && <p className="text-red-500 text-xs font-medium">{errors.description.message}</p>}
             </div>
+            </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Cover Image */}
-              <div className="space-y-2">
-                <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-1">Cover Image</label>
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+              <div className="space-y-2 rounded-[24px] border border-border/60 bg-muted/20 p-4 sm:p-5">
+                <div>
+                  <label className="pl-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Portada</label>
+                  <p className="mt-1 text-sm text-muted-foreground">Una imagen clara hace que el workout se reconozca rapido en listados y tarjetas.</p>
+                </div>
                 <Controller
                   control={control}
                   name="cover"
@@ -1173,16 +1232,19 @@ function CreateWorkoutContent() {
                     <MediaInput 
                       value={field.value} 
                       onChange={field.onChange}
-                      placeholder="Add cover image..."
+                      placeholder="Añadir portada..."
                       type="media"
+                      compact={isCompactMobileViewport}
                     />
                   )}
                 />
               </div>
 
-              {/* Workout Audio */}
-              <div className="space-y-2">
-                <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-1">Workout Playlist (URLs)</label>
+              <div className="space-y-2 rounded-[24px] border border-border/60 bg-muted/20 p-4 sm:p-5">
+                <div>
+                  <label className="pl-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Playlist</label>
+                  <p className="mt-1 text-sm text-muted-foreground">Añade enlaces si quieres asociar musica al workout.</p>
+                </div>
                 <Controller
                   control={control}
                   name="audio"
@@ -1190,17 +1252,20 @@ function CreateWorkoutContent() {
                     <TagInput 
                       value={field.value || []} 
                       onChange={field.onChange}
-                      placeholder="Add YouTube/Spotify links..."
+                      placeholder="Pega links de YouTube o Spotify..."
                       icon={<Music className="h-4 w-4" />}
                       variant="blue"
+                      compact={isCompactMobileViewport}
                     />
                   )}
                 />
               </div>
 
-              {/* Tags & Difficulty */}
-              <div className="space-y-2">
-                <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-1">Tags</label>
+              <div className="space-y-2 rounded-[24px] border border-border/60 bg-muted/20 p-4 sm:p-5">
+                <div>
+                  <label className="pl-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Tags</label>
+                  <p className="mt-1 text-sm text-muted-foreground">Ayudan a categorizar el workout y mejorar su descubrimiento.</p>
+                </div>
                 <Controller
                   control={control}
                   name="tags"
@@ -1212,33 +1277,37 @@ function CreateWorkoutContent() {
                   )}
                 />
               </div>
-              <div className="space-y-2">
-                <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-1">Difficulty</label>
+
+              <div className="space-y-2 rounded-[24px] border border-border/60 bg-muted/20 p-4 sm:p-5">
+                <div>
+                  <label className="pl-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Dificultad</label>
+                  <p className="mt-1 text-sm text-muted-foreground">Marca el nivel esperado para que el usuario sepa si encaja con su experiencia.</p>
+                </div>
                 <Controller
                   control={control}
                   name="difficulty"
                   render={({ field }) => (
                     <Select onValueChange={field.onChange} value={field.value}>
-                      <SelectTrigger className="w-full h-9 rounded-xl bg-background border-border/50 focus:ring-primary/20 font-medium text-sm">
-                        <SelectValue placeholder="Select difficulty level" />
+                      <SelectTrigger className="h-11 w-full rounded-2xl border-border/50 bg-background text-sm font-medium focus:ring-primary/20">
+                        <SelectValue placeholder="Selecciona la dificultad" />
                       </SelectTrigger>
                       <SelectContent className="rounded-xl border-border/50 shadow-xl">
                         <SelectItem value="beginner" className="rounded-lg my-1 cursor-pointer focus:bg-primary/5 focus:text-primary font-medium">
                           <div className="flex items-center gap-2">
                             <Dna className="h-4 w-4 text-emerald-500" />
-                            <span>Beginner</span>
+                            <span>Principiante</span>
                           </div>
                         </SelectItem>
                         <SelectItem value="intermediate" className="rounded-lg my-1 cursor-pointer focus:bg-primary/5 focus:text-primary font-medium">
                           <div className="flex items-center gap-2">
                             <Activity className="h-4 w-4 text-blue-500" />
-                            <span>Intermediate</span>
+                            <span>Intermedio</span>
                           </div>
                         </SelectItem>
                         <SelectItem value="advanced" className="rounded-lg my-1 cursor-pointer focus:bg-primary/5 focus:text-primary font-medium">
                           <div className="flex items-center gap-2">
                             <Zap className="h-4 w-4 text-orange-500" />
-                            <span>Advanced</span>
+                            <span>Avanzado</span>
                           </div>
                         </SelectItem>
                       </SelectContent>
@@ -1247,40 +1316,40 @@ function CreateWorkoutContent() {
                 />
               </div>
 
-              {/* Visibility */}
-              <div className="space-y-2">
+              <div className="space-y-2 rounded-[24px] border border-border/60 bg-muted/20 p-4 sm:p-5 md:col-span-2">
                 <div className="flex items-center gap-2 px-1">
                   <Globe className="h-3 w-3 text-muted-foreground" />
-                  <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Visibility</label>
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Visibilidad</label>
                 </div>
+                <p className="px-1 text-sm text-muted-foreground">Define quién puede ver este workout cuando lo publiques o lo dejes en borrador.</p>
                 <Controller
                   control={control}
                   name="visibility"
                   render={({ field }) => (
                     <Select onValueChange={field.onChange} value={field.value}>
-                      <SelectTrigger className="w-full h-9 rounded-xl bg-background border-border/50 focus:ring-primary/20 font-medium text-sm">
-                        <SelectValue placeholder="Select visibility" />
+                      <SelectTrigger className="h-11 w-full rounded-2xl border-border/50 bg-background text-sm font-medium focus:ring-primary/20">
+                        <SelectValue placeholder="Selecciona la visibilidad" />
                       </SelectTrigger>
                       <SelectContent className="rounded-xl border-border/50 shadow-xl">
                         <SelectItem value="draft" className="rounded-lg my-1 cursor-pointer focus:bg-primary/5 focus:text-primary font-medium">
                           <div className="flex items-center gap-2">
                             <FileText className="h-4 w-4 text-slate-500" />
-                            <span>Draft</span>
-                            <span className="ml-auto text-xs text-muted-foreground">Only you</span>
+                            <span>Borrador</span>
+                            <span className="ml-auto text-xs text-muted-foreground">Solo tu</span>
                           </div>
                         </SelectItem>
                         <SelectItem value="private" className="rounded-lg my-1 cursor-pointer focus:bg-primary/5 focus:text-primary font-medium">
                           <div className="flex items-center gap-2">
                             <Lock className="h-4 w-4 text-rose-500" />
-                            <span>Private</span>
-                            <span className="ml-auto text-xs text-muted-foreground">Followers only</span>
+                            <span>Privado</span>
+                            <span className="ml-auto text-xs text-muted-foreground">Solo seguidores</span>
                           </div>
                         </SelectItem>
                         <SelectItem value="public" className="rounded-lg my-1 cursor-pointer focus:bg-primary/5 focus:text-primary font-medium">
                           <div className="flex items-center gap-2">
                             <Globe className="h-4 w-4 text-emerald-500" />
-                            <span>Public</span>
-                            <span className="ml-auto text-xs text-muted-foreground">Everyone</span>
+                            <span>Publico</span>
+                            <span className="ml-auto text-xs text-muted-foreground">Todos</span>
                           </div>
                         </SelectItem>
                       </SelectContent>
@@ -1291,13 +1360,13 @@ function CreateWorkoutContent() {
             </div>
           </div>
 
-          <DialogFooter className="mt-4">
+          <DialogFooter className="shrink-0 border-t border-border/60 bg-background px-4 py-4 sm:px-6">
             <Button type="button" variant="ghost" onClick={() => setIsMetaOpen(false)}>
-              Cancel
+              Cerrar
             </Button>
             <Button type="button" onClick={handleSubmit(onSubmit)} className="gap-2" disabled={isSubmitting}>
               {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-              {isSubmitting ? 'Guardando...' : 'Save Workout'}
+              {isSubmitting ? 'Guardando...' : 'Guardar workout'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1465,14 +1534,14 @@ function ExercisesFieldArray({ nestIndex, control, register, setValue, watch, er
                               <div className="flex flex-wrap items-start justify-between gap-4 border-b border-border/60 pb-5">
                                 <div className="flex flex-wrap items-center gap-2">
                                   <span className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-primary">
-                                    Activity {k + 1}
+                                    Ejercicio {k + 1}
                                   </span>
                                   <span className="rounded-full border border-border/70 bg-background/80 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
-                                    {selectedType === 'time' ? 'Time based' : 'Rep based'}
+                                    {selectedType === 'time' ? 'Por tiempo' : 'Por repeticiones'}
                                   </span>
                                   {hasTutorial && (
                                     <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-600 dark:text-emerald-400">
-                                      Tutorial ready
+                                      Tutorial listo
                                     </span>
                                   )}
                                 </div>
@@ -1732,9 +1801,9 @@ function ExercisesFieldArray({ nestIndex, control, register, setValue, watch, er
                                                 <SelectValue placeholder={isCompactMobile ? 'Nivel' : 'Select difficulty'} />
                                               </SelectTrigger>
                                               <SelectContent>
-                                                <SelectItem value="beginner">Beginner</SelectItem>
-                                                <SelectItem value="intermediate">Intermediate</SelectItem>
-                                                <SelectItem value="advanced">Advanced</SelectItem>
+                                                <SelectItem value="beginner">Principiante</SelectItem>
+                                                <SelectItem value="intermediate">Intermedio</SelectItem>
+                                                <SelectItem value="advanced">Avanzado</SelectItem>
                                               </SelectContent>
                                             </Select>
                                           )}
@@ -1806,7 +1875,7 @@ function ExercisesFieldArray({ nestIndex, control, register, setValue, watch, er
         >
             <span className="flex items-center gap-2 group-hover:gap-3 transition-all">
                 <Plus className="h-3.5 w-3.5" /> 
-                Add Exercise
+                Agregar ejercicio
             </span>
         </Button>
 
@@ -1819,7 +1888,7 @@ function ExercisesFieldArray({ nestIndex, control, register, setValue, watch, er
                 >
                     <span className="flex items-center gap-2 group-hover:gap-3 transition-all">
                         <Package className="h-3.5 w-3.5" /> 
-                        Add Exercise from Vault
+                        Agregar desde vault
                     </span>
                 </Button>
             } 

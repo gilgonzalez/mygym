@@ -334,7 +334,7 @@ export function ExercisesVault({ onSelect, trigger }: ExercisesVaultProps) {
         )}
       </DialogTrigger>
 
-      <DialogContent className="flex h-[min(92dvh,920px)] w-[calc(100vw-20px)] !max-w-[calc(100vw-20px)] flex-col gap-0 overflow-hidden border border-border/60 bg-[#fcfbf8] p-0 shadow-[0_40px_120px_-50px_rgba(0,0,0,0.45)] dark:bg-[#0d0d0d] sm:w-[min(95vw,1420px)] sm:!max-w-[1420px]">
+      <DialogContent className="flex h-[100dvh] w-screen !max-w-none flex-col gap-0 overflow-hidden rounded-none border-none bg-[#fcfbf8] p-0 shadow-none dark:bg-[#0d0d0d] sm:h-[min(92dvh,920px)] sm:w-[min(95vw,1420px)] sm:!max-w-[1420px] sm:rounded-[32px] sm:border sm:border-border/60 sm:shadow-[0_40px_120px_-50px_rgba(0,0,0,0.45)]">
         <div className="border-b border-border/60 bg-gradient-to-b from-orange-500/10 via-background to-background">
           <div className="space-y-4 p-5 md:p-6">
             <DialogHeader className="space-y-2">
@@ -350,15 +350,15 @@ export function ExercisesVault({ onSelect, trigger }: ExercisesVaultProps) {
               <div className="relative flex-1">
                 <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
-                  placeholder="Buscar por nombre, descripcion, musculo o material..."
+                  placeholder="Buscar por nombre, musculo o material..."
                   className="h-12 rounded-2xl border-border/60 bg-background/90 pl-10 shadow-none"
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
                 />
               </div>
 
-              <div className="flex items-center gap-2">
-                <div className="min-w-[180px] flex-1 sm:flex-none sm:min-w-[220px]">
+              <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 sm:flex sm:items-center">
+                <div className="min-w-0 sm:flex-none sm:min-w-[220px]">
                   <Select value={sort} onValueChange={(value) => setSort(value as ExerciseSortOption)}>
                     <SelectTrigger className="h-12 rounded-2xl border-border/60 bg-background/90 shadow-none">
                       <SelectValue placeholder="Orden" />
@@ -388,6 +388,17 @@ export function ExercisesVault({ onSelect, trigger }: ExercisesVaultProps) {
                 </Button>
               </div>
             </div>
+
+            <div className="grid grid-cols-2 gap-2 text-xs sm:hidden">
+              <div className="rounded-2xl border border-border/60 bg-background/85 px-3 py-2">
+                <p className="font-semibold text-foreground">{count} ejercicios</p>
+                <p className="mt-1 text-muted-foreground">Resultados actuales</p>
+              </div>
+              <div className="rounded-2xl border border-border/60 bg-background/85 px-3 py-2">
+                <p className="font-semibold text-foreground">{activeFiltersCount} filtros</p>
+                <p className="mt-1 text-muted-foreground">Busqueda y seleccion</p>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -404,7 +415,7 @@ export function ExercisesVault({ onSelect, trigger }: ExercisesVaultProps) {
           </aside>
 
           <section className="flex min-h-0 flex-1 flex-col">
-            <div className="border-b border-border/60 bg-background/85 px-5 py-4 backdrop-blur md:px-6">
+            <div className="border-b border-border/60 bg-background/85 px-4 py-4 backdrop-blur md:px-6">
               <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                 <div className="space-y-2">
                   <div className="flex flex-wrap items-center gap-2">
@@ -448,7 +459,7 @@ export function ExercisesVault({ onSelect, trigger }: ExercisesVaultProps) {
               </div>
             </div>
 
-            <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5 md:px-6">
+            <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 md:px-6 md:py-5">
               {loading ? (
                 <div className="flex h-full min-h-[320px] flex-col items-center justify-center gap-3 text-center text-muted-foreground">
                   <Loader2 className="h-8 w-8 animate-spin text-orange-400" />
@@ -546,7 +557,7 @@ export function ExercisesVault({ onSelect, trigger }: ExercisesVaultProps) {
                             <div className="pointer-events-none absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-black/80 via-black/42 to-transparent" />
 
                             {onSelect && (
-                              <div className="absolute inset-x-0 top-0">
+                              <div className="absolute inset-x-0 top-0 hidden md:block">
                                 <button
                                   type="button"
                                   className="flex h-11 w-full -translate-y-full items-center justify-center gap-2 bg-emerald-400/85 text-sm font-bold tracking-[0.08em] text-slate-950 opacity-0 shadow-[0_18px_36px_-26px_rgba(16,185,129,0.45)] backdrop-blur-md transition-all duration-200 group-hover:translate-y-0 group-hover:opacity-100"
@@ -618,7 +629,7 @@ export function ExercisesVault({ onSelect, trigger }: ExercisesVaultProps) {
                               </h3>
 
                               {exercise.description && (
-                                <p className="line-clamp-2 text-sm leading-5 text-muted-foreground">
+                                <p className="line-clamp-3 text-sm leading-5 text-muted-foreground">
                                   {exercise.description}
                                 </p>
                               )}
@@ -638,6 +649,20 @@ export function ExercisesVault({ onSelect, trigger }: ExercisesVaultProps) {
                                 </p>
                               </div>
                             </div>
+
+                            {onSelect && (
+                              <Button
+                                type="button"
+                                className="mt-1 h-11 rounded-2xl font-semibold md:hidden"
+                                onClick={() => {
+                                  onSelect(exercise)
+                                  setIsOpen(false)
+                                }}
+                              >
+                                <Plus className="mr-2 h-4 w-4" />
+                                Agregar al workout
+                              </Button>
+                            )}
                           </div>
                         </article>
                       )
@@ -648,7 +673,7 @@ export function ExercisesVault({ onSelect, trigger }: ExercisesVaultProps) {
             </div>
 
             {(count > 0 || totalPages > 1) && (
-              <div className="border-t border-border/60 bg-background/92 px-5 py-4 backdrop-blur md:px-6">
+              <div className="border-t border-border/60 bg-background/92 px-4 py-4 backdrop-blur md:px-6">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div className="space-y-1">
                     <p className="text-sm font-medium text-foreground">
@@ -659,7 +684,7 @@ export function ExercisesVault({ onSelect, trigger }: ExercisesVaultProps) {
                     </p>
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 sm:flex sm:items-center">
                     <Button
                       variant="outline"
                       size="sm"
