@@ -9,7 +9,8 @@
     "start": "next start",
     "lint": "eslint .",
     "check": "tsc -b --noEmit",
-    "supabase:types": "supabase gen types typescript --project-id kbjdrsfrfgtyyntfxfns --schema public > src/types/database.ts"
+    "supabase:types": "supabase gen types typescript --project-id kbjdrsfrfgtyyntfxfns --schema public > src/types/database.ts",
+    "import:exercises-dataset": "node --env-file=.env scripts/import-exercises-dataset.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.956.0",
