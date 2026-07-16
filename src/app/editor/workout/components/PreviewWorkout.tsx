@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react'
-import { Play, Dumbbell, TimerIcon, Info, ChevronLeft, Clock } from 'lucide-react'
+import { Play, Dumbbell, TimerIcon, Info, ChevronLeft, Clock, ChevronDown } from 'lucide-react'
 import { Button } from '@/components/Button'
 import { PreviewActivity } from './PreviewActivity'
 import { LocalWorkout } from '@/types/workout/viewTypes'
@@ -13,6 +13,7 @@ interface PreviewWorkoutProps {
 export function PreviewWorkout({ data, onClose }: PreviewWorkoutProps) {
   const [isPlaying, setIsPlaying] = useState(false)
   const [currentStep, setCurrentStep] = useState(0)
+  const [expandedExerciseKey, setExpandedExerciseKey] = useState<string | null>(null)
 
   // Map form data to LocalWorkout structure
   const workout: LocalWorkout = useMemo(() => {
@@ -171,38 +172,69 @@ export function PreviewWorkout({ data, onClose }: PreviewWorkoutProps) {
                
                <div className="grid gap-3 grid-cols-1">
                  {section.exercises.map((ex, exIdx) => (
+                   (() => {
+                     const exerciseKey = `${section.id || idx}-${ex.id || exIdx}`
+                     const isExpanded = expandedExerciseKey === exerciseKey
+
+                     return (
                    <div 
-                     key={exIdx} 
-                     className="group relative flex items-center gap-3 p-3 rounded-xl bg-card border border-border/50 hover:border-primary/50 transition-all cursor-default"
+                     key={exerciseKey} 
+                     className="group relative rounded-xl bg-card border border-border/50 hover:border-primary/50 transition-all"
                    >
-                     <div className="w-12 h-12 rounded-lg bg-muted overflow-hidden shrink-0 border border-border/30 flex items-center justify-center relative">
-                      {ex.thumbnail_url ? (
-                        getMediaType(ex.thumbnail_url) === 'video' ? (
-                            <video 
-                               src={ex.thumbnail_url} 
-                                className="w-full h-full object-cover" 
-                                muted 
-                                playsInline
-                            />
+                     <button
+                       type="button"
+                       className="flex w-full items-center gap-3 p-3 text-left md:cursor-default"
+                       onClick={() => setExpandedExerciseKey(isExpanded ? null : exerciseKey)}
+                       aria-expanded={isExpanded}
+                     >
+                       <div className="w-12 h-12 rounded-lg bg-muted overflow-hidden shrink-0 border border-border/30 flex items-center justify-center relative">
+                        {ex.thumbnail_url ? (
+                          getMediaType(ex.thumbnail_url) === 'video' ? (
+                              <video 
+                                 src={ex.thumbnail_url} 
+                                  className="w-full h-full object-cover" 
+                                  muted 
+                                  playsInline
+                              />
+                           ) : (
+                             <img src={ex.thumbnail_url} alt={ex.name} className="w-full h-full object-cover" />
+                           )
                          ) : (
-                           <img src={ex.thumbnail_url} alt={ex.name} className="w-full h-full object-cover" />
-                         )
-                       ) : (
-                         <Dumbbell className="w-5 h-5 text-muted-foreground/40" />
-                       )}
-                     </div>
-                     
-                     <div className="flex-1 min-w-0">
-                       <h4 className="font-semibold text-sm text-foreground truncate pr-2">{ex.name}</h4>
-                       <div className="flex items-center gap-2 mt-1 text-[10px] md:text-xs text-muted-foreground">
-                         <span className="bg-secondary px-1.5 py-0.5 rounded-md font-medium">
-                           {ex.type === 'reps' ? `${ex.reps || 0} reps` : formatDuration(ex.duration || 0)}
-                         </span>
-                         {ex.sets && <span>{ex.sets} sets</span>}
-                         {ex.rest && <span className="flex items-center gap-0.5"><Clock className="w-3 h-3" /> {formatDuration(ex.rest)}</span>}
+                           <Dumbbell className="w-5 h-5 text-muted-foreground/40" />
+                         )}
                        </div>
-                     </div>
+
+                       <div className="min-w-0 flex-1">
+                         <div className="flex items-center gap-2">
+                           <h4 className="font-semibold text-sm text-foreground truncate pr-2">{ex.name}</h4>
+                           <ChevronDown
+                             className={`ml-auto h-4 w-4 shrink-0 text-muted-foreground transition-transform md:hidden ${isExpanded ? 'rotate-180' : ''}`}
+                           />
+                         </div>
+                         <div className="hidden md:flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+                           <span className="bg-secondary px-1.5 py-0.5 rounded-md font-medium">
+                             {ex.type === 'reps' ? `${ex.reps || 0} reps` : formatDuration(ex.duration || 0)}
+                           </span>
+                           {ex.sets && <span>{ex.sets} sets</span>}
+                           {ex.rest && <span className="flex items-center gap-0.5"><Clock className="w-3 h-3" /> {formatDuration(ex.rest)}</span>}
+                         </div>
+                       </div>
+                     </button>
+
+                     {isExpanded && (
+                       <div className="border-t border-border/50 px-3 py-3 md:hidden">
+                         <div className="flex flex-wrap items-center gap-2 text-[10px] text-muted-foreground">
+                           <span className="bg-secondary px-1.5 py-0.5 rounded-md font-medium">
+                             {ex.type === 'reps' ? `${ex.reps || 0} reps` : formatDuration(ex.duration || 0)}
+                           </span>
+                           {ex.sets && <span>{ex.sets} sets</span>}
+                           {ex.rest && <span className="flex items-center gap-0.5"><Clock className="w-3 h-3" /> {formatDuration(ex.rest)}</span>}
+                         </div>
+                       </div>
+                     )}
                    </div>
+                     )
+                   })()
                  ))}
                  {section.exercises.length === 0 && (
                     <div className="text-center py-4 text-xs text-muted-foreground italic">
