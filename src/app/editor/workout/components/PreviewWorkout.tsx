@@ -110,9 +110,9 @@ export function PreviewWorkout({ data, onClose }: PreviewWorkoutProps) {
 
   // OVERVIEW MODE (Similar to WorkoutOverview)
   return (
-    <div className="h-full w-full bg-background flex flex-col relative overflow-y-auto scrollbar-hide">
+    <div className="h-full w-full bg-background flex flex-col relative min-h-0 overflow-y-auto scrollbar-hide">
       {/* Hero Section */}
-      <div className="relative h-[45%] min-h-[300px] w-full shrink-0">
+      <div className="relative h-[40%] min-h-[240px] sm:min-h-[300px] w-full shrink-0">
          <div className="absolute top-4 left-4 z-50">
            <Button 
              variant="ghost" 
@@ -133,11 +133,11 @@ export function PreviewWorkout({ data, onClose }: PreviewWorkoutProps) {
            <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-black/30" />
          </div>
          
-         <div className="absolute bottom-0 left-0 right-0 p-6 w-full z-10">
+         <div className="absolute bottom-0 left-0 right-0 p-5 sm:p-6 w-full z-10">
            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/20 backdrop-blur-md text-primary text-xs font-medium mb-3 border border-primary/20">
              <Dumbbell className="w-3 h-3" /> {data.category || 'Strength Training'}
            </div>
-           <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-foreground mb-2 drop-shadow-sm leading-tight">
+           <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight text-foreground mb-2 drop-shadow-sm leading-tight">
              {workout.title}
            </h1>
            <div className="flex items-center gap-4 text-xs md:text-sm text-muted-foreground font-medium">
