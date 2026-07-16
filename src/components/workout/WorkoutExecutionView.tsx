@@ -5,7 +5,7 @@ import { Button } from '@/components/Button'
 import { PremiumFeatureDialog } from '@/components/premium/PremiumFeatureDialog'
 import { ExerciseTutorialDialog } from './ExerciseTutorialDialog'
 import { MusicPlayer } from './MusicPlayer'
-import { LocalExercise, LocalWorkout, ExerciseTutorial } from '@/types/workout/viewTypes'
+import { LocalWorkout, ExerciseTutorial } from '@/types/workout/viewTypes'
 import { CheckCircle2, ChevronLeft, Dumbbell, Info, Pause, Play, Plus, SkipForward } from 'lucide-react'
 import { getNextWorkoutCursor, getStepInfo } from '@/lib/workout/sessionNavigation'
 import { formatDuration } from '@/lib/time'
@@ -24,35 +24,13 @@ interface WorkoutExecutionViewProps {
   onPrev?: () => void
 }
 
-function createMockTutorial(exercise: LocalExercise): ExerciseTutorial {
-  const detailLine =
-    exercise.type === 'time'
-      ? `Mantén la ejecución durante ${formatDuration(exercise.duration || 0)} con control y ritmo constante.`
-      : `Completa ${exercise.reps || 0} repeticiones manteniendo la técnica estable en cada una.`
+function hasRealTutorialContent(tutorial?: ExerciseTutorial) {
+  if (!tutorial) return false
 
-  const equipmentLine =
-    exercise.equipment && exercise.equipment.length > 0
-      ? `Material recomendado: ${exercise.equipment.join(', ')}.`
-      : 'No necesitas material específico para probar este flujo.'
+  const hasMedia = Boolean(tutorial.media?.url)
+  const hasSteps = (tutorial.steps || []).some((step) => Boolean(step.title?.trim()) || Boolean(step.description?.trim()))
 
-  return {
-    steps: [
-      {
-        title: 'Posición inicial',
-        description:
-          exercise.description ||
-          `Colócate con buena postura antes de empezar ${exercise.name.toLowerCase()}.`,
-      },
-      {
-        title: 'Ejecución',
-        description: detailLine,
-      },
-      {
-        title: 'Atención',
-        description: equipmentLine,
-      },
-    ],
-  }
+  return hasMedia || hasSteps
 }
 
 function getStrokeColor(stage: SessionStage) {
@@ -121,6 +99,10 @@ export function WorkoutExecutionView({
   const [isPaused, setIsPaused] = useState(false)
   const [isTutorialOpen, setIsTutorialOpen] = useState(false)
   const [isPremiumDialogOpen, setIsPremiumDialogOpen] = useState(false)
+  const [premiumDialogTitle, setPremiumDialogTitle] = useState('Tutorial premium')
+  const [premiumDialogDescription, setPremiumDialogDescription] = useState(
+    'Los tutoriales guiados durante la sesion estan disponibles solo para usuarios premium. Actualiza tu plan para desbloquear esta ayuda visual.'
+  )
   const previousTimeLeftRef = useRef(timeLeft)
   const visualStageRef = useRef<HTMLDivElement | null>(null)
   const [mobileCircleSize, setMobileCircleSize] = useState<number | null>(null)
@@ -258,7 +240,7 @@ export function WorkoutExecutionView({
     }
   }, [])
 
-  const tutorialData = displayExercise ? displayExercise.tutorial || createMockTutorial(displayExercise) : undefined
+  const tutorialData = hasRealTutorialContent(displayExercise?.tutorial) ? displayExercise?.tutorial : undefined
   const flattenedRoadmap = useMemo(() => {
     return workout.sections.map((section, sectionIndex) => ({
       section,
@@ -336,6 +318,26 @@ export function WorkoutExecutionView({
       : stage === 'exercise-reps'
         ? 'Hecho'
         : 'Seguir'
+
+  const handleTutorialOpen = () => {
+    if (!displayExercise) return
+
+    if (!hasRealTutorialContent(displayExercise.tutorial)) {
+      setPremiumDialogTitle('Sin instrucciones disponibles')
+      setPremiumDialogDescription('Este ejercicio todavia no tiene instrucciones, pasos tecnicos ni recurso multimedia asociado.')
+      setIsPremiumDialogOpen(true)
+      return
+    }
+
+    if (!canAccessTutorial) {
+      setPremiumDialogTitle('Tutorial premium')
+      setPremiumDialogDescription('Los tutoriales guiados durante la sesion estan disponibles solo para usuarios premium. Actualiza tu plan para desbloquear esta ayuda visual.')
+      setIsPremiumDialogOpen(true)
+      return
+    }
+
+    setIsTutorialOpen(true)
+  }
 
   return (
     <div className="relative flex h-[100dvh] flex-col overflow-hidden bg-[#050816] text-white">
@@ -679,13 +681,7 @@ export function WorkoutExecutionView({
                 variant="ghost"
                 size="icon"
                 className="h-11 w-11 rounded-full border border-white/10 bg-white/10 text-white backdrop-blur-xl hover:bg-white/20"
-                onClick={() => {
-                  if (!canAccessTutorial) {
-                    setIsPremiumDialogOpen(true)
-                    return
-                  }
-                  setIsTutorialOpen(true)
-                }}
+                onClick={handleTutorialOpen}
               >
                 <Info className="h-4 w-4" />
               </Button>
@@ -751,13 +747,7 @@ export function WorkoutExecutionView({
                   variant="ghost"
                   size="icon"
                   className="h-12 w-full rounded-2xl border border-white/10 bg-white/10 text-white backdrop-blur-xl hover:bg-white/20"
-                  onClick={() => {
-                    if (!canAccessTutorial) {
-                      setIsPremiumDialogOpen(true)
-                      return
-                    }
-                    setIsTutorialOpen(true)
-                  }}
+                  onClick={handleTutorialOpen}
                 >
                   <Info className="h-4 w-4" />
                 </Button>
@@ -808,8 +798,8 @@ export function WorkoutExecutionView({
       <PremiumFeatureDialog
         open={isPremiumDialogOpen}
         onOpenChange={setIsPremiumDialogOpen}
-        title="Tutorial premium"
-        description="Los tutoriales guiados durante la sesion estan disponibles solo para usuarios premium. Actualiza tu plan para desbloquear esta ayuda visual."
+        title={premiumDialogTitle}
+        description={premiumDialogDescription}
       />
     </div>
   )

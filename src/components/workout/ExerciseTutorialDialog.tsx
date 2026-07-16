@@ -24,9 +24,9 @@ function renderTutorialMedia(tutorial?: ExerciseTutorial, exerciseName?: string)
             <Play className="ml-1 h-6 w-6 fill-current" />
           </div>
           <div>
-            <p className="text-sm font-semibold text-white">Video tutorial mock</p>
+            <p className="text-sm font-semibold text-white">Sin recurso multimedia</p>
             <p className="text-xs text-white/70">
-              Aqui se mostrara el video de {exerciseName || 'este ejercicio'}.
+              Este tutorial de {exerciseName || 'este ejercicio'} no incluye video, imagen ni audio.
             </p>
           </div>
         </div>

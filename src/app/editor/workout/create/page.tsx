@@ -118,6 +118,16 @@ function normalizeMediaUrl(value?: string | null) {
   return value.replace(/#(audio|video|image)$/, '')
 }
 
+function ensureUploadedUrl(value: string | null | undefined, label: string) {
+  const normalizedValue = normalizeMediaUrl(value)
+
+  if (normalizedValue.startsWith('blob:')) {
+    throw new Error(`${label} no se pudo subir correctamente. Vuelve a intentarlo.`)
+  }
+
+  return normalizedValue
+}
+
 function sanitizeTutorial(
   tutorial?: WorkoutFormExercise['tutorial'] | null
 ): WorkoutFormExercise['tutorial'] | null {
@@ -417,30 +427,28 @@ function CreateWorkoutContent() {
             // Upload Cover
             let coverUrl = normalizeMediaUrl(data.cover)
             if (data.cover?.startsWith('blob:')) {
-                try {
-                    setUploadStatus('Uploading cover image...')
-                    const res = await uploadFile(normalizeMediaUrl(data.cover))
-                    if (res) {
-                        coverUrl = res.url
-                    }
-                    updateProgress('Cover uploaded')
-                } catch (error) {
-                    console.error('Failed to upload cover:', error)
-                    // We continue without the cover or handle error gracefully
-                    // For now, logging error is safer than crashing the whole process
-                    // But if it's critical, we should throw. User asked for try-catch so probably wants to prevent crash.
+                setUploadStatus('Uploading cover image...')
+                const res = await uploadFile(normalizeMediaUrl(data.cover))
+                if (!res?.url) {
+                    throw new Error('La portada del workout no se pudo subir correctamente. Vuelve a intentarlo.')
                 }
+                coverUrl = res.url
+                updateProgress('Cover uploaded')
             }
+            coverUrl = ensureUploadedUrl(coverUrl, 'La portada del workout')
             
             // Upload Audio
             const audioUrls = await Promise.all(
                 (data.audio || []).map(async (url: string) => {
                     if (url.startsWith('blob:')) {
                         const res = await uploadFile(url)
+                        if (!res?.url) {
+                            throw new Error('Uno de los audios del workout no se pudo subir correctamente. Vuelve a intentarlo.')
+                        }
                         updateProgress('Audio track uploaded')
-                        return res?.url
+                        return res.url
                     }
-                    return normalizeMediaUrl(url)
+                    return ensureUploadedUrl(url, 'Uno de los audios del workout')
                 })
             )
             const validAudioUrls = audioUrls.filter((url: string | undefined): url is string => !!url)
@@ -456,28 +464,37 @@ function CreateWorkoutContent() {
 
                     if (exercise.thumbnail_url && exercise.thumbnail_url.startsWith('blob:')) {
                         const res = await uploadFile(normalizeMediaUrl(exercise.thumbnail_url))
-                        if (res) {
-                            finalThumbnailUrl = res.url
-                            finalThumbnailMediaId = res.id
-                            finalFilename = res.filename
-                            finalBucketPath = res.bucket_path
+                        if (!res?.url) {
+                            throw new Error(`El thumbnail de "${exercise.name}" no se pudo subir correctamente. Vuelve a intentarlo.`)
                         }
+                        finalThumbnailUrl = res.url
+                        finalThumbnailMediaId = res.id
+                        finalFilename = res.filename
+                        finalBucketPath = res.bucket_path
                         updateProgress(`Thumbnail uploaded: ${exercise.name}`)
                     }
+                    finalThumbnailUrl = ensureUploadedUrl(finalThumbnailUrl, `El thumbnail de "${exercise.name}"`)
 
                     if (finalTutorial?.media_url && finalTutorial.media_url.startsWith('blob:')) {
                         const res = await uploadFile(normalizeMediaUrl(finalTutorial.media_url))
-                        if (res) {
-                            finalTutorial = {
-                                ...finalTutorial,
-                                media_url: res.url,
-                                media_id: res.id || null,
-                                filename: res.filename || null,
-                                bucket_path: res.bucket_path || null,
-                                media_type: finalTutorial.media_type || inferMediaType(finalTutorial.media_url),
-                            }
+                        if (!res?.url) {
+                            throw new Error(`El recurso del tutorial de "${exercise.name}" no se pudo subir correctamente. Vuelve a intentarlo.`)
+                        }
+                        finalTutorial = {
+                            ...finalTutorial,
+                            media_url: res.url,
+                            media_id: res.id || null,
+                            filename: res.filename || null,
+                            bucket_path: res.bucket_path || null,
+                            media_type: finalTutorial.media_type || inferMediaType(finalTutorial.media_url),
                         }
                         updateProgress(`Tutorial uploaded: ${exercise.name}`)
+                    }
+                    if (finalTutorial?.media_url) {
+                        finalTutorial = {
+                            ...finalTutorial,
+                            media_url: ensureUploadedUrl(finalTutorial.media_url, `El recurso del tutorial de "${exercise.name}"`) || null,
+                        }
                     }
                     return { 
                         ...exercise, 

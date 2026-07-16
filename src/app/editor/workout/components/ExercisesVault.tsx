@@ -557,10 +557,10 @@ export function ExercisesVault({ onSelect, trigger }: ExercisesVaultProps) {
                             <div className="pointer-events-none absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-black/80 via-black/42 to-transparent" />
 
                             {onSelect && (
-                              <div className="absolute inset-x-0 top-0 hidden md:block">
+                              <div className="absolute inset-x-0 top-0 z-10 hidden md:block">
                                 <button
                                   type="button"
-                                  className="flex h-11 w-full -translate-y-full items-center justify-center gap-2 bg-emerald-400/85 text-sm font-bold tracking-[0.08em] text-slate-950 opacity-0 shadow-[0_18px_36px_-26px_rgba(16,185,129,0.45)] backdrop-blur-md transition-all duration-200 group-hover:translate-y-0 group-hover:opacity-100"
+                                  className="flex h-11 w-full -translate-y-full items-center justify-center gap-2 bg-emerald-400/78 text-sm font-bold tracking-[0.08em] text-slate-950 opacity-0 shadow-[0_18px_36px_-26px_rgba(16,185,129,0.45)] backdrop-blur-md transition-all duration-200 group-hover:translate-y-0 group-hover:opacity-100"
                                   onClick={() => {
                                     onSelect(exercise)
                                     setIsOpen(false)
@@ -635,25 +635,10 @@ export function ExercisesVault({ onSelect, trigger }: ExercisesVaultProps) {
                               )}
                             </div>
 
-                            <div className="mt-auto grid grid-cols-2 gap-2 rounded-[20px] border border-border/60 bg-muted/20 p-3">
-                              <div className="space-y-1">
-                                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Series</p>
-                                <p className="text-sm font-semibold text-foreground">{exercise.sets ?? '-'}</p>
-                              </div>
-                              <div className="space-y-1">
-                                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                                  {exercise.type === 'time' ? 'Duracion' : 'Reps'}
-                                </p>
-                                <p className="text-sm font-semibold text-foreground">
-                                  {exercise.type === 'time' ? (exercise.duration ?? '-') : (exercise.reps ?? '-')}
-                                </p>
-                              </div>
-                            </div>
-
                             {onSelect && (
                               <Button
                                 type="button"
-                                className="mt-1 h-11 rounded-2xl font-semibold md:hidden"
+                                className="mt-auto h-11 rounded-2xl font-semibold md:hidden"
                                 onClick={() => {
                                   onSelect(exercise)
                                   setIsOpen(false)
