@@ -309,6 +309,7 @@ export function WorkoutExecutionView({
   const ringProgress = Math.max(0, Math.min(progress, 1))
   const circleSize = 420
   const radius = 194
+  const strokeWidth = 12
   const circumference = 2 * Math.PI * radius
   const dashOffset = circumference * (1 - ringProgress)
   const strokeColor = getStrokeColor(stage)
@@ -323,7 +324,8 @@ export function WorkoutExecutionView({
     height: `${resolvedCircleSize}px`,
   }
   const circleClassName = 'h-full w-full'
-  const innerInset = mobileCircleSize ? Math.max(Math.round(resolvedCircleSize * 0.055), 14) : 18
+  const baseInnerInset = circleSize / 2 - (radius - strokeWidth / 2) + 2
+  const innerInset = Math.max(Math.round((resolvedCircleSize * baseInnerInset) / circleSize), 10)
   const innerCircleStyle = {
     inset: `${innerInset}px`,
   }
@@ -578,7 +580,11 @@ export function WorkoutExecutionView({
                 height={circleSize}
                 viewBox={`0 0 ${circleSize} ${circleSize}`}
                 className={circleClassName}
-                style={circleFrameStyle}
+                style={{
+                  ...circleFrameStyle,
+                  transform: 'rotate(-90deg)',
+                  transformOrigin: '50% 50%',
+                }}
               >
                 <circle
                   cx={circleSize / 2}
@@ -586,7 +592,7 @@ export function WorkoutExecutionView({
                   r={radius}
                   fill="transparent"
                   stroke="rgba(255,255,255,0.10)"
-                  strokeWidth="12"
+                  strokeWidth={strokeWidth}
                 />
                 <circle
                   cx={circleSize / 2}
@@ -594,7 +600,7 @@ export function WorkoutExecutionView({
                   r={radius}
                   fill="transparent"
                   stroke={strokeColor}
-                  strokeWidth="12"
+                  strokeWidth={strokeWidth}
                   strokeLinecap="round"
                   strokeDasharray={circumference}
                   strokeDashoffset={dashOffset}
