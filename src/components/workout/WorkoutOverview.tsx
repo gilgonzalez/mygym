@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { Button } from '@/components/Button'
 import { LocalExercise, LocalWorkout } from '@/types/workout/viewTypes'
@@ -41,10 +41,15 @@ export function WorkoutOverview({
   const router = useRouter()
   const pathname = usePathname()
   const heroImage = workout.cover
+  const [hasHeroImageError, setHasHeroImageError] = useState(false)
   const [showLoginDialog, setShowLoginDialog] = useState(false)
   const [showShare, setShowShare] = useState(false)
   const [previewExercise, setPreviewExercise] = useState<LocalExercise | null>(null)
   const [previewSectionName, setPreviewSectionName] = useState<string | undefined>(undefined)
+
+  useEffect(() => {
+    setHasHeroImageError(false)
+  }, [heroImage])
 
   // Calculate derived stats
   const { totalDurationSeconds, uniqueMuscleGroups, uniqueEquipment, totalExercises } = useMemo(() => {
@@ -76,6 +81,7 @@ export function WorkoutOverview({
   }, [workout])
 
   const durationLabel = formatDuration(totalDurationSeconds)
+  const hasHeroImage = Boolean(heroImage && !hasHeroImageError)
 
   const handleStart = () => {
     if (!isAuthenticated) {
@@ -200,11 +206,20 @@ export function WorkoutOverview({
          </div>
 
          <div className="absolute inset-0">
-           <img 
-             src={heroImage} 
-             alt="Workout Cover" 
-             className="w-full h-full object-cover opacity-80"
-           />
+           {hasHeroImage ? (
+             <img 
+               src={heroImage} 
+               alt="Workout Cover" 
+               className="w-full h-full object-cover opacity-80"
+               onError={() => setHasHeroImageError(true)}
+             />
+           ) : (
+             <>
+               <div className="absolute inset-0 bg-slate-950 dark:bg-black" />
+               <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(16,185,129,0.18),transparent_28%),radial-gradient(circle_at_bottom_left,rgba(59,130,246,0.22),transparent_34%)] dark:bg-[radial-gradient(circle_at_top_right,rgba(16,185,129,0.22),transparent_28%),radial-gradient(circle_at_bottom_left,rgba(59,130,246,0.26),transparent_34%)]" />
+               <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(15,23,42,0.92)_0%,rgba(15,23,42,0.68)_34%,rgba(15,23,42,0.22)_62%)] dark:bg-[linear-gradient(180deg,rgba(2,6,23,0.96)_0%,rgba(2,6,23,0.76)_34%,rgba(2,6,23,0.24)_62%)]" />
+             </>
+           )}
            <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-black/30" />
          </div>
          

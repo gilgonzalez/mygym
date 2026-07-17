@@ -188,7 +188,7 @@ export default function WorkoutCard({ workout }: WorkoutCardProps) {
 
           <div className="relative z-10 flex min-h-[260px] sm:min-h-[300px] flex-col gap-5 p-4 sm:gap-6 sm:p-5">
             <div className="flex items-start justify-between gap-4">
-              <h4 className="max-w-[18rem] text-2xl font-bold leading-tight tracking-tight text-white drop-shadow-md transition-all duration-300 group-hover:text-emerald-200 sm:text-[2rem]">
+              <h4 className="max-w-[18rem] text-2xl font-bold leading-tight tracking-tight text-emerald-950 drop-shadow-md transition-all duration-300 group-hover:text-emerald-700 dark:text-white sm:text-[2rem]">
                 {workout.title}
               </h4>
               <div className="rounded-full border border-white/10 bg-black/25 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/85 backdrop-blur-md dark:bg-white/10 dark:text-white">
