@@ -6,7 +6,7 @@ import { useMutation, useQuery } from '@tanstack/react-query'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd'
-import { Plus, Trash2, GripVertical, Save,  ArrowLeft, Eye, Play, Smartphone, Monitor, Image as ImageIcon,  Music, X, Upload, Mic, Square, Camera, Circle, Dna, Activity, Zap, Repeat, List, RotateCw, Library, Package, Globe, Lock, FileText, Sparkles, Loader2, Info } from 'lucide-react'
+import { Plus, Trash2, GripVertical, Save,  ArrowLeft, Eye, Play, Smartphone, Monitor, Image as ImageIcon,  Music, X, Upload, Mic, Square, Camera, Circle, Dna, Activity, Repeat, RotateCw, Library, Package, Globe, Lock, FileText, Sparkles, Loader2, Info, Timer } from 'lucide-react'
 import { 
   Select,
   SelectContent,
@@ -1075,7 +1075,7 @@ function CreateWorkoutContent() {
                                                     field.value === 'single' ? "bg-white dark:bg-zinc-800 shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
                                                 )}
                                             >
-                                                <List className="h-3.5 w-3.5" />
+                                                <Repeat className="h-3.5 w-3.5" />
                                                 Series seguidas
                                             </button>
                                         </TooltipTrigger>
@@ -1697,12 +1697,15 @@ function ExercisesFieldArray({ nestIndex, control, register, setValue, watch, er
                                 </div>
 
                                 <div className="space-y-5">
-                                  <div className="rounded-[20px] border border-border/60 bg-background/75 p-2.5 shadow-sm sm:rounded-[28px] sm:p-3 lg:p-3.5">
-                                    <div className="mb-3 flex items-start justify-between gap-3 sm:mb-4">
-                                      <div>
+                                  <div className="rounded-[20px] border border-border/60 bg-background/75 p-3 shadow-sm sm:rounded-[28px] sm:p-3 lg:p-3.5">
+                                    <div className="mb-3 flex flex-col gap-3 sm:mb-4 sm:flex-row sm:items-start sm:justify-between">
+                                      <div className="space-y-1">
                                         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">{isCompactMobile ? 'Formato' : 'Cómo se realiza'}</p>
+                                        <p className="text-[11px] leading-5 text-muted-foreground sm:hidden">
+                                          Elige cómo se mide el ejercicio y completa sus valores esenciales.
+                                        </p>
                                       </div>
-                                      <div className="flex items-center gap-2">
+                                      <div className="flex items-center justify-between gap-2 sm:justify-start">
                                         <div className="rounded-2xl bg-primary/10 p-2 text-primary">
                                           <Activity className="h-4 w-4" />
                                         </div>
@@ -1710,30 +1713,30 @@ function ExercisesFieldArray({ nestIndex, control, register, setValue, watch, er
                                       </div>
                                     </div>
 
-                                    <div className="mt-2 grid gap-1 sm:mt-2.5 sm:gap-1.5 lg:grid-cols-[0.68fr_repeat(3,minmax(0,1fr))] lg:items-stretch">
+                                    <div className="mt-2 space-y-2 sm:mt-2.5 sm:space-y-2.5 lg:grid lg:grid-cols-[0.68fr_repeat(3,minmax(0,1fr))] lg:items-stretch lg:gap-1.5 lg:space-y-0">
                                       <Controller
                                         control={control}
                                         name={`sections.${nestIndex}.exercises.${k}.type`}
                                         render={({ field }) => (
-                                          <div className="grid grid-cols-2 gap-1 sm:gap-1.5 lg:grid-cols-1 lg:grid-rows-2 lg:self-stretch">
+                                          <div className="grid grid-cols-2 gap-2 lg:grid-cols-1 lg:grid-rows-2 lg:self-stretch">
                                             <button
                                               type="button"
                                               onClick={() => field.onChange('reps')}
                                               className={cn(
-                                                'relative rounded-[16px] border p-1 text-left transition-all sm:rounded-[20px] sm:p-1.5 lg:flex lg:h-full lg:flex-col lg:justify-center',
+                                                'relative rounded-[18px] border p-3 text-left transition-all sm:rounded-[20px] sm:p-3 lg:flex lg:h-full lg:flex-col lg:justify-center',
                                                 field.value === 'reps'
                                                   ? 'border-primary/40 bg-primary/[0.08] shadow-sm'
                                                   : 'border-border/60 bg-muted/20 hover:border-primary/20 hover:bg-background'
                                               )}
                                             >
                                               {renderHint('Mide el ejercicio por número de repeticiones en cada serie.', 'absolute right-1 top-1 sm:right-1.5 sm:top-1.5')}
-                                              <div className="flex items-center gap-2">
-                                                <div className="rounded-2xl bg-background/90 p-1 text-primary shadow-sm">
-                                                  <List className="h-3 w-3" />
+                                              <div className={cn('flex items-start gap-3', isCompactMobile && 'justify-center')}>
+                                                <div className={cn('rounded-2xl bg-background/90 p-2 text-primary shadow-sm', isCompactMobile && 'p-3')}>
+                                                  <Repeat className={cn('h-3.5 w-3.5', isCompactMobile && 'h-4 w-4')} />
                                                 </div>
-                                                <div className="flex items-center gap-1 pr-6 sm:pr-7">
-                                                  <span className="text-[9px] font-bold uppercase tracking-[0.16em] text-muted-foreground sm:text-[10px]">
-                                                    Reps
+                                                <div className={cn('min-w-0 flex-1 pr-6 sm:pr-7', isCompactMobile && 'sr-only')}>
+                                                  <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground sm:text-[10px]">
+                                                    {isCompactMobile ? 'Repeticiones' : 'Reps'}
                                                   </span>
                                                 </div>
                                               </div>
@@ -1743,20 +1746,20 @@ function ExercisesFieldArray({ nestIndex, control, register, setValue, watch, er
                                               type="button"
                                               onClick={() => field.onChange('time')}
                                               className={cn(
-                                                'relative rounded-[16px] border p-1 text-left transition-all sm:rounded-[20px] sm:p-1.5 lg:flex lg:h-full lg:flex-col lg:justify-center',
+                                                'relative rounded-[18px] border p-3 text-left transition-all sm:rounded-[20px] sm:p-3 lg:flex lg:h-full lg:flex-col lg:justify-center',
                                                 field.value === 'time'
                                                   ? 'border-primary/40 bg-primary/[0.08] shadow-sm'
                                                   : 'border-border/60 bg-muted/20 hover:border-primary/20 hover:bg-background'
                                               )}
                                             >
                                               {renderHint('Mide el ejercicio por duración en segundos para cada serie.', 'absolute right-1 top-1 sm:right-1.5 sm:top-1.5')}
-                                              <div className="flex items-center gap-2">
-                                                <div className="rounded-2xl bg-background/90 p-1 text-primary shadow-sm">
-                                                  <Zap className="h-3 w-3" />
+                                              <div className={cn('flex items-start gap-3', isCompactMobile && 'justify-center')}>
+                                                <div className={cn('rounded-2xl bg-background/90 p-2 text-primary shadow-sm', isCompactMobile && 'p-3')}>
+                                                  <Timer className={cn('h-3.5 w-3.5', isCompactMobile && 'h-4 w-4')} />
                                                 </div>
-                                                <div className="flex items-center gap-1 pr-6 sm:pr-7">
-                                                  <span className="text-[9px] font-bold uppercase tracking-[0.16em] text-muted-foreground sm:text-[10px]">
-                                                    Time
+                                                <div className={cn('min-w-0 flex-1 pr-6 sm:pr-7', isCompactMobile && 'sr-only')}>
+                                                  <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground sm:text-[10px]">
+                                                    {isCompactMobile ? 'Tiempo' : 'Time'}
                                                   </span>
                                                 </div>
                                               </div>
@@ -1765,83 +1768,87 @@ function ExercisesFieldArray({ nestIndex, control, register, setValue, watch, er
                                         )}
                                       />
 
-                                      <div className="relative rounded-[16px] border border-border/60 bg-muted/20 p-1 sm:rounded-[20px] sm:p-1.5 lg:flex lg:flex-col lg:justify-between">
-                                        {renderHint(selectedType === 'time' ? 'Indica los segundos que dura cada serie del ejercicio.' : 'Indica cuántas repeticiones debe completar el usuario en cada serie.', 'absolute right-1 top-1 sm:right-1.5 sm:top-1.5')}
-                                        <div className="flex items-center gap-2">
-                                          <div className="rounded-2xl bg-background/90 p-1 text-primary shadow-sm">
-                                            {selectedType === 'time' ? <Zap className="h-3 w-3" /> : <List className="h-3 w-3" />}
+                                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:contents">
+                                        <div className="relative col-span-2 rounded-[18px] border border-border/60 bg-muted/20 p-3 sm:col-span-1 sm:rounded-[20px] sm:p-1.5 lg:flex lg:flex-col lg:justify-between">
+                                          {renderHint(selectedType === 'time' ? 'Indica los segundos que dura cada serie del ejercicio.' : 'Indica cuántas repeticiones debe completar el usuario en cada serie.', 'absolute right-2 top-2 sm:right-1.5 sm:top-1.5')}
+                                          <div className="flex items-center gap-2">
+                                            <div className="rounded-2xl bg-background/90 p-2 text-primary shadow-sm sm:p-1">
+                                              {selectedType === 'time' ? <Timer className="h-3.5 w-3.5 sm:h-3 sm:w-3" /> : <Repeat className="h-3.5 w-3.5 sm:h-3 sm:w-3" />}
+                                            </div>
+                                            <div className="flex items-center gap-1 pr-7 sm:pr-6">
+                                              <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground sm:text-[10px]">
+                                                {selectedType === 'time'
+                                                  ? (isCompactMobile ? 'Segundos' : 'Seconds')
+                                                  : (isCompactMobile ? 'Repeticiones' : 'Reps')}
+                                              </span>
+                                            </div>
                                           </div>
-                                          <div className="flex items-center gap-1 pr-6 sm:pr-7">
-                                            <span className="text-[9px] font-bold uppercase tracking-[0.16em] text-muted-foreground sm:text-[10px]">
-                                              {selectedType === 'time' ? 'Seconds' : 'Reps'}
-                                            </span>
-                                          </div>
+                                          <Controller
+                                            control={control}
+                                            name={`sections.${nestIndex}.exercises.${k}.type`}
+                                            render={({ field: typeField }) => (
+                                              <Input
+                                                {...register(
+                                                  typeField.value === 'reps'
+                                                    ? `sections.${nestIndex}.exercises.${k}.reps`
+                                                    : `sections.${nestIndex}.exercises.${k}.duration`
+                                                )}
+                                                type="number"
+                                                inputMode="numeric"
+                                                pattern="[0-9]*"
+                                                min={0}
+                                                placeholder="0"
+                                                className="mt-2 h-10 rounded-2xl border-border/60 bg-background px-3 text-sm font-bold shadow-none sm:mt-1.5 sm:h-8 sm:px-2.5 sm:text-sm"
+                                              />
+                                            )}
+                                          />
                                         </div>
-                                        <Controller
-                                          control={control}
-                                          name={`sections.${nestIndex}.exercises.${k}.type`}
-                                          render={({ field: typeField }) => (
-                                            <Input
-                                              {...register(
-                                                typeField.value === 'reps'
-                                                  ? `sections.${nestIndex}.exercises.${k}.reps`
-                                                  : `sections.${nestIndex}.exercises.${k}.duration`
-                                              )}
-                                              type="number"
-                                              inputMode="numeric"
-                                              pattern="[0-9]*"
-                                              min={0}
-                                              placeholder="0"
-                                              className="mt-1 h-7 rounded-2xl border-border/60 bg-background px-2.5 text-[13px] font-bold shadow-none sm:mt-1.5 sm:h-8 sm:text-sm"
-                                            />
-                                          )}
-                                        />
-                                      </div>
 
-                                      <div className="relative rounded-[16px] border border-border/60 bg-muted/20 p-1 sm:rounded-[20px] sm:p-1.5 lg:flex lg:flex-col lg:justify-between">
-                                        {renderHint('Número total de series o vueltas que se deben completar en este ejercicio.', 'absolute right-1 top-1 sm:right-1.5 sm:top-1.5')}
-                                        <div className="flex items-center gap-2">
-                                          <div className="rounded-2xl bg-background/90 p-1 text-primary shadow-sm">
-                                            <Repeat className="h-3 w-3" />
+                                        <div className="relative rounded-[18px] border border-border/60 bg-muted/20 p-3 sm:rounded-[20px] sm:p-1.5 lg:flex lg:flex-col lg:justify-between">
+                                          {renderHint('Número total de series o vueltas que se deben completar en este ejercicio.', 'absolute right-2 top-2 sm:right-1.5 sm:top-1.5')}
+                                          <div className="flex items-center gap-2">
+                                            <div className="rounded-2xl bg-background/90 p-2 text-primary shadow-sm sm:p-1">
+                                              <Repeat className="h-3.5 w-3.5 sm:h-3 sm:w-3" />
+                                            </div>
+                                            <div className="flex items-center gap-1 pr-7 sm:pr-6">
+                                              <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground sm:text-[10px]">
+                                                {isCompactMobile ? 'Series' : 'Sets'}
+                                              </span>
+                                            </div>
                                           </div>
-                                          <div className="flex items-center gap-1 pr-6 sm:pr-7">
-                                            <span className="text-[9px] font-bold uppercase tracking-[0.16em] text-muted-foreground sm:text-[10px]">
-                                              Sets
-                                            </span>
-                                          </div>
-                                        </div>
-                                        <Input
-                                          {...register(`sections.${nestIndex}.exercises.${k}.sets`)}
-                                          placeholder="0"
-                                          type="number"
-                                          min={0}
-                                          className="mt-1 h-7 rounded-2xl border-border/60 bg-background px-2.5 text-[13px] font-bold shadow-none sm:mt-1.5 sm:h-8 sm:text-sm"
-                                        />
-                                      </div>
-
-                                      <div className="relative col-span-2 rounded-[16px] border border-border/60 bg-muted/20 p-1 sm:col-span-1 sm:rounded-[20px] sm:p-1.5 lg:col-span-1 lg:flex lg:flex-col lg:justify-between">
-                                        {renderHint('Tiempo de recuperación entre una serie y la siguiente, expresado en segundos.', 'absolute right-1 top-1 sm:right-1.5 sm:top-1.5')}
-                                        <div className="flex items-center gap-2">
-                                          <div className="rounded-2xl bg-background/90 p-1 text-primary shadow-sm">
-                                            <RotateCw className="h-3 w-3" />
-                                          </div>
-                                          <div className="flex items-center gap-1 pr-6 sm:pr-7">
-                                            <span className="text-[9px] font-bold uppercase tracking-[0.16em] text-muted-foreground sm:text-[10px]">
-                                              Rest
-                                            </span>
-                                          </div>
-                                        </div>
-                                        <div className="relative mt-1 sm:mt-1.5">
                                           <Input
-                                            {...register(`sections.${nestIndex}.exercises.${k}.rest`)}
+                                            {...register(`sections.${nestIndex}.exercises.${k}.sets`)}
                                             placeholder="0"
                                             type="number"
                                             min={0}
-                                            className="h-7 rounded-2xl border-border/60 bg-background pr-8 text-[13px] font-bold shadow-none sm:h-8 sm:pr-9 sm:text-sm"
+                                            className="mt-2 h-10 rounded-2xl border-border/60 bg-background px-3 text-sm font-bold shadow-none sm:mt-1.5 sm:h-8 sm:px-2.5 sm:text-sm"
                                           />
-                                          <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-semibold text-muted-foreground sm:right-3 sm:text-[11px]">
-                                            seg
-                                          </span>
+                                        </div>
+
+                                        <div className="relative col-span-2 rounded-[18px] border border-border/60 bg-muted/20 p-3 sm:col-span-1 sm:rounded-[20px] sm:p-1.5 lg:col-span-1 lg:flex lg:flex-col lg:justify-between">
+                                          {renderHint('Tiempo de recuperación entre una serie y la siguiente, expresado en segundos.', 'absolute right-2 top-2 sm:right-1.5 sm:top-1.5')}
+                                          <div className="flex items-center gap-2">
+                                            <div className="rounded-2xl bg-background/90 p-2 text-primary shadow-sm sm:p-1">
+                                              <RotateCw className="h-3.5 w-3.5 sm:h-3 sm:w-3" />
+                                            </div>
+                                            <div className="flex items-center gap-1 pr-7 sm:pr-6">
+                                              <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground sm:text-[10px]">
+                                                {isCompactMobile ? 'Descanso' : 'Rest'}
+                                              </span>
+                                            </div>
+                                          </div>
+                                          <div className="relative mt-2 sm:mt-1.5">
+                                            <Input
+                                              {...register(`sections.${nestIndex}.exercises.${k}.rest`)}
+                                              placeholder="0"
+                                              type="number"
+                                              min={0}
+                                              className="h-10 rounded-2xl border-border/60 bg-background pr-10 pl-3 text-sm font-bold shadow-none sm:h-8 sm:pr-9 sm:pl-2.5 sm:text-sm"
+                                            />
+                                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-semibold text-muted-foreground sm:right-3 sm:text-[11px]">
+                                              seg
+                                            </span>
+                                          </div>
                                         </div>
                                       </div>
                                     </div>
