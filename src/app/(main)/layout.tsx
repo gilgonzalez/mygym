@@ -30,11 +30,11 @@ export default function MainLayout({
     <div className="min-h-screen bg-gray-50 dark:bg-background pb-16 md:pb-0">
       <nav className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex h-16 items-center justify-between">
+          <div className="flex min-h-16 items-center justify-between gap-3 py-2">
             {/* Left: Logo (Home) */}
-            <div className="flex items-center">
+            <div className="flex min-w-0 items-center">
               <Link href="/" className="flex items-center gap-2 transition-opacity hover:opacity-80">
-                <Dumbbell className="h-8 w-8 text-primary" />
+                <Dumbbell className="h-7 w-7 shrink-0 text-primary sm:h-8 sm:w-8" />
                 <span className="text-xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent hidden sm:block">
                   MyGym
                 </span>
@@ -42,7 +42,11 @@ export default function MainLayout({
             </div>
             
             {/* Right: Actions */}
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-1.5 sm:gap-3">
+              <div className="sm:hidden">
+                <ModeToggle />
+              </div>
+
               {/* Create Workout Action */}
               {user && (
                 <Link href="/editor/workout/create">
@@ -50,19 +54,19 @@ export default function MainLayout({
                     <PlusSquare className="h-4 w-4" />
                     Create Workout
                   </Button>
-                  <Button size="icon" variant="ghost" className="sm:hidden">
+                  <Button size="icon" variant="ghost" className="h-9 w-9 sm:hidden">
                       <PlusSquare className="h-5 w-5" />
                   </Button>
                 </Link>
               )}
 
               {/* Divider */}
-              <div className="hidden sm:block h-6 w-px bg-border/50" />
+              <div className="hidden h-6 w-px bg-border/50 sm:block" />
 
               {/* User Utilities Group */}
               <div className="flex items-center gap-1 sm:gap-2">
                 <Link href="/profile">
-                  <Button variant="ghost" size="icon" className={isActive('/profile') ? 'text-primary' : ''}>
+                  <Button variant="ghost" size="icon" className={`h-9 w-9 ${isActive('/profile') ? 'text-primary' : ''}`}>
                     <User className="h-5 w-5" />
                   </Button>
                 </Link>
@@ -72,7 +76,7 @@ export default function MainLayout({
                   size="icon" 
                   onClick={handleLogout}
                   title="Sign out"
-                  className="text-muted-foreground hover:text-destructive"
+                  className="h-9 w-9 text-muted-foreground hover:text-destructive"
                 >
                   <LogOut className="h-5 w-5" />
                 </Button>
@@ -81,7 +85,7 @@ export default function MainLayout({
             </div>
           </div>
         </div>
-        <div className="hidden sm:flex absolute right-4 top-0 h-full items-center">
+        <div className="absolute right-4 top-0 hidden h-full items-center sm:flex">
             <ModeToggle />
         </div>
       </nav>

@@ -43,6 +43,8 @@ interface ExerciseFilterOptionsResult {
   error: string | null
 }
 
+const EXERCISES_BATCH_SIZE = 1000
+
 type SearchableExerciseRow = Pick<
   Database['public']['Tables']['exercises']['Row'],
   'id' | 'name' | 'description' | 'muscle_group' | 'equipment' | 'type' | 'created_at'
@@ -158,6 +160,72 @@ function sortExerciseRows(
   return withScores
 }
 
+async function fetchAllExerciseSearchRows(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  muscleGroups: string[],
+  equipment: string[]
+) {
+  const rows: SearchableExerciseRow[] = []
+  let from = 0
+  let hasMore = true
+
+  while (hasMore) {
+    let query = supabase
+      .from('exercises')
+      .select('id, name, description, muscle_group, equipment, type, created_at')
+      .range(from, from + EXERCISES_BATCH_SIZE - 1)
+
+    if (muscleGroups.length > 0) {
+      query = query.overlaps('muscle_group', muscleGroups)
+    }
+
+    if (equipment.length > 0) {
+      query = query.overlaps('equipment', equipment)
+    }
+
+    const { data, error } = await query
+
+    if (error) {
+      return { data: null, error }
+    }
+
+    const batch = data ?? []
+    rows.push(...batch)
+
+    hasMore = batch.length === EXERCISES_BATCH_SIZE
+    from += EXERCISES_BATCH_SIZE
+  }
+
+  return { data: rows, error: null }
+}
+
+async function fetchAllExerciseFilterRows(
+  supabase: Awaited<ReturnType<typeof createClient>>
+) {
+  const rows: Array<{ muscle_group: string[] | null; equipment: string[] | null }> = []
+  let from = 0
+  let hasMore = true
+
+  while (hasMore) {
+    const { data, error } = await supabase
+      .from('exercises')
+      .select('muscle_group, equipment')
+      .range(from, from + EXERCISES_BATCH_SIZE - 1)
+
+    if (error) {
+      return { data: null, error }
+    }
+
+    const batch = data ?? []
+    rows.push(...batch)
+
+    hasMore = batch.length === EXERCISES_BATCH_SIZE
+    from += EXERCISES_BATCH_SIZE
+  }
+
+  return { data: rows, error: null }
+}
+
 export async function listExercises({
   page = 1,
   limit = 10,
@@ -168,19 +236,11 @@ export async function listExercises({
 }: ListExercisesParams): Promise<ListExercisesResult> {
   const supabase = await createClient()
 
-  let baseQuery = supabase
-    .from('exercises')
-    .select('id, name, description, muscle_group, equipment, type, created_at')
-
-  if (muscleGroups.length > 0) {
-    baseQuery = baseQuery.overlaps('muscle_group', muscleGroups)
-  }
-
-  if (equipment.length > 0) {
-    baseQuery = baseQuery.overlaps('equipment', equipment)
-  }
-
-  const { data: searchRows, error: searchError } = await baseQuery
+  const { data: searchRows, error: searchError } = await fetchAllExerciseSearchRows(
+    supabase,
+    muscleGroups,
+    equipment
+  )
 
   if (searchError) {
     console.error('Error fetching exercise search rows:', searchError)
@@ -236,9 +296,7 @@ export async function listExercises({
 export async function listExerciseFilterOptions(): Promise<ExerciseFilterOptionsResult> {
   const supabase = await createClient()
 
-  const { data, error } = await supabase
-    .from('exercises')
-    .select('muscle_group, equipment')
+  const { data, error } = await fetchAllExerciseFilterRows(supabase)
 
   if (error) {
     console.error('Error fetching exercise filter options:', error)

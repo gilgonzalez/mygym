@@ -746,14 +746,15 @@ function CreateWorkoutContent() {
             setValue('difficulty', w.difficulty || 'intermediate')
             
             // Map Sections & Exercises
-            const newSections = w.sections.map((s: any, idx: number) => ({
+            const newSections: WorkoutFormValues['sections'] = w.sections.map((s: any, idx: number): WorkoutFormSection => ({
                 id: `section-${Date.now()}-${idx}`,
                 name: s.name,
                 orderType: 'single',
-                exercises: s.exercises.map((e: any, eIdx: number) => ({
+                exercises: s.exercises.map((e: any, eIdx: number): WorkoutFormExercise => ({
                     id: `ex-${Date.now()}-${idx}-${eIdx}`,
+                    db_id: e.id || e.db_id,
                     name: e.name,
-                    type: e.type || 'reps',
+                    type: e.type === 'time' ? 'time' : 'reps',
                     reps: e.reps || 0,
                     sets: e.sets || 3,
                     duration: e.duration || 0,
@@ -761,10 +762,10 @@ function CreateWorkoutContent() {
                     description: e.description || '',
                     muscle_groups: e.muscle_groups || [],
                     equipment: e.equipment || [],
-                    difficulty: 'intermediate',
-                    thumbnail_url: '',
-                    thumbnail_media_id: null,
-                    tutorial: undefined,
+                    difficulty: e.difficulty || w.difficulty || 'intermediate',
+                    thumbnail_url: e.thumbnail_url || '',
+                    thumbnail_media_id: e.thumbnail_media_id || null,
+                    tutorial: sanitizeTutorial(e.tutorial) || undefined,
                 }))
             }))
             
@@ -772,11 +773,11 @@ function CreateWorkoutContent() {
             setIsAiOpen(false)
             setAiPrompt('')
         } else {
-            alert("Failed to generate workout: " + (res.error || "Unknown error"))
+            alert(res.error || "No se pudo generar el workout")
         }
     } catch (err) {
         console.error(err)
-        alert("An error occurred while communicating with the AI")
+        alert("Ocurrio un error al comunicarse con el asistente")
     } finally {
         setIsGenerating(false)
     }
@@ -813,75 +814,61 @@ function CreateWorkoutContent() {
   return (
     <div className="flex h-[100dvh] min-h-[100dvh] flex-col overflow-hidden">
       {/* Header */}
-      <header className="shrink-0 border-b bg-background px-3 py-3 sm:px-4 md:px-6">
-        <div className="flex flex-col gap-3">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex min-w-0 flex-1 items-start gap-3">
-              <Link
-                href="/"
-                className="rounded-full border border-border/60 p-2 text-muted-foreground transition-colors hover:text-foreground"
-              >
-                <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" />
-              </Link>
-
-              <div className="min-w-0">
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
-                  {builderLabel}
-                </p>
-                <h1 className="truncate text-base font-semibold text-foreground sm:text-lg">Workout Builder</h1>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {sectionFields.length} secciones · {totalExercises} ejercicios
-                </p>
-              </div>
-            </div>
-
-            <Button
-              onClick={() => setIsMetaOpen(true)}
-              disabled={isSubmitting}
-              size="sm"
-              className="h-11 shrink-0 rounded-2xl px-4 font-bold sm:h-10 sm:rounded-full md:px-6"
+      <header className="shrink-0 border-b bg-background px-2.5 py-2 sm:px-4 md:px-6">
+        <div className="flex flex-col gap-1.5 sm:gap-2 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-2.5">
+            <Link
+              href="/"
+              className="rounded-full border border-border/60 p-1.5 text-muted-foreground transition-colors hover:text-foreground"
             >
-              {isSubmitting ? (
-                <>
-                  <RotateCw className="mr-2 h-4 w-4 animate-spin" />
-                  <span className="hidden sm:inline">Guardando...</span>
-                  <span className="sm:hidden">{uploadProgress}%</span>
-                </>
-              ) : isRetry ? (
-                <>
-                  <RotateCw className="mr-2 h-4 w-4" />
-                  <span className="hidden sm:inline">Reintentar</span>
-                  <span className="sm:hidden">Retry</span>
-                </>
-              ) : (
-                <>
-                  <Save className="mr-2 h-4 w-4" />
-                  <span className="hidden sm:inline">Detalles y guardar</span>
-                  <span className="sm:hidden">Guardar</span>
-                </>
-              )}
-            </Button>
+              <ArrowLeft className="h-3.5 w-3.5 sm:h-5 sm:w-5" />
+            </Link>
+
+            <div className="min-w-0">
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                {builderLabel}
+              </p>
+              <h1 className="truncate text-[13px] font-semibold leading-none text-foreground sm:text-base">Workout Builder</h1>
+              <p className="mt-0.5 text-[11px] leading-none text-muted-foreground sm:text-xs">
+                {sectionFields.length} secciones · {totalExercises} ejercicios
+              </p>
+            </div>
           </div>
 
-          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-            <div className="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap sm:items-center">
+          <div className="flex flex-col items-end gap-1.5 sm:gap-2 lg:flex-row lg:items-center lg:justify-end lg:gap-2">
+            <div className="flex flex-wrap items-center justify-end gap-1.5 sm:gap-2">
               <Button
                 variant="outline"
                 size="sm"
-                className="h-11 justify-start gap-2 rounded-2xl border-indigo-200 bg-indigo-50/50 text-indigo-600 shadow-sm hover:bg-indigo-50 hover:text-indigo-700 dark:border-indigo-900/50 dark:bg-indigo-950/20 dark:text-indigo-400 dark:hover:bg-indigo-950/50 sm:h-10 sm:rounded-full"
+                className="h-8 w-auto justify-start gap-1.5 rounded-2xl border-indigo-200 bg-indigo-50/50 px-2.5 text-[10px] text-indigo-600 shadow-sm hover:bg-indigo-50 hover:text-indigo-700 dark:border-indigo-900/50 dark:bg-indigo-950/20 dark:text-indigo-400 dark:hover:bg-indigo-950/50 sm:h-9 sm:gap-2 sm:rounded-full sm:px-3 sm:text-xs"
                 onClick={handleOpenAiAssistant}
               >
-                <Sparkles className="h-4 w-4" />
+                <Sparkles className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 <span>Asistente IA</span>
                 {!isPremiumUser ? (
-                  <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.18em] text-amber-600 dark:text-amber-400">
+                  <span className="hidden rounded-full border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.14em] text-amber-600 dark:text-amber-400 min-[420px]:inline-flex">
                     Premium
                   </span>
                 ) : null}
-                <span className="ml-auto flex items-center gap-1 border-l border-indigo-200 pl-2 dark:border-indigo-800 sm:ml-1">
-                  <Mic className="h-3.5 w-3.5 opacity-70" />
+                <span className="ml-auto flex items-center gap-1 border-l border-indigo-200 pl-1.5 dark:border-indigo-800 sm:ml-1 sm:pl-2">
+                  <Mic className="h-3 w-3 opacity-70 sm:h-3.5 sm:w-3.5" />
                 </span>
               </Button>
+
+              {!isDesktopViewport && (
+                <Button
+                  variant={showPreview ? 'secondary' : 'outline'}
+                  size="sm"
+                  className="h-8 w-auto rounded-2xl px-2.5 text-[10px] font-semibold sm:h-9 sm:rounded-full sm:px-3 sm:text-xs"
+                  onClick={() => {
+                    setPreviewDevice('mobile')
+                    setShowPreview(true)
+                  }}
+                >
+                  <Eye className="mr-1.5 h-3.5 w-3.5 sm:mr-2 sm:h-4 sm:w-4" />
+                  Preview
+                </Button>
+              )}
 
               {isDesktopViewport && (
                 <Button
@@ -894,12 +881,39 @@ function CreateWorkoutContent() {
                   <Eye className="h-4 w-4" />
                 </Button>
               )}
+
+              <Button
+                onClick={() => setIsMetaOpen(true)}
+                disabled={isSubmitting}
+                size="sm"
+                className="h-8 w-auto shrink-0 rounded-2xl px-2.5 text-[10px] font-bold sm:h-9 sm:rounded-full sm:px-4 sm:text-xs md:px-5"
+              >
+                {isSubmitting ? (
+                  <>
+                    <RotateCw className="mr-1.5 h-3.5 w-3.5 animate-spin sm:mr-2 sm:h-4 sm:w-4" />
+                    <span className="hidden sm:inline">Guardando...</span>
+                    <span className="sm:hidden">{uploadProgress}%</span>
+                  </>
+                ) : isRetry ? (
+                  <>
+                    <RotateCw className="mr-1.5 h-3.5 w-3.5 sm:mr-2 sm:h-4 sm:w-4" />
+                    <span className="hidden sm:inline">Reintentar</span>
+                    <span className="sm:hidden">Retry</span>
+                  </>
+                ) : (
+                  <>
+                    <Save className="mr-1.5 h-3.5 w-3.5 sm:mr-2 sm:h-4 sm:w-4" />
+                    <span className="hidden sm:inline">Detalles y guardar</span>
+                    <span className="sm:hidden">Guardar</span>
+                  </>
+                )}
+              </Button>
             </div>
 
             {(submitStatus !== 'idle' || isSubmitting) && (
               <div
                 className={cn(
-                  'rounded-2xl border px-3 py-2 text-xs',
+                  'rounded-2xl border px-2.5 py-1.5 text-[10px] sm:px-3 sm:text-xs lg:min-w-[260px] lg:max-w-[340px]',
                   submitStatus === 'error'
                     ? 'border-destructive/20 bg-destructive/10 text-destructive'
                     : submitStatus === 'success'
@@ -907,12 +921,12 @@ function CreateWorkoutContent() {
                       : 'border-primary/15 bg-primary/[0.04] text-muted-foreground'
                 )}
               >
-                <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center justify-between gap-2.5">
                   <span className="min-w-0 truncate">{isSubmitting ? uploadStatus || 'Guardando...' : submitMessage}</span>
                   {isSubmitting ? <span className="shrink-0 font-semibold">{uploadProgress}%</span> : null}
                 </div>
                 {isSubmitting ? (
-                  <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-secondary">
+                  <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-secondary">
                     <div
                       className="h-full bg-primary transition-all duration-300 ease-out"
                       style={{ width: `${uploadProgress}%` }}
@@ -929,15 +943,15 @@ function CreateWorkoutContent() {
         
         {/* LEFT: Editor Panel */}
         <div className={cn(
-          "flex-1 overflow-x-hidden overflow-y-auto p-3 sm:p-4 md:p-8 transition-all duration-500 ease-&lsqb;cubic-bezier(0.32,0.72,0,1)&rsqb; scrollbar-hide",
+          "flex-1 overflow-x-hidden overflow-y-auto p-2.5 sm:p-4 md:p-8 transition-all duration-500 ease-&lsqb;cubic-bezier(0.32,0.72,0,1)&rsqb; scrollbar-hide",
           showPreview && isDesktopViewport ? (previewDevice === 'mobile' ? "lg:mr-[420px]" : "lg:mr-[65%]") : ""
         )}>
-          <div className="mx-auto max-w-5xl space-y-6 pb-32 sm:space-y-8 md:space-y-10 md:pb-40">
-            <section className="rounded-[28px] border border-border/60 bg-white/90 p-4 shadow-sm dark:bg-zinc-900/70 sm:hidden">
+          <div className="mx-auto max-w-5xl space-y-4 pb-24 sm:space-y-7 md:space-y-10 md:pb-40">
+            <section className="rounded-[24px] border border-border/60 bg-white/90 p-3 shadow-sm dark:bg-zinc-900/70 sm:hidden">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Resumen</p>
-                  <h2 className="mt-1 text-base font-semibold text-foreground">
+                  <h2 className="mt-1 text-sm font-semibold text-foreground">
                     {formValues.title?.trim() || 'Tu workout todavia no tiene titulo'}
                   </h2>
                 </div>
@@ -946,30 +960,33 @@ function CreateWorkoutContent() {
                 </Badge>
               </div>
 
-              <div className="mt-4 grid grid-cols-3 gap-2">
+              <div className="mt-3 grid grid-cols-3 gap-2">
                 <div className="rounded-2xl border border-border/60 bg-muted/20 px-3 py-2">
                   <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">Secciones</p>
-                  <p className="mt-1 text-lg font-semibold text-foreground">{sectionFields.length}</p>
+                  <p className="mt-1 text-base font-semibold text-foreground">{sectionFields.length}</p>
                 </div>
                 <div className="rounded-2xl border border-border/60 bg-muted/20 px-3 py-2">
                   <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">Ejercicios</p>
-                  <p className="mt-1 text-lg font-semibold text-foreground">{totalExercises}</p>
+                  <p className="mt-1 text-base font-semibold text-foreground">{totalExercises}</p>
                 </div>
-                <div className="rounded-2xl border border-border/60 bg-muted/20 px-3 py-2">
+                <button
+                  type="button"
+                  className="rounded-2xl border border-border/60 bg-muted/20 px-3 py-2 text-left transition-colors hover:border-primary/30 hover:text-primary"
+                  onClick={() => {
+                    setPreviewDevice('mobile')
+                    setShowPreview(true)
+                  }}
+                >
                   <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">Preview</p>
-                  <p className="mt-1 text-sm font-semibold text-foreground">Desktop</p>
-                </div>
+                  <p className="mt-1 text-xs font-semibold text-foreground">Abrir</p>
+                </button>
               </div>
-
-              <p className="mt-4 text-sm leading-5 text-muted-foreground">
-                Empieza por nombrar cada sección, añade ejercicios y abre "Detalles y guardar" cuando quieras completar portada, tags y visibilidad.
-              </p>
             </section>
 
             {(isSubmitting || submitStatus === 'error') && (
               <div
                 className={cn(
-                  'sticky top-4 z-20 rounded-2xl border px-4 py-3 shadow-sm backdrop-blur',
+                  'sticky top-3 z-20 rounded-2xl border px-3 py-2.5 shadow-sm backdrop-blur',
                   submitStatus === 'error'
                     ? 'border-destructive/20 bg-destructive/10'
                     : 'border-primary/15 bg-background/90'
@@ -980,7 +997,7 @@ function CreateWorkoutContent() {
                     <p className="text-sm font-semibold text-foreground">
                       {isSubmitting ? uploadStatus || 'Guardando workout...' : 'No pudimos completar el guardado'}
                     </p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-[11px] text-muted-foreground sm:text-xs">
                       {isSubmitting
                         ? submitMessage || 'No cierres esta pantalla mientras terminamos uploads y persistencia.'
                         : submitMessage || 'Revisa los datos y vuelve a intentarlo.'}
@@ -1012,29 +1029,29 @@ function CreateWorkoutContent() {
             <DragDropContext onDragEnd={onDragEnd}>
               <Droppable droppableId="sections" type="SECTION">
                 {(provided) => (
-                  <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-8">
+                  <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-4 sm:space-y-6">
                     {sectionFields.map((section, index) => (
                       <Draggable key={section.id} draggableId={section.id} index={index}>
                         {(provided) => (
                           <div
                             ref={provided.innerRef}
                             {...provided.draggableProps}
-                            className="group overflow-hidden rounded-[24px] border border-border/50 bg-white shadow-xl shadow-black/5 backdrop-blur-sm animate-in slide-in-from-bottom-8 duration-700 fill-mode-backwards dark:bg-zinc-900/50 sm:rounded-[2rem]"
+                            className="group overflow-hidden rounded-[22px] border border-border/50 bg-white shadow-xl shadow-black/5 backdrop-blur-sm animate-in slide-in-from-bottom-8 duration-700 fill-mode-backwards dark:bg-zinc-900/50 sm:rounded-[2rem]"
                             style={{ 
                                 ...provided.draggableProps.style,
                                 animationDelay: `${index * 100}ms` 
                             }}
                           >
-                            <div className="flex items-start gap-3 border-b border-border/50 bg-gradient-to-r from-gray-50 to-white p-4 dark:from-zinc-900 dark:to-zinc-900/50 sm:items-center sm:gap-4 sm:p-6">
-                              <div {...provided.dragHandleProps} className="cursor-grab text-muted-foreground/30 hover:text-foreground transition-colors p-2 hover:bg-black/5 rounded-xl">
-                                <GripVertical className="h-6 w-6" />
+                            <div className="flex items-start gap-2 border-b border-border/50 bg-gradient-to-r from-gray-50 to-white p-3 dark:from-zinc-900 dark:to-zinc-900/50 sm:items-center sm:gap-4 sm:p-6">
+                              <div {...provided.dragHandleProps} className="cursor-grab rounded-xl p-1.5 text-muted-foreground/30 transition-colors hover:bg-black/5 hover:text-foreground sm:p-2">
+                                <GripVertical className="h-5 w-5 sm:h-6 sm:w-6" />
                               </div>
-                              <div className="flex-1 flex flex-col md:flex-row items-start md:items-center gap-4">
+                              <div className="flex flex-1 flex-col items-start gap-2 md:flex-row md:items-center md:gap-4">
                                 <div className="flex-1">
                                     <Input 
                                         {...register(`sections.${index}.name` as const)} 
                                         placeholder="Nombre de la seccion" 
-                                        className="h-auto w-full bg-transparent px-0 text-xl font-black tracking-tight shadow-none focus-visible:ring-0 placeholder:text-muted-foreground/25 sm:text-2xl"
+                                        className="h-auto w-full bg-transparent px-0 text-lg font-black tracking-tight shadow-none focus-visible:ring-0 placeholder:text-muted-foreground/25 sm:text-2xl"
                                     />
                                     <input type="hidden" {...register(`sections.${index}.id` as const)} />
                                     {errors.sections?.[index]?.name && (
@@ -1054,7 +1071,7 @@ function CreateWorkoutContent() {
                                                 type="button"
                                                 onClick={() => field.onChange('single')}
                                                 className={cn(
-                                                    "px-3 py-1.5 rounded-md text-xs font-bold uppercase transition-all flex items-center justify-center sm:justify-start gap-1.5 w-full sm:w-auto",
+                                                    "flex w-full items-center justify-center gap-1.5 rounded-md px-2.5 py-1.5 text-[10px] font-bold uppercase transition-all sm:w-auto sm:justify-start sm:text-xs",
                                                     field.value === 'single' ? "bg-white dark:bg-zinc-800 shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
                                                 )}
                                             >
@@ -1073,7 +1090,7 @@ function CreateWorkoutContent() {
                                                 type="button"
                                                 onClick={() => field.onChange('linear')}
                                                 className={cn(
-                                                    "px-3 py-1.5 rounded-md text-xs font-bold uppercase transition-all flex items-center justify-center sm:justify-start gap-1.5 w-full sm:w-auto",
+                                                    "flex w-full items-center justify-center gap-1.5 rounded-md px-2.5 py-1.5 text-[10px] font-bold uppercase transition-all sm:w-auto sm:justify-start sm:text-xs",
                                                     field.value === 'linear' || !field.value ? "bg-white dark:bg-zinc-800 shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
                                                 )}
                                             >
@@ -1092,12 +1109,12 @@ function CreateWorkoutContent() {
                               <Button 
                                 type="button" variant="ghost" size="icon" 
                                 onClick={() => removeSection(index)}
-                                className="h-10 w-10 rounded-full text-muted-foreground transition-all hover:bg-destructive/10 hover:text-destructive md:opacity-0 md:group-hover:opacity-100"
+                                className="h-9 w-9 rounded-full text-muted-foreground transition-all hover:bg-destructive/10 hover:text-destructive md:opacity-0 md:group-hover:opacity-100"
                               >
                                 <Trash2 className="h-5 w-5" />
                               </Button>
                             </div>
-                            <div className="p-4 sm:p-5 md:p-8">
+                            <div className="p-3 sm:p-5 md:p-8">
                               <ExercisesFieldArray 
                                 nestIndex={index} 
                                 control={control} 
@@ -1118,7 +1135,7 @@ function CreateWorkoutContent() {
               </Droppable>
             </DragDropContext>
 
-            <div className="relative mt-8 mb-20 group">
+            <div className="group relative mt-5 mb-14 sm:mt-8 sm:mb-20">
                 <div className="absolute inset-0 flex items-center" aria-hidden="true">
                     <div className="w-full border-t border-dashed border-border/40 group-hover:border-primary/20 transition-colors" />
                 </div>
@@ -1127,7 +1144,7 @@ function CreateWorkoutContent() {
                         type="button" 
                         variant="outline" 
                         size="lg"
-                        className="w-full sm:w-auto h-12 px-8 rounded-full border border-dashed border-border/60 hover:border-primary/40 bg-background text-muted-foreground/60 hover:text-primary hover:bg-primary/5 text-xs font-bold uppercase tracking-widest shadow-sm hover:shadow-md transition-all duration-300"
+                        className="h-11 w-full rounded-full border border-dashed border-border/60 bg-background px-6 text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60 shadow-sm transition-all duration-300 hover:border-primary/40 hover:bg-primary/5 hover:text-primary hover:shadow-md sm:h-12 sm:w-auto sm:px-8 sm:text-xs"
                         onClick={() => appendSection({ id: `sec-${Date.now()}`, name: '', orderType: 'linear', exercises: [] })}
                     >
                         <span className="flex items-center gap-2 group-hover:gap-3 transition-all">
@@ -1206,41 +1223,36 @@ function CreateWorkoutContent() {
       {/* Step 2: Metadata Dialog */}
       <Dialog open={isMetaOpen} onOpenChange={setIsMetaOpen}>
         <DialogContent className="flex max-h-[94dvh] w-[calc(100vw-16px)] max-w-3xl flex-col gap-0 overflow-hidden rounded-[28px] p-0 sm:w-full">
-          <DialogHeader className="shrink-0 border-b border-border/60 bg-background px-4 py-4 sm:px-6">
+          <DialogHeader className="shrink-0 border-b border-border/60 bg-background px-4 py-3 sm:px-6 sm:py-4">
             <DialogTitle>Detalles del workout</DialogTitle>
-            <DialogDescription>
-              Completa la informacion principal para que el workout se entienda bien en móvil: titulo, objetivo, portada, tags y visibilidad.
-            </DialogDescription>
           </DialogHeader>
 
-          <div className="flex-1 space-y-6 overflow-y-auto px-4 py-4 sm:px-6">
-            <div className="rounded-[24px] border border-border/60 bg-muted/20 p-4 sm:p-5">
-              <div className="mb-4">
+          <div className="flex-1 space-y-4 overflow-y-auto px-4 py-4 sm:space-y-6 sm:px-6">
+            <div className="rounded-[24px] border border-border/60 bg-muted/20 p-3.5 sm:p-5">
+              <div className="mb-3">
                 <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Identidad</p>
-                <p className="mt-1 text-sm text-muted-foreground">Pon un titulo claro y explica el objetivo de la sesion en pocas lineas.</p>
               </div>
 
               <div className="space-y-3">
               <Input 
                 {...register('title')} 
                 placeholder="Titulo del workout" 
-                className="h-auto border-none bg-transparent px-0 text-2xl font-black tracking-tighter text-foreground focus-visible:ring-0 placeholder:text-muted-foreground/40 md:text-3xl"
+                className="h-auto border-none bg-transparent px-0 text-xl font-black tracking-tighter text-foreground focus-visible:ring-0 placeholder:text-muted-foreground/40 md:text-3xl"
               />
               {errors.title && <p className="text-red-500 text-xs font-medium">{errors.title.message}</p>}
               <Textarea 
                 {...register('description')} 
-                placeholder="Que objetivo tiene esta sesion y que sensacion deberia tener al ejecutarla?" 
-                className="min-h-[88px] resize-none rounded-[22px] border-border/60 bg-background text-sm font-medium text-foreground shadow-none focus-visible:ring-0"
+                placeholder="Descripcion breve" 
+                className="min-h-[76px] resize-none rounded-[20px] border-border/60 bg-background text-sm font-medium text-foreground shadow-none focus-visible:ring-0"
               />
               {errors.description && <p className="text-red-500 text-xs font-medium">{errors.description.message}</p>}
             </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-              <div className="space-y-2 rounded-[24px] border border-border/60 bg-muted/20 p-4 sm:p-5">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6">
+              <div className="space-y-2 rounded-[24px] border border-border/60 bg-muted/20 p-3.5 sm:p-5">
                 <div>
                   <label className="pl-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Portada</label>
-                  <p className="mt-1 text-sm text-muted-foreground">Una imagen clara hace que el workout se reconozca rapido en listados y tarjetas.</p>
                 </div>
                 <Controller
                   control={control}
@@ -1257,10 +1269,9 @@ function CreateWorkoutContent() {
                 />
               </div>
 
-              <div className="space-y-2 rounded-[24px] border border-border/60 bg-muted/20 p-4 sm:p-5">
+              <div className="space-y-2 rounded-[24px] border border-border/60 bg-muted/20 p-3.5 sm:p-5">
                 <div>
                   <label className="pl-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Playlist</label>
-                  <p className="mt-1 text-sm text-muted-foreground">Añade enlaces si quieres asociar musica al workout.</p>
                 </div>
                 <Controller
                   control={control}
@@ -1278,10 +1289,9 @@ function CreateWorkoutContent() {
                 />
               </div>
 
-              <div className="space-y-2 rounded-[24px] border border-border/60 bg-muted/20 p-4 sm:p-5">
+              <div className="space-y-2 rounded-[24px] border border-border/60 bg-muted/20 p-3.5 sm:p-5">
                 <div>
                   <label className="pl-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Tags</label>
-                  <p className="mt-1 text-sm text-muted-foreground">Ayudan a categorizar el workout y mejorar su descubrimiento.</p>
                 </div>
                 <Controller
                   control={control}
@@ -1295,17 +1305,16 @@ function CreateWorkoutContent() {
                 />
               </div>
 
-              <div className="space-y-2 rounded-[24px] border border-border/60 bg-muted/20 p-4 sm:p-5">
+              <div className="space-y-2 rounded-[24px] border border-border/60 bg-muted/20 p-3.5 sm:p-5">
                 <div>
                   <label className="pl-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Dificultad</label>
-                  <p className="mt-1 text-sm text-muted-foreground">Marca el nivel esperado para que el usuario sepa si encaja con su experiencia.</p>
                 </div>
                 <Controller
                   control={control}
                   name="difficulty"
                   render={({ field }) => (
                     <Select onValueChange={field.onChange} value={field.value}>
-                      <SelectTrigger className="h-11 w-full rounded-2xl border-border/50 bg-background text-sm font-medium focus:ring-primary/20">
+                      <SelectTrigger className="h-10 w-full rounded-2xl border-border/50 bg-background text-sm font-medium focus:ring-primary/20 sm:h-11">
                         <SelectValue placeholder="Selecciona la dificultad" />
                       </SelectTrigger>
                       <SelectContent className="rounded-xl border-border/50 shadow-xl">
@@ -1333,18 +1342,17 @@ function CreateWorkoutContent() {
                 />
               </div>
 
-              <div className="space-y-2 rounded-[24px] border border-border/60 bg-muted/20 p-4 sm:p-5 md:col-span-2">
+              <div className="space-y-2 rounded-[24px] border border-border/60 bg-muted/20 p-3.5 sm:p-5 md:col-span-2">
                 <div className="flex items-center gap-2 px-1">
                   <Globe className="h-3 w-3 text-muted-foreground" />
                   <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Visibilidad</label>
                 </div>
-                <p className="px-1 text-sm text-muted-foreground">Define quién puede ver este workout cuando lo publiques o lo dejes en borrador.</p>
                 <Controller
                   control={control}
                   name="visibility"
                   render={({ field }) => (
                     <Select onValueChange={field.onChange} value={field.value}>
-                      <SelectTrigger className="h-11 w-full rounded-2xl border-border/50 bg-background text-sm font-medium focus:ring-primary/20">
+                      <SelectTrigger className="h-10 w-full rounded-2xl border-border/50 bg-background text-sm font-medium focus:ring-primary/20 sm:h-11">
                         <SelectValue placeholder="Selecciona la visibilidad" />
                       </SelectTrigger>
                       <SelectContent className="rounded-xl border-border/50 shadow-xl">
@@ -1448,6 +1456,56 @@ function CreateWorkoutContent() {
             </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={!isDesktopViewport && showPreview} onOpenChange={setShowPreview}>
+        <DialogContent className="flex h-[100dvh] w-screen !max-w-none flex-col gap-0 overflow-hidden rounded-none border-none bg-background p-0 shadow-none sm:hidden">
+          <div className="flex items-center justify-between border-b border-border/60 px-3 py-2.5">
+            <div className="flex items-center gap-1 rounded-full bg-muted/60 p-1">
+              <button
+                type="button"
+                onClick={() => setPreviewDevice('mobile')}
+                className={cn(
+                  'rounded-full px-3 py-1.5 text-xs font-semibold transition-colors',
+                  previewDevice === 'mobile' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground'
+                )}
+              >
+                <Smartphone className="mr-1 inline h-3.5 w-3.5" />
+                Mobile
+              </button>
+              <button
+                type="button"
+                onClick={() => setPreviewDevice('desktop')}
+                className={cn(
+                  'rounded-full px-3 py-1.5 text-xs font-semibold transition-colors',
+                  previewDevice === 'desktop' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground'
+                )}
+              >
+                <Monitor className="mr-1 inline h-3.5 w-3.5" />
+                Desktop
+              </button>
+            </div>
+            <Button variant="ghost" size="sm" className="rounded-full px-3" onClick={() => setShowPreview(false)}>
+              Cerrar
+            </Button>
+          </div>
+
+          <div className="min-h-0 flex-1 overflow-hidden bg-neutral-100 p-2 dark:bg-zinc-950">
+            <div
+              className={cn(
+                'mx-auto h-full overflow-hidden bg-background shadow-xl ring-1 ring-black/5',
+                previewDevice === 'mobile'
+                  ? 'max-w-[390px] rounded-[2rem] border-[7px] border-zinc-900'
+                  : 'rounded-2xl border-[10px] border-zinc-900'
+              )}
+            >
+              <PreviewWorkout
+                data={formValues}
+                onClose={() => setShowPreview(false)}
+              />
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
@@ -1459,21 +1517,28 @@ function ExercisesFieldArray({ nestIndex, control, register, setValue, watch, er
     name: `sections.${nestIndex}.exercises`
   })
 
-  const renderHint = (text: string) => (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <button
-          type="button"
-          className="rounded-full border border-border/60 bg-background/80 p-1.5 text-muted-foreground transition-colors hover:text-foreground"
-        >
-          <Info className="h-3.5 w-3.5" />
-        </button>
-      </TooltipTrigger>
-      <TooltipContent side="top" className="max-w-xs text-xs leading-relaxed">
-        {text}
-      </TooltipContent>
-    </Tooltip>
-  )
+  const renderHint = (text: string, className?: string) => {
+    if (isCompactMobile) return null
+
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            className={cn(
+              "rounded-full border border-border/60 bg-background/80 p-1.5 text-muted-foreground transition-colors hover:text-foreground",
+              className
+            )}
+          >
+            <Info className="h-3.5 w-3.5" />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="top" className="max-w-xs text-xs leading-relaxed">
+          {text}
+        </TooltipContent>
+      </Tooltip>
+    )
+  }
 
   const handleAddFromVault = (exercise: Exercise) => {
     const tutorialData = Array.isArray(exercise.tutorial) ? exercise.tutorial[0] : exercise.tutorial
@@ -1509,10 +1574,10 @@ function ExercisesFieldArray({ nestIndex, control, register, setValue, watch, er
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3 sm:space-y-4">
       <Droppable droppableId={`exercises-${nestIndex}`} type="EXERCISE">
         {(provided) => (
-          <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-4">
+          <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-3 sm:space-y-4">
             {fields.map((item, k) => {
               const exercisePath = `sections.${nestIndex}.exercises.${k}` as const
               const selectedType = watch(`${exercisePath}.type`) === 'time' ? 'time' : 'reps'
@@ -1524,52 +1589,52 @@ function ExercisesFieldArray({ nestIndex, control, register, setValue, watch, er
                         <article
                             ref={provided.innerRef}
                             {...provided.draggableProps}
-                            className="group relative overflow-hidden rounded-[24px] border border-border/60 bg-gradient-to-br from-white via-white to-muted/20 p-3 shadow-sm transition-all hover:shadow-lg dark:from-zinc-950 dark:via-zinc-950 dark:to-zinc-900/80 sm:p-4 md:rounded-[30px] md:p-6"
+                            className="group relative overflow-hidden rounded-[20px] border border-border/60 bg-gradient-to-br from-white via-white to-muted/20 p-2.5 shadow-sm transition-all hover:shadow-lg dark:from-zinc-950 dark:via-zinc-950 dark:to-zinc-900/80 sm:p-4 md:rounded-[30px] md:p-6"
                         >
                             <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
                             
                             {/* Drag Handle */}
                             <div 
                                 {...provided.dragHandleProps} 
-                                className="absolute left-2 top-3 z-10 rounded-xl p-1.5 text-muted-foreground/30 transition-colors hover:bg-black/5 hover:text-foreground sm:left-3 sm:top-4 sm:p-2"
+                                className="absolute left-2 top-2.5 z-10 rounded-xl p-1.5 text-muted-foreground/30 transition-colors hover:bg-black/5 hover:text-foreground sm:left-3 sm:top-4 sm:p-2"
                             >
                                 <GripVertical className="h-5 w-5" />
                             </div>
 
                             {/* Delete Button (Absolute Top Right) */}
-                            <div className="absolute right-3 top-3 z-10 sm:right-4 sm:top-4">
+                            <div className="absolute right-2.5 top-2.5 z-10 sm:right-4 sm:top-4">
                                 <Button 
                                     type="button" variant="ghost" size="icon" 
                                     onClick={() => remove(k)}
-                                    className="h-8 w-8 text-muted-foreground/30 hover:text-destructive hover:bg-destructive/10 rounded-full"
+                                    className="h-7 w-7 rounded-full text-muted-foreground/30 hover:bg-destructive/10 hover:text-destructive sm:h-8 sm:w-8"
                                 >
                                     <Trash2 className="h-4 w-4" />
                                 </Button>
                             </div>
 
-                            <div className="pl-4 pr-4 sm:pl-10 sm:pr-10">
-                              <div className="flex flex-wrap items-start justify-between gap-4 border-b border-border/60 pb-5">
-                                <div className="flex flex-wrap items-center gap-2">
-                                  <span className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-primary">
+                            <div className="pl-3 pr-3 sm:pl-10 sm:pr-10">
+                              <div className="flex flex-wrap items-start justify-between gap-2 border-b border-border/60 pb-3 sm:gap-4 sm:pb-5">
+                                <div className="flex flex-wrap items-center gap-2 pl-7 sm:pl-0">
+                                  <span className="rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.18em] text-primary sm:px-3 sm:text-[10px]">
                                     Ejercicio {k + 1}
                                   </span>
-                                  <span className="rounded-full border border-border/70 bg-background/80 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                                  <span className="rounded-full border border-border/70 bg-background/80 px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.18em] text-muted-foreground sm:px-3 sm:text-[10px]">
                                     {selectedType === 'time' ? 'Por tiempo' : 'Por repeticiones'}
                                   </span>
                                   {hasTutorial && (
-                                    <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-600 dark:text-emerald-400">
+                                    <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.18em] text-emerald-600 dark:text-emerald-400 sm:px-3 sm:text-[10px]">
                                       Tutorial listo
                                     </span>
                                   )}
                                 </div>
                               </div>
 
-                              <div className="mt-6 space-y-5">
+                              <div className="mt-3 space-y-3 sm:mt-6 sm:space-y-5">
                                 <div className="grid gap-3 sm:gap-5 xl:grid-cols-[minmax(0,1fr)_320px] xl:items-stretch">
-                                  <div className="rounded-[24px] border border-border/60 bg-background/75 p-3 shadow-sm sm:rounded-[28px] sm:p-4 md:p-5">
-                                    <div className="mb-4 flex items-start justify-between gap-3">
+                                  <div className="rounded-[20px] border border-border/60 bg-background/75 p-3 shadow-sm sm:rounded-[28px] sm:p-4 md:p-5">
+                                    <div className="mb-3 flex items-start justify-between gap-3">
                                       <div>
-                                        <p className="text-sm font-semibold">Título y descripción</p>
+                                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Contenido</p>
                                       </div>
                                       {renderHint('Usa un nombre corto y una descripción breve con cues o aclaraciones útiles para entender el ejercicio de un vistazo.')}
                                     </div>
@@ -1577,7 +1642,7 @@ function ExercisesFieldArray({ nestIndex, control, register, setValue, watch, er
                                     <Input
                                       {...register(`sections.${nestIndex}.exercises.${k}.name`)}
                                       placeholder="Nombre del ejercicio"
-                                      className="h-auto border-none bg-transparent px-0 text-[1.35rem] font-black tracking-tight shadow-none focus-visible:ring-0 placeholder:text-muted-foreground/30 sm:text-2xl"
+                                      className="h-auto border-none bg-transparent px-0 text-[1.1rem] font-black tracking-tight shadow-none focus-visible:ring-0 placeholder:text-muted-foreground/30 sm:text-2xl"
                                     />
                                     <input type="hidden" {...register(`sections.${nestIndex}.exercises.${k}.id`)} />
                                     <input type="hidden" {...register(`sections.${nestIndex}.exercises.${k}.db_id`)} />
@@ -1591,11 +1656,11 @@ function ExercisesFieldArray({ nestIndex, control, register, setValue, watch, er
                                     <Textarea
                                       {...register(`sections.${nestIndex}.exercises.${k}.description`)}
                                       placeholder={isCompactMobile ? "Notas breves..." : "Ej. Mantén el core activo, baja controlado y evita encoger los hombros."}
-                                      className="mt-4 min-h-[96px] resize-none rounded-[22px] border-border/60 bg-muted/20 text-sm shadow-none sm:min-h-[108px]"
+                                      className="mt-3 min-h-[72px] resize-none rounded-[20px] border-border/60 bg-muted/20 text-sm shadow-none sm:mt-4 sm:min-h-[108px]"
                                     />
                                   </div>
 
-                                  <div className="rounded-[24px] border border-border/60 bg-background/75 p-3 shadow-sm sm:rounded-[28px] sm:p-4">
+                                  <div className="rounded-[20px] border border-border/60 bg-background/75 p-3 shadow-sm sm:rounded-[28px] sm:p-4">
                                     <div className="mb-3 flex items-start justify-between gap-3">
                                       <div className="flex items-center gap-2">
                                         <div className="rounded-2xl bg-primary/10 p-2 text-primary">
@@ -1612,7 +1677,7 @@ function ExercisesFieldArray({ nestIndex, control, register, setValue, watch, er
                                       control={control}
                                       name={`sections.${nestIndex}.exercises.${k}.thumbnail_url`}
                                       render={({ field }) => (
-                                        <div className="min-h-[132px] overflow-hidden rounded-[24px] border-2 border-dashed border-border/50 bg-muted/30 shadow-inner transition-colors hover:border-primary/20 sm:min-h-[168px] lg:min-h-[212px]">
+                                        <div className="min-h-[112px] overflow-hidden rounded-[20px] border-2 border-dashed border-border/50 bg-muted/30 shadow-inner transition-colors hover:border-primary/20 sm:min-h-[168px] lg:min-h-[212px]">
                                           <MediaInput
                                             value={field.value}
                                             onChange={(value) => {
@@ -1632,10 +1697,10 @@ function ExercisesFieldArray({ nestIndex, control, register, setValue, watch, er
                                 </div>
 
                                 <div className="space-y-5">
-                                  <div className="rounded-[24px] border border-border/60 bg-background/75 p-3 shadow-sm sm:rounded-[28px] sm:p-4 md:p-5">
-                                    <div className="mb-4 flex items-start justify-between gap-3">
+                                  <div className="rounded-[20px] border border-border/60 bg-background/75 p-2.5 shadow-sm sm:rounded-[28px] sm:p-3 lg:p-3.5">
+                                    <div className="mb-3 flex items-start justify-between gap-3 sm:mb-4">
                                       <div>
-                                        <p className="text-sm font-semibold">{isCompactMobile ? 'Formato' : 'Cómo se realiza'}</p>
+                                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">{isCompactMobile ? 'Formato' : 'Cómo se realiza'}</p>
                                       </div>
                                       <div className="flex items-center gap-2">
                                         <div className="rounded-2xl bg-primary/10 p-2 text-primary">
@@ -1645,77 +1710,72 @@ function ExercisesFieldArray({ nestIndex, control, register, setValue, watch, er
                                       </div>
                                     </div>
 
-                                    <Controller
-                                      control={control}
-                                      name={`sections.${nestIndex}.exercises.${k}.type`}
-                                      render={({ field }) => (
-                                        <div className="grid grid-cols-2 gap-2 sm:gap-3">
-                                          <button
-                                            type="button"
-                                            onClick={() => field.onChange('reps')}
-                                            className={cn(
-                                              'rounded-[20px] border p-3 text-left transition-all sm:rounded-[24px] sm:p-4',
-                                              field.value === 'reps'
-                                                ? 'border-primary/40 bg-primary/[0.08] shadow-sm'
-                                                : 'border-border/60 bg-muted/20 hover:border-primary/20 hover:bg-background'
-                                            )}
-                                          >
-                                            <div className="mb-2 flex items-center justify-between sm:mb-3">
-                                              <div className="rounded-2xl bg-background/90 p-2 text-primary shadow-sm">
-                                                <List className="h-4 w-4" />
+                                    <div className="mt-2 grid gap-1 sm:mt-2.5 sm:gap-1.5 lg:grid-cols-[0.68fr_repeat(3,minmax(0,1fr))] lg:items-stretch">
+                                      <Controller
+                                        control={control}
+                                        name={`sections.${nestIndex}.exercises.${k}.type`}
+                                        render={({ field }) => (
+                                          <div className="grid grid-cols-2 gap-1 sm:gap-1.5 lg:grid-cols-1 lg:grid-rows-2 lg:self-stretch">
+                                            <button
+                                              type="button"
+                                              onClick={() => field.onChange('reps')}
+                                              className={cn(
+                                                'relative rounded-[16px] border p-1 text-left transition-all sm:rounded-[20px] sm:p-1.5 lg:flex lg:h-full lg:flex-col lg:justify-center',
+                                                field.value === 'reps'
+                                                  ? 'border-primary/40 bg-primary/[0.08] shadow-sm'
+                                                  : 'border-border/60 bg-muted/20 hover:border-primary/20 hover:bg-background'
+                                              )}
+                                            >
+                                              {renderHint('Mide el ejercicio por número de repeticiones en cada serie.', 'absolute right-1 top-1 sm:right-1.5 sm:top-1.5')}
+                                              <div className="flex items-center gap-2">
+                                                <div className="rounded-2xl bg-background/90 p-1 text-primary shadow-sm">
+                                                  <List className="h-3 w-3" />
+                                                </div>
+                                                <div className="flex items-center gap-1 pr-6 sm:pr-7">
+                                                  <span className="text-[9px] font-bold uppercase tracking-[0.16em] text-muted-foreground sm:text-[10px]">
+                                                    Reps
+                                                  </span>
+                                                </div>
                                               </div>
-                                              <span className="text-[9px] font-bold uppercase tracking-[0.18em] text-muted-foreground sm:text-[10px]">
-                                                Reps
-                                              </span>
-                                            </div>
-                                            <p className="text-xs font-semibold text-foreground sm:text-sm">
-                                              {isCompactMobile ? 'Reps' : 'Por repeticiones'}
-                                            </p>
-                                          </button>
+                                            </button>
 
-                                          <button
-                                            type="button"
-                                            onClick={() => field.onChange('time')}
-                                            className={cn(
-                                              'rounded-[20px] border p-3 text-left transition-all sm:rounded-[24px] sm:p-4',
-                                              field.value === 'time'
-                                                ? 'border-primary/40 bg-primary/[0.08] shadow-sm'
-                                                : 'border-border/60 bg-muted/20 hover:border-primary/20 hover:bg-background'
-                                            )}
-                                          >
-                                            <div className="mb-2 flex items-center justify-between sm:mb-3">
-                                              <div className="rounded-2xl bg-background/90 p-2 text-primary shadow-sm">
-                                                <Zap className="h-4 w-4" />
+                                            <button
+                                              type="button"
+                                              onClick={() => field.onChange('time')}
+                                              className={cn(
+                                                'relative rounded-[16px] border p-1 text-left transition-all sm:rounded-[20px] sm:p-1.5 lg:flex lg:h-full lg:flex-col lg:justify-center',
+                                                field.value === 'time'
+                                                  ? 'border-primary/40 bg-primary/[0.08] shadow-sm'
+                                                  : 'border-border/60 bg-muted/20 hover:border-primary/20 hover:bg-background'
+                                              )}
+                                            >
+                                              {renderHint('Mide el ejercicio por duración en segundos para cada serie.', 'absolute right-1 top-1 sm:right-1.5 sm:top-1.5')}
+                                              <div className="flex items-center gap-2">
+                                                <div className="rounded-2xl bg-background/90 p-1 text-primary shadow-sm">
+                                                  <Zap className="h-3 w-3" />
+                                                </div>
+                                                <div className="flex items-center gap-1 pr-6 sm:pr-7">
+                                                  <span className="text-[9px] font-bold uppercase tracking-[0.16em] text-muted-foreground sm:text-[10px]">
+                                                    Time
+                                                  </span>
+                                                </div>
                                               </div>
-                                              <span className="text-[9px] font-bold uppercase tracking-[0.18em] text-muted-foreground sm:text-[10px]">
-                                                Time
-                                              </span>
-                                            </div>
-                                            <p className="text-xs font-semibold text-foreground sm:text-sm">
-                                              {isCompactMobile ? 'Tiempo' : 'Por tiempo'}
-                                            </p>
-                                          </button>
-                                        </div>
-                                      )}
-                                    />
-
-                                    <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3">
-                                      <div className="rounded-[20px] border border-border/60 bg-muted/20 p-3 sm:rounded-[24px] sm:p-4">
-                                        <div className="mb-2 flex items-center justify-between sm:mb-3">
-                                          <div className="rounded-2xl bg-background/90 p-2 text-primary shadow-sm">
-                                            {selectedType === 'time' ? <Zap className="h-4 w-4" /> : <List className="h-4 w-4" />}
+                                            </button>
                                           </div>
-                                          <span className="text-[9px] font-bold uppercase tracking-[0.16em] text-muted-foreground sm:text-[10px]">
-                                            {selectedType === 'time' ? 'Seconds' : 'Reps'}
-                                          </span>
-                                        </div>
-                                        <p className="text-xs font-semibold text-foreground sm:text-sm">
-                                          {selectedType === 'time'
-                                            ? (isCompactMobile ? 'Tiempo' : 'Tiempo de trabajo')
-                                            : (isCompactMobile ? 'Reps' : 'Repeticiones')}
-                                        </p>
-                                        <div className={cn("mt-2", isCompactMobile && "hidden sm:block")}>
-                                          {renderHint(selectedType === 'time' ? 'Indica los segundos que dura cada serie del ejercicio.' : 'Indica cuántas repeticiones debe completar el usuario en cada serie.')}
+                                        )}
+                                      />
+
+                                      <div className="relative rounded-[16px] border border-border/60 bg-muted/20 p-1 sm:rounded-[20px] sm:p-1.5 lg:flex lg:flex-col lg:justify-between">
+                                        {renderHint(selectedType === 'time' ? 'Indica los segundos que dura cada serie del ejercicio.' : 'Indica cuántas repeticiones debe completar el usuario en cada serie.', 'absolute right-1 top-1 sm:right-1.5 sm:top-1.5')}
+                                        <div className="flex items-center gap-2">
+                                          <div className="rounded-2xl bg-background/90 p-1 text-primary shadow-sm">
+                                            {selectedType === 'time' ? <Zap className="h-3 w-3" /> : <List className="h-3 w-3" />}
+                                          </div>
+                                          <div className="flex items-center gap-1 pr-6 sm:pr-7">
+                                            <span className="text-[9px] font-bold uppercase tracking-[0.16em] text-muted-foreground sm:text-[10px]">
+                                              {selectedType === 'time' ? 'Seconds' : 'Reps'}
+                                            </span>
+                                          </div>
                                         </div>
                                         <Controller
                                           control={control}
@@ -1732,58 +1792,54 @@ function ExercisesFieldArray({ nestIndex, control, register, setValue, watch, er
                                               pattern="[0-9]*"
                                               min={0}
                                               placeholder="0"
-                                              className="mt-3 h-10 rounded-2xl border-border/60 bg-background text-sm font-bold shadow-none sm:mt-4 sm:h-12 sm:text-base"
+                                              className="mt-1 h-7 rounded-2xl border-border/60 bg-background px-2.5 text-[13px] font-bold shadow-none sm:mt-1.5 sm:h-8 sm:text-sm"
                                             />
                                           )}
                                         />
                                       </div>
 
-                                      <div className="rounded-[20px] border border-border/60 bg-muted/20 p-3 sm:rounded-[24px] sm:p-4">
-                                        <div className="mb-2 flex items-center justify-between sm:mb-3">
-                                          <div className="rounded-2xl bg-background/90 p-2 text-primary shadow-sm">
-                                            <Repeat className="h-4 w-4" />
+                                      <div className="relative rounded-[16px] border border-border/60 bg-muted/20 p-1 sm:rounded-[20px] sm:p-1.5 lg:flex lg:flex-col lg:justify-between">
+                                        {renderHint('Número total de series o vueltas que se deben completar en este ejercicio.', 'absolute right-1 top-1 sm:right-1.5 sm:top-1.5')}
+                                        <div className="flex items-center gap-2">
+                                          <div className="rounded-2xl bg-background/90 p-1 text-primary shadow-sm">
+                                            <Repeat className="h-3 w-3" />
                                           </div>
-                                          <span className="text-[9px] font-bold uppercase tracking-[0.16em] text-muted-foreground sm:text-[10px]">
-                                            Sets
-                                          </span>
-                                        </div>
-                                        <p className="text-xs font-semibold text-foreground sm:text-sm">
-                                          {isCompactMobile ? 'Series' : 'Series'}
-                                        </p>
-                                        <div className={cn("mt-2", isCompactMobile && "hidden sm:block")}>
-                                          {renderHint('Número total de series o vueltas que se deben completar en este ejercicio.')}
+                                          <div className="flex items-center gap-1 pr-6 sm:pr-7">
+                                            <span className="text-[9px] font-bold uppercase tracking-[0.16em] text-muted-foreground sm:text-[10px]">
+                                              Sets
+                                            </span>
+                                          </div>
                                         </div>
                                         <Input
                                           {...register(`sections.${nestIndex}.exercises.${k}.sets`)}
                                           placeholder="0"
                                           type="number"
                                           min={0}
-                                          className="mt-3 h-10 rounded-2xl border-border/60 bg-background text-sm font-bold shadow-none sm:mt-4 sm:h-12 sm:text-base"
+                                          className="mt-1 h-7 rounded-2xl border-border/60 bg-background px-2.5 text-[13px] font-bold shadow-none sm:mt-1.5 sm:h-8 sm:text-sm"
                                         />
                                       </div>
 
-                                      <div className="col-span-2 rounded-[20px] border border-border/60 bg-muted/20 p-3 sm:col-span-1 sm:rounded-[24px] sm:p-4">
-                                        <div className="mb-2 flex items-center justify-between sm:mb-3">
-                                          <div className="rounded-2xl bg-background/90 p-2 text-primary shadow-sm">
-                                            <RotateCw className="h-4 w-4" />
+                                      <div className="relative col-span-2 rounded-[16px] border border-border/60 bg-muted/20 p-1 sm:col-span-1 sm:rounded-[20px] sm:p-1.5 lg:col-span-1 lg:flex lg:flex-col lg:justify-between">
+                                        {renderHint('Tiempo de recuperación entre una serie y la siguiente, expresado en segundos.', 'absolute right-1 top-1 sm:right-1.5 sm:top-1.5')}
+                                        <div className="flex items-center gap-2">
+                                          <div className="rounded-2xl bg-background/90 p-1 text-primary shadow-sm">
+                                            <RotateCw className="h-3 w-3" />
                                           </div>
-                                          <span className="text-[9px] font-bold uppercase tracking-[0.16em] text-muted-foreground sm:text-[10px]">
-                                            Rest
-                                          </span>
+                                          <div className="flex items-center gap-1 pr-6 sm:pr-7">
+                                            <span className="text-[9px] font-bold uppercase tracking-[0.16em] text-muted-foreground sm:text-[10px]">
+                                              Rest
+                                            </span>
+                                          </div>
                                         </div>
-                                        <p className="text-xs font-semibold text-foreground sm:text-sm">Rest</p>
-                                        <div className={cn("mt-2", isCompactMobile && "hidden sm:block")}>
-                                          {renderHint('Tiempo de recuperación entre una serie y la siguiente, expresado en segundos.')}
-                                        </div>
-                                        <div className="relative mt-3 sm:mt-4">
+                                        <div className="relative mt-1 sm:mt-1.5">
                                           <Input
                                             {...register(`sections.${nestIndex}.exercises.${k}.rest`)}
                                             placeholder="0"
                                             type="number"
                                             min={0}
-                                            className="h-10 rounded-2xl border-border/60 bg-background pr-9 text-sm font-bold shadow-none sm:h-12 sm:pr-10 sm:text-base"
+                                            className="h-7 rounded-2xl border-border/60 bg-background pr-8 text-[13px] font-bold shadow-none sm:h-8 sm:pr-9 sm:text-sm"
                                           />
-                                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-semibold text-muted-foreground sm:right-4 sm:text-xs">
+                                          <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-semibold text-muted-foreground sm:right-3 sm:text-[11px]">
                                             seg
                                           </span>
                                         </div>
@@ -1791,10 +1847,10 @@ function ExercisesFieldArray({ nestIndex, control, register, setValue, watch, er
                                     </div>
                                   </div>
 
-                                  <div className="rounded-[24px] border border-border/60 bg-background/75 p-3 shadow-sm sm:rounded-[28px] sm:p-4 md:p-5">
-                                    <div className="mb-4 flex items-start justify-between gap-3">
+                                  <div className="rounded-[20px] border border-border/60 bg-background/75 p-3 shadow-sm sm:rounded-[28px] sm:p-4 md:p-5">
+                                    <div className="mb-3 flex items-start justify-between gap-3 sm:mb-4">
                                       <div>
-                                        <p className="text-sm font-semibold">{isCompactMobile ? 'Contexto' : 'Contexto del ejercicio'}</p>
+                                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">{isCompactMobile ? 'Contexto' : 'Contexto del ejercicio'}</p>
                                       </div>
                                       <div className="flex items-center gap-2">
                                         <div className="rounded-2xl bg-muted p-2 text-muted-foreground">
@@ -1804,7 +1860,7 @@ function ExercisesFieldArray({ nestIndex, control, register, setValue, watch, er
                                       </div>
                                     </div>
 
-                                    <div className="grid gap-3 md:grid-cols-3">
+                                    <div className="grid gap-2.5 md:grid-cols-3 md:gap-3">
                                       <div className="space-y-2">
                                         <label className="pl-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                                           {isCompactMobile ? 'Level' : 'Difficulty'}
@@ -1814,7 +1870,7 @@ function ExercisesFieldArray({ nestIndex, control, register, setValue, watch, er
                                           name={`sections.${nestIndex}.exercises.${k}.difficulty`}
                                           render={({ field }) => (
                                             <Select onValueChange={field.onChange} value={field.value || 'beginner'}>
-                                              <SelectTrigger className="h-10 rounded-2xl border-border/60 bg-muted/20 text-sm font-medium shadow-none sm:h-11">
+                                              <SelectTrigger className="h-9 rounded-2xl border-border/60 bg-muted/20 text-sm font-medium shadow-none sm:h-11">
                                                 <SelectValue placeholder={isCompactMobile ? 'Nivel' : 'Select difficulty'} />
                                               </SelectTrigger>
                                               <SelectContent>
@@ -1884,10 +1940,10 @@ function ExercisesFieldArray({ nestIndex, control, register, setValue, watch, er
           </div>
         )}
       </Droppable>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
         <Button
             type="button" variant="ghost" size="sm"
-            className="w-full h-12 border border-dashed border-border/40 hover:border-primary/40 text-muted-foreground/60 hover:text-primary hover:bg-primary/5 rounded-xl text-xs font-bold uppercase tracking-widest transition-all group"
+            className="group h-10 w-full rounded-xl border border-dashed border-border/40 text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60 transition-all hover:border-primary/40 hover:bg-primary/5 hover:text-primary sm:h-12 sm:text-xs"
             onClick={() => append(createEmptyExercise())}
         >
             <span className="flex items-center gap-2 group-hover:gap-3 transition-all">
@@ -1901,7 +1957,7 @@ function ExercisesFieldArray({ nestIndex, control, register, setValue, watch, er
             trigger={
                 <Button
                     type="button" variant="ghost" size="sm"
-                    className="w-full h-12 border border-dashed border-orange-500/20 hover:border-orange-500/40 text-muted-foreground/60 hover:text-orange-500 hover:bg-orange-500/10 rounded-xl text-xs font-bold uppercase tracking-widest transition-all group"
+                    className="group h-10 w-full rounded-xl border border-dashed border-orange-500/20 text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60 transition-all hover:border-orange-500/40 hover:bg-orange-500/10 hover:text-orange-500 sm:h-12 sm:text-xs"
                 >
                     <span className="flex items-center gap-2 group-hover:gap-3 transition-all">
                         <Package className="h-3.5 w-3.5" /> 
