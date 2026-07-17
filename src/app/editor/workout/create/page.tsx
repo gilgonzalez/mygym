@@ -6,7 +6,7 @@ import { useMutation, useQuery } from '@tanstack/react-query'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd'
-import { Plus, Trash2, GripVertical, Save,  ArrowLeft, Eye, Play, Smartphone, Monitor, Image as ImageIcon,  Music, X, Upload, Mic, Square, Camera, Circle, Dna, Activity, Repeat, RotateCw, Library, Package, Globe, Lock, FileText, Sparkles, Loader2, Info, Timer } from 'lucide-react'
+import { Plus, Trash2, GripVertical, Save,  ArrowLeft, Eye, Play, Smartphone, Monitor, Image as ImageIcon,  Music, X, Upload, Mic, Square, Camera, Circle, Dna, Activity, Repeat, RotateCw, Library, Package, Globe, Lock, FileText, Sparkles, Loader2, Info, Timer, Zap } from 'lucide-react'
 import { 
   Select,
   SelectContent,
