@@ -106,6 +106,23 @@ type WorkoutFormValues = z.infer<typeof workoutSchema>
 type WorkoutFormSection = WorkoutFormValues['sections'][number]
 type WorkoutFormExercise = WorkoutFormSection['exercises'][number]
 
+function findFirstFormError(error: unknown): string | null {
+  if (!error) return null
+
+  if (typeof error === 'object' && error !== null) {
+    if ('message' in error && typeof (error as { message?: unknown }).message === 'string') {
+      return (error as { message: string }).message
+    }
+
+    for (const value of Object.values(error as Record<string, unknown>)) {
+      const nestedMessage = findFirstFormError(value)
+      if (nestedMessage) return nestedMessage
+    }
+  }
+
+  return null
+}
+
 function inferMediaType(value?: string | null): 'image' | 'video' | 'audio' {
   if (!value) return 'image'
   if (value.includes('#audio') || /\.(mp3|wav|ogg|m4a|aac)($|\?)/i.test(value)) return 'audio'
@@ -137,7 +154,7 @@ function sanitizeTutorial(
   const steps = (tutorial.steps || []).filter((step) => {
     const hasTitle = Boolean(step.title?.trim())
     const hasDescription = Boolean(step.description?.trim())
-    return hasTitle || hasDescription
+    return hasTitle && hasDescription
   })
 
   if (!mediaUrl && !tutorial.media_id && steps.length === 0) {
@@ -686,8 +703,9 @@ function CreateWorkoutContent() {
   }, [user, isLoading, router])
 
   const isWorkoutLoading = !!workoutId && isLoadingWorkout
+  const isAuthLoading = isLoading && !user
 
-  if (isLoading || isWorkoutLoading) {
+  if (isAuthLoading || isWorkoutLoading) {
     return (
       <div className="min-h-screen p-8">
         <div className="animate-pulse space-y-8">
@@ -800,6 +818,14 @@ function CreateWorkoutContent() {
     setSubmitStatus('loading')
     setSubmitMessage(workoutId ? 'Actualizando workout y sincronizando media...' : 'Guardando workout y preparando archivos...')
     createWorkout(data)
+  }
+
+  const onInvalidSubmit = (formErrors: typeof errors) => {
+    const firstErrorMessage = findFirstFormError(formErrors)
+
+    console.error('Workout submit blocked by validation', formErrors)
+    setSubmitStatus('error')
+    setSubmitMessage(firstErrorMessage || 'Hay campos incompletos o invalidos en el workout. Revisa los bloques del editor y vuelve a intentarlo.')
   }
 
   const handleOpenAiAssistant = () => {
@@ -1396,7 +1422,7 @@ function CreateWorkoutContent() {
             <Button type="button" variant="ghost" onClick={() => setIsMetaOpen(false)}>
               Cerrar
             </Button>
-            <Button type="button" onClick={handleSubmit(onSubmit)} className="gap-2" disabled={isSubmitting}>
+            <Button type="button" onClick={handleSubmit(onSubmit, onInvalidSubmit)} className="gap-2" disabled={isSubmitting}>
               {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
               {isSubmitting ? 'Guardando...' : 'Guardar workout'}
             </Button>

@@ -406,7 +406,7 @@ export function WorkoutExecutionView({
                           {section.name}
                         </span>
 
-                        <div className="mt-2 flex items-center gap-1.5">
+                        <div className="mt-2 flex flex-wrap items-center gap-1.5">
                           {Array.from({ length: Math.max(...exercises.map(({ exercise }) => exercise.sets || 1), 1) }).map((_, seriesIndex) => {
                             const seriesNumber = seriesIndex + 1
                             const exercisesInSeries = exercises
@@ -419,7 +419,7 @@ export function WorkoutExecutionView({
                               sectionIndex === activeCursor.sectionIndex && activeCursor.set === seriesNumber
 
                             return (
-                              <div key={`${section.id}-series-${seriesNumber}`} className="flex items-center gap-1.5">
+                              <div key={`${section.id}-series-${seriesNumber}`} className="flex flex-wrap items-center gap-1.5">
                                 <div
                                   className={`flex h-5 w-5 items-center justify-center rounded-full border text-[9px] font-bold transition-all ${
                                     isSeriesActive

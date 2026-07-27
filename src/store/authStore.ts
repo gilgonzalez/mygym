@@ -26,14 +26,31 @@ export const useAuthStore = create<AuthState>()(
         supabase.auth.signOut()
       },
       initialize: async () => {
+        const withTimeout = async <T>(promise: PromiseLike<T>, label: string, timeoutMs = 10000): Promise<T> => {
+          return Promise.race([
+            promise,
+            new Promise<T>((_, reject) =>
+              setTimeout(() => reject(new Error(`${label} timed out`)), timeoutMs)
+            ),
+          ])
+        }
+
         try {
           // Primero intentamos recuperar la sesión del almacenamiento local
-          const { data: { session } } = await supabase.auth.getSession()
+          const sessionResponse: Awaited<ReturnType<typeof supabase.auth.getSession>> = await withTimeout(
+            supabase.auth.getSession(),
+            'Supabase getSession'
+          )
+          const { data: { session } } = sessionResponse
           
           if (session?.user) {
             // Si hay sesión local, intentamos refrescarla para asegurar que las cookies estén sincronizadas
             // Esto es crucial para que las Server Actions funcionen si las cookies se borraron
-            const { data: { session: refreshedSession }, error: refreshError } = await supabase.auth.refreshSession()
+            const refreshResponse: Awaited<ReturnType<typeof supabase.auth.refreshSession>> = await withTimeout(
+              supabase.auth.refreshSession(),
+              'Supabase refreshSession'
+            )
+            const { data: { session: refreshedSession }, error: refreshError } = refreshResponse
             
             if (refreshError) {
                console.warn('Error refreshing session:', refreshError)
@@ -46,19 +63,26 @@ export const useAuthStore = create<AuthState>()(
 
             const activeSession = refreshedSession || session
             if (activeSession?.user) {
-                const { data: userData } = await supabase
-                .from('users')
-                .select('*')
-                .eq('id', activeSession.user.id)
-                .single()
+                const userResponse = await withTimeout(
+                  supabase
+                    .from('users')
+                    .select('*')
+                    .eq('id', activeSession.user.id)
+                    .single() as PromiseLike<{ data: User | null }>,
+                  'Load authenticated user'
+                )
+                const { data: userData } = userResponse
                 
                 if (userData) {
-                set({ user: userData, isAuthenticated: true })
+                  set({ user: userData, isAuthenticated: true })
                 }
             }
+          } else {
+            set({ user: null, isAuthenticated: false })
           }
         } catch (error) {
           console.error('Error checking user:', error)
+          set({ user: null, isAuthenticated: false })
         } finally {
           set({ isLoading: false })
         }
