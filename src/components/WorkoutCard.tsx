@@ -10,6 +10,7 @@ import { deleteWorkoutAction } from '@/app/actions/workout/delete'
 import { useRouter } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
 import { ShareWorkoutDialog } from './share/ShareWorkoutDialog'
+import { FollowButton } from './social/FollowButton'
 import { WorkoutCommentsSheet } from './workout/WorkoutCommentsSheet'
 import { formatDuration } from '@/lib/time'
 
@@ -120,41 +121,51 @@ export default function WorkoutCard({ workout }: WorkoutCardProps) {
             </div>
           </div>
 
-          {isOwner && (
-            <div className="relative" ref={menuRef}>
-              <button
-                onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu) }}
-                className="p-1 rounded-full hover:bg-muted/50 text-muted-foreground transition-colors"
-              >
-                {isDeleting ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <MoreVertical className="h-4 w-4" />
-                )}
-              </button>
+          <div className="flex items-center gap-2">
+            {!isOwner && workout.user_id ? (
+              <FollowButton
+                userId={workout.user_id}
+                initialStatus={workout.viewer_follow_status}
+                className="h-9"
+              />
+            ) : null}
 
-              {showMenu && (
-                <div className="absolute right-0 top-8 w-32 bg-popover border border-border rounded-lg shadow-xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                  <div className="flex flex-col p-1">
-                    <button
-                      onClick={() => router.push(`/editor/workout/create?id=${workout.id}`)}
-                      className="flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted rounded-md transition-colors text-left"
-                    >
-                      <Edit className="h-3.5 w-3.5" />
-                      Edit
-                    </button>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setShowMenu(false); handleDelete() }}
-                      className="flex items-center gap-2 px-3 py-2 text-sm text-red-500 hover:bg-red-500/10 rounded-md transition-colors text-left"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                      Delete
-                    </button>
+            {isOwner && (
+              <div className="relative" ref={menuRef}>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu) }}
+                  className="p-1 rounded-full hover:bg-muted/50 text-muted-foreground transition-colors"
+                >
+                  {isDeleting ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <MoreVertical className="h-4 w-4" />
+                  )}
+                </button>
+
+                {showMenu && (
+                  <div className="absolute right-0 top-8 w-32 bg-popover border border-border rounded-lg shadow-xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                    <div className="flex flex-col p-1">
+                      <button
+                        onClick={() => router.push(`/editor/workout/create?id=${workout.id}`)}
+                        className="flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted rounded-md transition-colors text-left"
+                      >
+                        <Edit className="h-3.5 w-3.5" />
+                        Edit
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setShowMenu(false); handleDelete() }}
+                        className="flex items-center gap-2 px-3 py-2 text-sm text-red-500 hover:bg-red-500/10 rounded-md transition-colors text-left"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                        Delete
+                      </button>
+                    </div>
                   </div>
-                </div>
-              )}
-            </div>
-          )}
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="space-y-3">

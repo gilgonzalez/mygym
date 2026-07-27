@@ -1,4 +1,5 @@
 import { Database } from '@/types/database'
+import type { FollowStatus } from '@/types/social'
 
 type DbWorkout = Database['public']['Tables']['workouts']['Row']
 type DbUser = Database['public']['Tables']['users']['Row']
@@ -58,5 +59,6 @@ export interface Workout extends DbWorkout {
   }>
   likes_count?: number
   is_liked?: boolean
+  viewer_follow_status?: FollowStatus
   rating: number | null
 }

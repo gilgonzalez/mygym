@@ -7,8 +7,6 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "14.1"
   }
@@ -168,9 +166,9 @@ export type Database = {
           id: string
           mime_type: string | null
           size_bytes: number | null
-          type: string | null
+          type: string
           url: string
-          user_id: string
+          user_id: string | null
         }
         Insert: {
           bucket_path?: string | null
@@ -179,9 +177,9 @@ export type Database = {
           id?: string
           mime_type?: string | null
           size_bytes?: number | null
-          type?: string | null
+          type: string
           url: string
-          user_id: string
+          user_id?: string | null
         }
         Update: {
           bucket_path?: string | null
@@ -190,9 +188,9 @@ export type Database = {
           id?: string
           mime_type?: string | null
           size_bytes?: number | null
-          type?: string | null
+          type?: string
           url?: string
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -206,6 +204,7 @@ export type Database = {
       }
       section_exercises: {
         Row: {
+          created_at: string | null
           duration: number | null
           exercise_id: string
           id: string
@@ -218,6 +217,7 @@ export type Database = {
           weight_kg: number | null
         }
         Insert: {
+          created_at?: string | null
           duration?: number | null
           exercise_id: string
           id?: string
@@ -230,6 +230,7 @@ export type Database = {
           weight_kg?: number | null
         }
         Update: {
+          created_at?: string | null
           duration?: number | null
           exercise_id?: string
           id?: string
@@ -278,6 +279,54 @@ export type Database = {
           type?: string | null
         }
         Relationships: []
+      }
+      user_follows: {
+        Row: {
+          accepted_at: string | null
+          created_at: string
+          followed_id: string
+          follower_id: string
+          requested_at: string
+          responded_at: string | null
+          status: Database["public"]["Enums"]["follow_request_status"]
+          updated_at: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          created_at?: string
+          followed_id: string
+          follower_id: string
+          requested_at?: string
+          responded_at?: string | null
+          status?: Database["public"]["Enums"]["follow_request_status"]
+          updated_at?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          created_at?: string
+          followed_id?: string
+          follower_id?: string
+          requested_at?: string
+          responded_at?: string | null
+          status?: Database["public"]["Enums"]["follow_request_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_follows_followed_id_fkey"
+            columns: ["followed_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_follows_follower_id_fkey"
+            columns: ["follower_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_stats: {
         Row: {
@@ -534,6 +583,38 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_follow_request: {
+        Args: { p_follower_id: string }
+        Returns: Database["public"]["Tables"]["user_follows"]["Row"]
+      }
+      can_access_exercise: {
+        Args: { p_exercise_id: string; p_viewer_id?: string }
+        Returns: boolean
+      }
+      can_access_media: {
+        Args: { p_media_id: string; p_viewer_id?: string }
+        Returns: boolean
+      }
+      can_access_section: {
+        Args: { p_section_id: string; p_viewer_id?: string }
+        Returns: boolean
+      }
+      can_access_tutorial: {
+        Args: { p_tutorial_id: string; p_viewer_id?: string }
+        Returns: boolean
+      }
+      can_access_user_content: {
+        Args: { p_owner_id: string; p_visibility: string; p_viewer_id?: string }
+        Returns: boolean
+      }
+      can_access_workout: {
+        Args: { p_workout_id: string; p_viewer_id?: string }
+        Returns: boolean
+      }
+      cancel_follow_request: {
+        Args: { p_followed_id: string }
+        Returns: boolean
+      }
       complete_workout_session: {
         Args: {
           p_duration_minutes: number
@@ -547,12 +628,33 @@ export type Database = {
         Args: { p_user_id: string; p_workout_data: Json }
         Returns: string
       }
+      is_follow_accepted: {
+        Args: { p_follower_id: string; p_followed_id: string }
+        Returns: boolean
+      }
+      reject_follow_request: {
+        Args: { p_follower_id: string }
+        Returns: Database["public"]["Tables"]["user_follows"]["Row"]
+      }
+      remove_follower: {
+        Args: { p_follower_id: string }
+        Returns: boolean
+      }
+      request_follow: {
+        Args: { p_followed_id: string }
+        Returns: Database["public"]["Tables"]["user_follows"]["Row"]
+      }
+      unfollow_user: {
+        Args: { p_followed_id: string }
+        Returns: boolean
+      }
       update_complete_workout: {
         Args: { p_user_id: string; p_workout_data: Json; p_workout_id: string }
         Returns: boolean
       }
     }
     Enums: {
+      follow_request_status: "pending" | "accepted" | "rejected"
       user_role: "ADMIN" | "USER" | "CREATOR" | "COACH"
     }
     CompositeTypes: {

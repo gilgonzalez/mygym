@@ -1,11 +1,15 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import type { FollowStatus } from '@/types/social'
 import { Workout } from '@/types/workout/composite'
 
 export async function getWorkoutById(id: string): Promise<{ success: boolean, data?: Workout, error?: string }> {
   try {
     const supabase = await createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
 
     const { data, error } = await supabase
       .from('workouts')
@@ -60,10 +64,30 @@ export async function getWorkoutById(id: string): Promise<{ success: boolean, da
     if (error) throw error
     if (!data) throw new Error('Workout not found')
 
+    let viewerFollowStatus: FollowStatus | undefined
+
+    if (user?.id && data.user_id !== user.id) {
+      const { data: relationship, error: followError } = await supabase
+        .from('user_follows')
+        .select('status')
+        .eq('follower_id', user.id)
+        .eq('followed_id', data.user_id)
+        .maybeSingle()
+
+      if (followError) throw followError
+
+      if (relationship?.status === 'pending' || relationship?.status === 'accepted') {
+        viewerFollowStatus = relationship.status
+      } else {
+        viewerFollowStatus = 'none'
+      }
+    }
+
     // Transform deeply nested response to flat UI structure
     const workout: Workout = {
       ...data,
       user: data.user,
+      viewer_follow_status: viewerFollowStatus,
       sections: (data.workout_sections || [])
         .sort((a: any, b: any) => a.order_index - b.order_index)
         .map((ws: any) => ({

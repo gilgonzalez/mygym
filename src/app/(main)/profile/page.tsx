@@ -3,18 +3,21 @@
 import Link from 'next/link'
 import { useAuthStore } from '@/store/authStore'
 import { Button } from '@/components/Button'
-import { User, LogIn, UserPlus, LogOut, Settings, Flame, Trophy, Timer, Dumbbell, Medal, FileEdit, Crown, Sparkles, Users, ShieldCheck } from 'lucide-react'
+import { User, LogIn, UserPlus, LogOut, Settings, Flame, Trophy, Timer, Dumbbell, Medal, FileEdit, Crown, Sparkles, Users, ShieldCheck, Inbox } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import { Progress } from '@/components/ui/progress'
 import { ActivityHeatmap } from '@/components/profile/ActivityHeatmap'
 import { useState } from 'react'
 import { getUserWorkoutsAction } from '@/app/actions/workout/list'
+import { getFollowOverviewAction } from '@/app/actions/user/follows'
 import { getUserStatsAction } from '@/app/actions/user/getStats'
+import { ProfileSocialSheet } from '@/components/profile/ProfileSocialSheet'
 import SimplifiedWorkoutCard from '@/components/SimplifiedWorkoutCard'
 import { PremiumFeatureDialog } from '@/components/premium/PremiumFeatureDialog'
 import { PremiumLockedOverlay } from '@/components/premium/PremiumLockedOverlay'
 import { formatDurationFromMinutes } from '@/lib/time'
+import type { FollowOverview } from '@/types/social'
 
 interface UserStats {
     level: number
@@ -34,11 +37,20 @@ interface UserStats {
 
 import { useQuery } from '@tanstack/react-query'
 
+const workoutFilters = [
+  { value: 'all', label: 'Todos' },
+  { value: 'public', label: 'Publicos' },
+  { value: 'private', label: 'Privados' },
+  { value: 'followers', label: 'Seguidores' },
+  { value: 'draft', label: 'Borradores' },
+] as const
+
 export default function ProfilePage() {
   const { user, logout } = useAuthStore()
   const router = useRouter()
-  const [filter, setFilter] = useState<'all' | 'public' | 'private' | 'draft'>('all')
+  const [filter, setFilter] = useState<(typeof workoutFilters)[number]['value']>('all')
   const [showPremiumDialog, setShowPremiumDialog] = useState(false)
+  const [showSocialSheet, setShowSocialSheet] = useState(false)
 
   const { data: workouts = [], isLoading: workoutsLoading } = useQuery({
     queryKey: ['userWorkouts', user?.id],
@@ -102,6 +114,22 @@ export default function ProfilePage() {
     enabled: !!user?.id
   })
 
+  const { data: followOverview, isLoading: socialLoading } = useQuery({
+    queryKey: ['followOverview', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null
+
+      const res = await getFollowOverviewAction(user.id)
+
+      if (!res.success) {
+        throw new Error(res.error || 'No pudimos cargar tu red social.')
+      }
+
+      return res.data || null
+    },
+    enabled: !!user?.id
+  })
+
   const handleLogout = async () => {
     await supabase.auth.signOut()
     logout()
@@ -159,6 +187,14 @@ export default function ProfilePage() {
   const isPremiumUser = Boolean(user.isPremium)
   const displayName = user.name || 'Gym Enthusiast'
   const roleLabel = user.role.charAt(0) + user.role.slice(1).toLowerCase()
+  const socialOverview: FollowOverview = followOverview || {
+    followersCount: 0,
+    followingCount: 0,
+    pendingRequestsCount: 0,
+    followers: [],
+    following: [],
+    pendingRequests: [],
+  }
   const profileStatsCards = (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 lg:grid-cols-1">
       <div className="group relative overflow-hidden rounded-[26px] border border-orange-500/15 bg-gradient-to-br from-card via-card to-orange-500/[0.07] p-4 shadow-[0_14px_34px_rgba(0,0,0,0.16)]">
@@ -275,7 +311,7 @@ export default function ProfilePage() {
                   </div>
                 </div>
 
-                <div className="flex flex-wrap items-center justify-center gap-2 xl:justify-start">
+                <div className="flex flex-col items-start justify-center gap-2 xl:justify-start mt-2">
                   <div className="flex items-center gap-1.5 rounded-full border border-amber-500/20 bg-amber-500/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-amber-500">
                     <Medal className="h-3.5 w-3.5" />
                     {currentStats.rank_title}
@@ -305,44 +341,65 @@ export default function ProfilePage() {
                   </p>
                 </div>
 
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                  <div className="rounded-[24px] border border-white/10 bg-white/[0.03] px-4 py-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
+                  <div className="rounded-[24px] border border-white/10 bg-white/[0.03] px-4 py-2.5 sm:col-span-1">
                     <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-white/45">XP actual</p>
-                    <p className="mt-2 text-2xl font-black tracking-tight text-foreground">
+                    <p className="mt-1.5 text-xl font-black tracking-tight text-foreground sm:text-2xl">
                       {currentStats.current_xp}
-                      <span className="ml-1 text-sm font-semibold text-muted-foreground">/ {currentStats.next_level_xp}</span>
+                      <span className="ml-1 text-xs font-semibold text-muted-foreground sm:text-sm">/ {currentStats.next_level_xp}</span>
                     </p>
                   </div>
-                  <div className="rounded-[24px] border border-white/10 bg-white/[0.03] px-4 py-3">
-                    <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-white/45">Seguidores</p>
-                    <p className="mt-2 flex items-center gap-2 text-2xl font-black tracking-tight text-foreground">
-                      <Users className="h-5 w-5 text-primary" />
-                      12
-                    </p>
-                  </div>
-                  <div className="rounded-[24px] border border-white/10 bg-white/[0.03] px-4 py-3">
-                    <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-white/45">Siguiendo</p>
-                    <p className="mt-2 flex items-center gap-2 text-2xl font-black tracking-tight text-foreground">
-                      <UserPlus className="h-5 w-5 text-primary" />
-                      8
-                    </p>
+                  <div className="rounded-[26px] border border-white/10 bg-slate-950/30 px-4 py-2.5 sm:col-span-3">
+                    <div className="flex items-center justify-between gap-3 text-[11px] font-bold uppercase tracking-[0.22em] text-white/45">
+                      <span>Progression</span>
+                      <span className="text-foreground">{currentStats.current_xp} / {currentStats.next_level_xp} XP</span>
+                    </div>
+                    <Progress value={xpPercentage} className="mt-2 h-2.5 bg-white/10" />
+                    <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
+                      <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1">
+                        Nivel {currentStats.level}
+                      </span>
+                      <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1">
+                        {isPremiumUser ? 'Acceso premium activo' : 'Funciones premium bloqueadas'}
+                      </span>
+                    </div>
                   </div>
                 </div>
 
-                <div className="rounded-[26px] border border-white/10 bg-slate-950/30 p-4">
-                  <div className="mb-3 flex items-center justify-between gap-3 text-xs font-bold uppercase tracking-[0.22em] text-white/45">
-                    <span>Progression</span>
-                    <span className="text-foreground">{currentStats.current_xp} / {currentStats.next_level_xp} XP</span>
-                  </div>
-                  <Progress value={xpPercentage} className="h-3 bg-white/10" />
-                  <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-                    <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1">
-                      Nivel {currentStats.level}
-                    </span>
-                    <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1">
-                      {isPremiumUser ? 'Acceso premium activo' : 'Funciones premium bloqueadas'}
-                    </span>
-                  </div>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowSocialSheet(true)}
+                    className="rounded-[24px] border border-white/10 bg-white/[0.03] px-4 py-2.5 text-left transition-colors hover:bg-white/[0.06]"
+                  >
+                    <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-white/45">Seguidores</p>
+                    <p className="mt-1.5 flex items-center gap-2 text-xl font-black tracking-tight text-foreground sm:text-2xl">
+                      <Users className="h-4 w-4 text-primary" />
+                      {socialLoading ? '...' : socialOverview.followersCount}
+                    </p>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowSocialSheet(true)}
+                    className="rounded-[24px] border border-white/10 bg-white/[0.03] px-4 py-2.5 text-left transition-colors hover:bg-white/[0.06]"
+                  >
+                    <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-white/45">Siguiendo</p>
+                    <p className="mt-1.5 flex items-center gap-2 text-xl font-black tracking-tight text-foreground sm:text-2xl">
+                      <UserPlus className="h-4 w-4 text-primary" />
+                      {socialLoading ? '...' : socialOverview.followingCount}
+                    </p>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowSocialSheet(true)}
+                    className="rounded-[24px] border border-white/10 bg-white/[0.03] px-4 py-2.5 text-left transition-colors hover:bg-white/[0.06]"
+                  >
+                    <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-white/45">Solicitudes</p>
+                    <p className="mt-1.5 flex items-center gap-2 text-xl font-black tracking-tight text-foreground sm:text-2xl">
+                      <Inbox className="h-4 w-4 text-primary" />
+                      {socialLoading ? '...' : socialOverview.pendingRequestsCount}
+                    </p>
+                  </button>
                 </div>
               </div>
             </div>
@@ -403,17 +460,17 @@ export default function ProfilePage() {
 
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <div className="flex w-fit items-center gap-1 rounded-2xl border border-white/10 bg-white/[0.04] p-1">
-              {(['all', 'public', 'private', 'draft'] as const).map((f) => (
+              {workoutFilters.map(({ value, label }) => (
                 <button
-                  key={f}
-                  onClick={() => setFilter(f)}
+                  key={value}
+                  onClick={() => setFilter(value)}
                   className={`rounded-xl px-3 py-2 text-[11px] font-bold uppercase tracking-[0.18em] transition-all ${
-                    filter === f
+                    filter === value
                       ? 'bg-white text-slate-950 shadow-lg'
                       : 'text-white/55 hover:bg-white/[0.06] hover:text-white'
                   }`}
                 >
-                  {f}
+                  {label}
                 </button>
               ))}
             </div>
@@ -457,6 +514,13 @@ export default function ProfilePage() {
         open={showPremiumDialog}
         onOpenChange={setShowPremiumDialog}
         description="Esta seccion del perfil esta disponible solo para usuarios premium. Actualiza tu plan para desbloquear actividad avanzada y estadisticas."
+      />
+
+      <ProfileSocialSheet
+        open={showSocialSheet}
+        onOpenChange={setShowSocialSheet}
+        overview={socialOverview}
+        isLoading={socialLoading}
       />
     </div>
   )

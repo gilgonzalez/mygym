@@ -6,7 +6,7 @@ import { useMutation, useQuery } from '@tanstack/react-query'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd'
-import { Plus, Trash2, GripVertical, Save,  ArrowLeft, Eye, Play, Smartphone, Monitor, Image as ImageIcon,  Music, X, Upload, Mic, Square, Camera, Circle, Dna, Activity, Zap, Repeat, List, RotateCw, Library, Package, Globe, Lock, FileText, Sparkles, Loader2, Info } from 'lucide-react'
+import { Plus, Trash2, GripVertical, Save,  ArrowLeft, Eye, Play, Smartphone, Monitor, Image as ImageIcon,  Music, X, Upload, Mic, Square, Camera, Circle, Dna, Activity, Zap, Repeat, List, RotateCw, Library, Package, Globe, Lock, FileText, Sparkles, Loader2, Info, Users } from 'lucide-react'
 import { 
   Select,
   SelectContent,
@@ -97,7 +97,7 @@ const workoutSchema = z.object({
   cover: z.string().optional(),
   tags: z.array(z.string()).optional(),
   difficulty: z.enum(['beginner', 'intermediate', 'advanced']).optional(),
-  visibility: z.enum(['draft', 'public', 'private']).default('private'),
+  visibility: z.enum(['draft', 'public', 'private', 'followers']).default('private'),
   audio: z.array(z.string()).optional(),
   sections: z.array(sectionSchema),
 })
@@ -1360,14 +1360,21 @@ function CreateWorkoutContent() {
                           <div className="flex items-center gap-2">
                             <FileText className="h-4 w-4 text-slate-500" />
                             <span>Borrador</span>
-                            <span className="ml-auto text-xs text-muted-foreground">Solo tu</span>
+                            <span className="ml-auto text-xs text-muted-foreground">En edicion</span>
                           </div>
                         </SelectItem>
                         <SelectItem value="private" className="rounded-lg my-1 cursor-pointer focus:bg-primary/5 focus:text-primary font-medium">
                           <div className="flex items-center gap-2">
                             <Lock className="h-4 w-4 text-rose-500" />
                             <span>Privado</span>
-                            <span className="ml-auto text-xs text-muted-foreground">Solo seguidores</span>
+                            <span className="ml-auto text-xs text-muted-foreground">Solo tu</span>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="followers" className="rounded-lg my-1 cursor-pointer focus:bg-primary/5 focus:text-primary font-medium">
+                          <div className="flex items-center gap-2">
+                            <Users className="h-4 w-4 text-sky-500" />
+                            <span>Solo seguidores</span>
+                            <span className="ml-auto text-xs text-muted-foreground">Tu comunidad</span>
                           </div>
                         </SelectItem>
                         <SelectItem value="public" className="rounded-lg my-1 cursor-pointer focus:bg-primary/5 focus:text-primary font-medium">

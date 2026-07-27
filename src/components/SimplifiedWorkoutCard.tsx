@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
-import { Heart, Clock, User, MoreVertical, Edit, Trash2, Loader2, Zap, Lock, Globe, FileEdit, Share2 } from 'lucide-react'
+import { Heart, Clock, User, MoreVertical, Edit, Trash2, Loader2, Zap, Lock, Globe, FileEdit, Share2, Users } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
 import { Workout } from '../types/workout/composite'
 import { Card } from './Card'
@@ -10,11 +10,19 @@ import { deleteWorkoutAction } from '@/app/actions/workout/delete'
 import { useRouter } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
 import { ShareWorkoutDialog } from './share/ShareWorkoutDialog'
+import { FollowButton } from './social/FollowButton'
 import { formatDuration } from '@/lib/time'
 
 interface SimplifiedWorkoutCardProps {
   workout: Workout
 }
+
+const visibilityLabelMap = {
+  draft: 'Borrador',
+  private: 'Privado',
+  followers: 'Solo seguidores',
+  public: 'Publico',
+} as const
 
 export default function SimplifiedWorkoutCard({ workout }: SimplifiedWorkoutCardProps) {
   const [likesCount, setLikesCount] = useState(workout.likes_count || 0)
@@ -105,9 +113,20 @@ export default function SimplifiedWorkoutCard({ workout }: SimplifiedWorkoutCard
 
           {/* Owner Actions */}
           <div className="flex items-center gap-1">
+             {!isOwner && workout.user_id ? (
+               <FollowButton
+                 userId={workout.user_id}
+                 initialStatus={workout.viewer_follow_status}
+               />
+             ) : null}
+
              {isOwner && (
-                 <div className="mr-1" title={workout.visibility ?? ""}>
+                 <div
+                   className="mr-1"
+                   title={workout.visibility ? visibilityLabelMap[workout.visibility as keyof typeof visibilityLabelMap] ?? workout.visibility : ''}
+                 >
                     {workout.visibility === 'private' && <Lock className="w-3.5 h-3.5 text-muted-foreground stroke-red-500" />}
+                    {workout.visibility === 'followers' && <Users className="w-3.5 h-3.5 text-muted-foreground stroke-sky-500" />}
                     {workout.visibility === 'public' && <Globe className="w-3.5 h-3.5 text-muted-foreground stroke-emerald-500" />}
                     {workout.visibility === 'draft' && <FileEdit className="w-3.5 h-3.5 text-muted-foreground stroke-orange-500" />}
                  </div>
