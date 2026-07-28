@@ -16,6 +16,8 @@ interface WorkoutState {
   // Time Tracking
   startTime: number | null
   endTime: number | null
+  elapsedMs: number
+  lastActiveAt: number | null
 
   // Voice State
   isSpeaking: boolean
@@ -25,10 +27,17 @@ interface WorkoutState {
   initializeWorkout: (workout: LocalWorkout) => void
   startSession: () => void
   endSession: () => void
+  pauseSessionClock: () => void
+  resumeSessionClock: () => void
   nextStep: () => void
   prevStep: () => void
   restartWorkout: () => void
   jumpToStep: (sectionIndex: number, exerciseIndex: number) => void
+}
+
+function getCommittedElapsedMs(elapsedMs: number, lastActiveAt: number | null, now = Date.now()) {
+  if (!lastActiveAt) return elapsedMs
+  return elapsedMs + Math.max(now - lastActiveAt, 0)
 }
 
 export const useWorkoutStore = create<WorkoutState>((set, get) => ({
@@ -41,6 +50,8 @@ export const useWorkoutStore = create<WorkoutState>((set, get) => ({
   isResting: false,
   startTime: null,
   endTime: null,
+  elapsedMs: 0,
+  lastActiveAt: null,
   isSpeaking: false,
 
   setSpeaking: (speaking) => set({ isSpeaking: speaking }),
@@ -55,13 +66,57 @@ export const useWorkoutStore = create<WorkoutState>((set, get) => ({
       currentSet: 1,
       isResting: false,
       startTime: null,
-      endTime: null
+      endTime: null,
+      elapsedMs: 0,
+      lastActiveAt: null,
     })
   },
 
-  startSession: () => set({ hasStarted: true, startTime: Date.now(), endTime: null }),
+  startSession: () => {
+    const state = get()
+    const now = Date.now()
 
-  endSession: () => set({ hasStarted: false }), // Does not reset time, just pauses/stops UI
+    set({
+      hasStarted: true,
+      isCompleted: false,
+      startTime: state.startTime ?? now,
+      endTime: null,
+      lastActiveAt: state.lastActiveAt ?? now,
+    })
+  },
+
+  endSession: () => {
+    const state = get()
+    const now = Date.now()
+
+    set({
+      hasStarted: false,
+      elapsedMs: getCommittedElapsedMs(state.elapsedMs, state.lastActiveAt, now),
+      lastActiveAt: null,
+    })
+  },
+
+  pauseSessionClock: () => {
+    const state = get()
+    if (!state.lastActiveAt) return
+
+    const now = Date.now()
+
+    set({
+      elapsedMs: getCommittedElapsedMs(state.elapsedMs, state.lastActiveAt, now),
+      lastActiveAt: null,
+    })
+  },
+
+  resumeSessionClock: () => {
+    const state = get()
+    if (!state.hasStarted || state.lastActiveAt) return
+
+    set({
+      endTime: null,
+      lastActiveAt: Date.now(),
+    })
+  },
 
   restartWorkout: () => set({
     hasStarted: true,
@@ -71,19 +126,28 @@ export const useWorkoutStore = create<WorkoutState>((set, get) => ({
     currentSet: 1,
     isResting: false,
     startTime: Date.now(),
-    endTime: null
+    endTime: null,
+    elapsedMs: 0,
+    lastActiveAt: Date.now(),
   }),
 
-  jumpToStep: (sectionIndex, exerciseIndex) => set({
-    hasStarted: true,
-    isCompleted: false,
-    currentSectionIndex: sectionIndex,
-    currentExerciseIndex: exerciseIndex,
-    currentSet: 1,
-    isResting: false,
-    // Keep original start time if exists, otherwise set it? 
-    // Usually jumpToStep implies we are in a session.
-  }),
+  jumpToStep: (sectionIndex, exerciseIndex) => {
+    const state = get()
+    const now = Date.now()
+
+    set({
+      hasStarted: true,
+      isCompleted: false,
+      currentSectionIndex: sectionIndex,
+      currentExerciseIndex: exerciseIndex,
+      currentSet: 1,
+      isResting: false,
+      startTime: state.startTime ?? now,
+      endTime: null,
+      elapsedMs: state.startTime ? state.elapsedMs : 0,
+      lastActiveAt: now,
+    })
+  },
 
   prevStep: () => {
     const state = get()
@@ -138,13 +202,27 @@ export const useWorkoutStore = create<WorkoutState>((set, get) => ({
           isResting: false,
         })
       } else {
-        set({ isCompleted: true, hasStarted: false, endTime: Date.now() })
+        const now = Date.now()
+        set({
+          isCompleted: true,
+          hasStarted: false,
+          endTime: now,
+          elapsedMs: getCommittedElapsedMs(state.elapsedMs, state.lastActiveAt, now),
+          lastActiveAt: null,
+        })
       }
     } else {
       if (nextCursor) {
         set({ isResting: true })
       } else {
-        set({ isCompleted: true, hasStarted: false, endTime: Date.now() })
+        const now = Date.now()
+        set({
+          isCompleted: true,
+          hasStarted: false,
+          endTime: now,
+          elapsedMs: getCommittedElapsedMs(state.elapsedMs, state.lastActiveAt, now),
+          lastActiveAt: null,
+        })
       }
     }
   }

@@ -67,6 +67,8 @@ export default function WorkoutSessionPage({ params }: { params: { id: string } 
     currentExerciseIndex, 
     currentSet,
     isResting,
+    startTime,
+    elapsedMs,
     initializeWorkout,
     startSession,
     endSession,
@@ -87,7 +89,10 @@ export default function WorkoutSessionPage({ params }: { params: { id: string } 
     }
   })
 
-  const exerciseDescriptionMap = buildExerciseDescriptionMap(workoutData?.description)
+  const exerciseDescriptionMap = useMemo(
+    () => buildExerciseDescriptionMap(workoutData?.description),
+    [workoutData?.description]
+  )
 
   // Map DB data to View Type
   const workout: LocalWorkout | null = useMemo(() => {
@@ -127,7 +132,7 @@ export default function WorkoutSessionPage({ params }: { params: { id: string } 
         }))
       }))
     }
-  }, [workoutData])
+  }, [exerciseDescriptionMap, workoutData])
 
   // Initialize store with workout data
   useEffect(() => {
@@ -141,22 +146,7 @@ export default function WorkoutSessionPage({ params }: { params: { id: string } 
     if (isCompleted && activeWorkout && user && !hasLoggedRef.current) {
         hasLoggedRef.current = true
         
-        // Calculate total duration (estimate)
-        // Sum of all exercises duration + rest + sets
-        let totalSeconds = 0
-        activeWorkout.sections.forEach(section => {
-            section.exercises.forEach(ex => {
-                const sets = ex.sets || 1
-                const duration = ex.duration || 0
-                const rest = ex.rest || 0
-                // Rough estimate: (duration + rest) * sets
-                // If reps based, assume 45s per set?
-                const timePerSet = duration > 0 ? duration : 45 
-                totalSeconds += (timePerSet + rest) * sets
-            })
-        })
-        
-        const durationMinutes = Math.ceil(totalSeconds / 60)
+        const durationMinutes = Math.max(1, Math.ceil(elapsedMs / 60000))
         const xpEarned = Math.ceil(durationMinutes * 5) + 50 // Base 50 + 5 per minute
         setXpEarnedState(xpEarned)
 
@@ -173,8 +163,9 @@ export default function WorkoutSessionPage({ params }: { params: { id: string } 
             if (!result.success) {
                 console.error('Error logging workout stats:', result.error)
             } else {
-                if (result.data && typeof result.data === 'object' && 'log_id' in result.data) {
-                    setCurrentLogId((result.data as any).log_id)
+                const logData = result.data as { log_id?: string } | null | undefined
+                if (typeof logData?.log_id === 'string') {
+                    setCurrentLogId(logData.log_id)
                 }
             }
         })
@@ -186,11 +177,18 @@ export default function WorkoutSessionPage({ params }: { params: { id: string } 
         setCurrentLogId(null)
         setXpEarnedState(0)
     }
-  }, [isCompleted, activeWorkout, user, canSaveProgress])
+  }, [isCompleted, activeWorkout, user, canSaveProgress, elapsedMs])
 
 
   // Helper to determine if we have a session in progress
-  const hasActiveSession = activeWorkout?.id === workout?.id && (currentSectionIndex > 0 || currentExerciseIndex > 0 || isResting)
+  const hasActiveSession = activeWorkout?.id === workout?.id && !isCompleted && Boolean(
+    startTime ||
+    elapsedMs > 0 ||
+    currentSectionIndex > 0 ||
+    currentExerciseIndex > 0 ||
+    currentSet > 1 ||
+    isResting
+  )
 
   const handleStartFromOverview = () => {
     if (!workout) return

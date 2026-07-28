@@ -9,6 +9,7 @@ import { LocalWorkout, ExerciseTutorial } from '@/types/workout/viewTypes'
 import { CheckCircle2, ChevronLeft, Dumbbell, Info, Pause, Play, Plus, SkipForward } from 'lucide-react'
 import { getNextWorkoutCursor, getStepInfo } from '@/lib/workout/sessionNavigation'
 import { formatDuration } from '@/lib/time'
+import { useWorkoutStore } from '@/store/workOutStore'
 
 type SessionStage = 'prepare' | 'rest' | 'exercise-timed' | 'exercise-reps'
 
@@ -94,6 +95,10 @@ export function WorkoutExecutionView({
   onNextStep,
   onPrev,
 }: WorkoutExecutionViewProps) {
+  const elapsedMs = useWorkoutStore((state) => state.elapsedMs)
+  const lastActiveAt = useWorkoutStore((state) => state.lastActiveAt)
+  const pauseSessionClock = useWorkoutStore((state) => state.pauseSessionClock)
+  const resumeSessionClock = useWorkoutStore((state) => state.resumeSessionClock)
   const [isPreparing, setIsPreparing] = useState(true)
   const [timeLeft, setTimeLeft] = useState(5)
   const [isPaused, setIsPaused] = useState(false)
@@ -107,6 +112,7 @@ export function WorkoutExecutionView({
   const visualStageRef = useRef<HTMLDivElement | null>(null)
   const [mobileCircleSize, setMobileCircleSize] = useState<number | null>(null)
   const [isCompactMobileViewport, setIsCompactMobileViewport] = useState(false)
+  const [elapsedClockNow, setElapsedClockNow] = useState(() => Date.now())
 
   const currentSection = workout.sections[currentSectionIndex]
   const currentExercise = currentSection?.exercises[currentExerciseIndex]
@@ -201,6 +207,27 @@ export function WorkoutExecutionView({
     previousTimeLeftRef.current = timeLeft
   }, [timeLeft])
 
+  useEffect(() => {
+    if (isPaused || isTutorialOpen) {
+      pauseSessionClock()
+      return
+    }
+
+    resumeSessionClock()
+  }, [isPaused, isTutorialOpen, pauseSessionClock, resumeSessionClock])
+
+  useEffect(() => {
+    setElapsedClockNow(Date.now())
+
+    if (!lastActiveAt) return
+
+    const interval = window.setInterval(() => {
+      setElapsedClockNow(Date.now())
+    }, 1000)
+
+    return () => window.clearInterval(interval)
+  }, [lastActiveAt])
+
   useLayoutEffect(() => {
     if (typeof window === 'undefined') return
 
@@ -289,6 +316,10 @@ export function WorkoutExecutionView({
 
   const progress = hasTimer && totalDuration > 0 ? 1 - timeLeft / totalDuration : 1
   const ringProgress = Math.max(0, Math.min(progress, 1))
+  const workoutDurationSeconds = Math.floor(
+    (elapsedMs + (lastActiveAt ? Math.max(elapsedClockNow - lastActiveAt, 0) : 0)) / 1000
+  )
+  const workoutDurationLabel = formatDuration(workoutDurationSeconds, { style: 'clock' })
   const circleSize = 420
   const radius = 194
   const strokeWidth = 12
@@ -384,11 +415,16 @@ export function WorkoutExecutionView({
 
                       <div className="shrink-0 text-right">
                         <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/35">
-                          Progreso
+                          Sesion
                         </p>
-                        <p className="rounded-full border border-white/10 bg-white/[0.06] px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-white/70">
-                          {totalExercisesBeforeActive + 1} / {totalExerciseCount}
-                        </p>
+                        <div className="flex flex-wrap justify-end gap-1.5">
+                          <p className="rounded-full border border-white/10 bg-white/[0.06] px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-white/70">
+                            {totalExercisesBeforeActive + 1} / {totalExerciseCount}
+                          </p>
+                          <p className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-2.5 py-1 text-[11px] font-bold tabular-nums tracking-[0.12em] text-emerald-200">
+                            {workoutDurationLabel}
+                          </p>
+                        </div>
                       </div>
                     </div>
 
@@ -473,10 +509,15 @@ export function WorkoutExecutionView({
                 </div>
 
                 <div className="hidden shrink-0 text-right sm:block">
-                  <p className="text-xs font-medium uppercase tracking-[0.22em] text-white/45">
-                    {totalExercisesBeforeActive + 1} / {totalExerciseCount}
-                  </p>
-                  <p className="max-w-[180px] truncate text-sm font-semibold text-white/80">
+                  <div className="flex items-center justify-end gap-2">
+                    <p className="rounded-full border border-white/10 bg-white/[0.06] px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-white/70">
+                      {totalExercisesBeforeActive + 1} / {totalExerciseCount}
+                    </p>
+                    <p className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-2.5 py-1 text-[11px] font-bold tabular-nums tracking-[0.12em] text-emerald-200">
+                      {workoutDurationLabel}
+                    </p>
+                  </div>
+                  <p className="mt-2 max-w-[180px] truncate text-sm font-semibold text-white/80">
                     {displaySection?.name || workout.title}
                   </p>
                 </div>

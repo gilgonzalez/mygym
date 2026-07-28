@@ -33,10 +33,10 @@ export function WorkoutCompleted({ workout, onRestart, initialLogId, xpEarned, c
   const [showShare, setShowShare] = useState(false)
   const [showPremiumDialog, setShowPremiumDialog] = useState(false)
   
-  const { startTime, endTime } = useWorkoutStore()
+  const { elapsedMs, lastActiveAt } = useWorkoutStore()
 
   // Calculate Duration
-  const durationMs = (endTime || Date.now()) - (startTime || Date.now())
+  const durationMs = elapsedMs + (lastActiveAt ? Math.max(Date.now() - lastActiveAt, 0) : 0)
   const timeString = formatDuration(Math.floor(durationMs / 1000), { style: 'clock' })
 
   // Calculate Stats
