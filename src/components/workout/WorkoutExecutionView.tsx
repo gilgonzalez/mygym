@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '@/components/Button'
 import { PremiumFeatureDialog } from '@/components/premium/PremiumFeatureDialog'
 import { ExerciseTutorialDialog } from './ExerciseTutorialDialog'
@@ -110,6 +110,8 @@ export function WorkoutExecutionView({
   )
   const previousTimeLeftRef = useRef(timeLeft)
   const visualStageRef = useRef<HTMLDivElement | null>(null)
+  const audioContextRef = useRef<AudioContext | null>(null)
+  const lastCountdownBeepRef = useRef<number | null>(null)
   const [isCompactMobileViewport, setIsCompactMobileViewport] = useState(false)
   const [elapsedClockNow, setElapsedClockNow] = useState(() => Date.now())
 
@@ -187,6 +189,85 @@ export function WorkoutExecutionView({
 
     return () => clearInterval(interval)
   }, [hasTimer, isPaused, isTutorialOpen, timeLeft])
+
+  const ensureAudioContext = useCallback(async () => {
+    const AudioContextConstructor = window.AudioContext || (window as any).webkitAudioContext
+    if (!AudioContextConstructor) return null
+
+    if (!audioContextRef.current) {
+      audioContextRef.current = new AudioContextConstructor()
+    }
+
+    if (audioContextRef.current.state === 'suspended') {
+      try {
+        await audioContextRef.current.resume()
+      } catch {
+        return audioContextRef.current
+      }
+    }
+
+    return audioContextRef.current
+  }, [])
+
+  const playBeep = useCallback((freq = 880, type: OscillatorType = 'sine') => {
+    void ensureAudioContext().then((ctx) => {
+      if (!ctx) return
+
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+
+      osc.connect(gain)
+      gain.connect(ctx.destination)
+
+      osc.type = type
+      osc.frequency.setValueAtTime(freq, ctx.currentTime)
+
+      gain.gain.setValueAtTime(0, ctx.currentTime)
+      gain.gain.linearRampToValueAtTime(0.1, ctx.currentTime + 0.01)
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1)
+
+      osc.start(ctx.currentTime)
+      osc.stop(ctx.currentTime + 0.1)
+    })
+  }, [ensureAudioContext])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    const unlock = () => {
+      void ensureAudioContext()
+    }
+
+    window.addEventListener('pointerdown', unlock, { once: true })
+    window.addEventListener('keydown', unlock, { once: true })
+
+    return () => {
+      window.removeEventListener('pointerdown', unlock)
+      window.removeEventListener('keydown', unlock)
+    }
+  }, [ensureAudioContext])
+
+  useEffect(() => {
+    lastCountdownBeepRef.current = null
+  }, [timerKey])
+
+  useEffect(() => {
+    if (stage !== 'exercise-timed') return
+    if (!hasTimer || isPaused || isTutorialOpen) return
+
+    if (timeLeft === 0) {
+      if (lastCountdownBeepRef.current === 0) return
+      lastCountdownBeepRef.current = 0
+      playBeep(1760, 'square')
+      return
+    }
+
+    if (timeLeft > 0 && timeLeft <= 5) {
+      if (lastCountdownBeepRef.current === timeLeft) return
+      lastCountdownBeepRef.current = timeLeft
+      playBeep(880)
+    }
+  }, [hasTimer, isPaused, isTutorialOpen, playBeep, stage, timeLeft])
 
   useEffect(() => {
     const previousTimeLeft = previousTimeLeftRef.current
