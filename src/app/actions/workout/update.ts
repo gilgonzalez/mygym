@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server"
 import { WorkoutInput } from "./create"
+import { syncWorkoutChallengeConfig } from "./challenge"
 
 export async function updateWorkoutAction(workoutId: string, data: WorkoutInput) {
   try {
@@ -20,6 +21,8 @@ export async function updateWorkoutAction(workoutId: string, data: WorkoutInput)
         console.error('RPC Update Error:', error)
         throw new Error(`Update failed: ${error.message}`)
     }
+
+    await syncWorkoutChallengeConfig(supabase, workoutId, data.challenge)
 
     return { success: true }
   } catch (error: any) {

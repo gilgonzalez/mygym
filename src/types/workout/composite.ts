@@ -5,9 +5,11 @@ type DbWorkout = Database['public']['Tables']['workouts']['Row']
 type DbUser = Database['public']['Tables']['users']['Row']
 type DbSection = Database['public']['Tables']['sections']['Row']
 type DbExercise = Database['public']['Tables']['exercises']['Row']
+type DbWorkoutChallenge = Database['public']['Tables']['workout_challenges']['Row']
 
 // Type for the API Response (Deeply nested)
 export interface WorkoutApiResponse extends DbWorkout {
+  challenge?: DbWorkoutChallenge | null
   workout_user: {
     user: Pick<DbUser, 'id' | 'username' | 'name' | 'avatar_url'> | null
   } | null
@@ -31,6 +33,7 @@ export interface WorkoutApiResponse extends DbWorkout {
 // Type for the UI (Flattened)
 export interface Workout extends DbWorkout {
   user: Pick<DbUser, 'id' | 'username' | 'name' | 'avatar_url'> | null
+  challenge?: DbWorkoutChallenge | null
   sections: Array<DbSection & {
     total_exercises?: number
     exercises: Array<DbExercise & {

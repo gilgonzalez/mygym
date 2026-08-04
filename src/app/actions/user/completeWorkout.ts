@@ -1,14 +1,16 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import type { WorkoutChallengeResultInput } from '@/app/actions/workout/challenge'
 
 interface CompleteWorkoutParams {
   workoutId: string
   durationMinutes: number
   xpEarned: number
+  challengeResult?: WorkoutChallengeResultInput
 }
 
-export async function completeWorkoutAction({ workoutId, durationMinutes, xpEarned }: CompleteWorkoutParams) {
+export async function completeWorkoutAction({ workoutId, durationMinutes, xpEarned, challengeResult }: CompleteWorkoutParams) {
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -60,6 +62,45 @@ export async function completeWorkoutAction({ workoutId, durationMinutes, xpEarn
     if (error) {
         console.error('Error completing workout session:', error)
         return { success: false, error: error.message }
+    }
+
+    const logData = data as { log_id?: string } | null
+
+    if (challengeResult && typeof logData?.log_id === 'string') {
+        const { data: previousBest, error: bestError } = await supabase
+            .from('workout_challenge_results')
+            .select('score')
+            .eq('user_id', user.id)
+            .eq('workout_id', workoutId)
+            .order('score', { ascending: false })
+            .limit(1)
+            .maybeSingle()
+
+        if (bestError) {
+            return { success: false, error: bestError.message }
+        }
+
+        const isPr = challengeResult.score > (previousBest?.score || 0)
+
+        const { error: challengeError } = await supabase
+            .from('workout_challenge_results')
+            .insert({
+                workout_log_id: logData.log_id,
+                workout_id: workoutId,
+                user_id: user.id,
+                mode: challengeResult.mode,
+                rounds_completed: challengeResult.roundsCompleted,
+                extra_reps: challengeResult.extraReps,
+                score: challengeResult.score,
+                time_cap_seconds: challengeResult.timeCapSeconds,
+                is_pr: isPr,
+            })
+
+        if (challengeError) {
+            return { success: false, error: challengeError.message }
+        }
+
+        return { success: true, data: { ...logData, challenge_result: { ...challengeResult, is_pr: isPr } } }
     }
 
     return { success: true, data }

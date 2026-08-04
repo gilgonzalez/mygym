@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react'
-import { Play, Dumbbell, TimerIcon, Info, ChevronLeft, Clock } from 'lucide-react'
+import { Play, Dumbbell, TimerIcon, Info, ChevronLeft, Clock, Trophy } from 'lucide-react'
 import { Button } from '@/components/Button'
 import { PreviewActivity } from './PreviewActivity'
 import { LocalWorkout } from '@/types/workout/viewTypes'
@@ -24,6 +24,12 @@ export function PreviewWorkout({ data, onClose }: PreviewWorkoutProps) {
       tags: data.tags,
       difficulty: data.difficulty,
       audio: Array.isArray(data.audio) ? data.audio : (data.audio ? [data.audio] : []),
+      challenge: data.challenge?.enabled ? {
+        mode: 'amrap_section',
+        challengeSectionId: data.challenge.challengeSectionId || data.sections?.[0]?.id,
+        timeCapSeconds: data.challenge.timeCapSeconds || 600,
+        scoreType: 'rounds_plus_reps',
+      } : null,
       sections: (data.sections || []).map((s: any) => ({
         id: s.id,
         name: s.name || 'Untitled Section',
@@ -63,6 +69,10 @@ export function PreviewWorkout({ data, onClose }: PreviewWorkoutProps) {
   }, [workout])
 
   const totalDurationSeconds = useMemo(() => {
+    if (workout.challenge?.timeCapSeconds) {
+      return workout.challenge.timeCapSeconds
+    }
+
     let totalSeconds = 0
 
     workout.sections.forEach((section) => {
@@ -76,7 +86,9 @@ export function PreviewWorkout({ data, onClose }: PreviewWorkoutProps) {
     })
 
     return totalSeconds
-  }, [workout.sections])
+  }, [workout.challenge?.timeCapSeconds, workout.sections])
+
+  const challengeSectionName = workout.sections.find((section) => section.id === workout.challenge?.challengeSectionId)?.name
 
   if (isPlaying) {
     return (
@@ -137,6 +149,17 @@ export function PreviewWorkout({ data, onClose }: PreviewWorkoutProps) {
            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/20 backdrop-blur-md text-primary text-xs font-medium mb-3 border border-primary/20">
              <Dumbbell className="w-3 h-3" /> {data.category || 'Strength Training'}
            </div>
+           {workout.challenge && (
+             <div className="mb-3 flex flex-wrap gap-2">
+               <span className="inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/12 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-emerald-200">
+                 <Trophy className="h-3 w-3" />
+                 Reto AMRAP
+               </span>
+               <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/20 px-3 py-1 text-[11px] font-semibold text-white/75">
+                 {challengeSectionName || 'Section'} en bucle
+               </span>
+             </div>
+           )}
            <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight text-foreground mb-2 drop-shadow-sm leading-tight">
              {workout.title}
            </h1>

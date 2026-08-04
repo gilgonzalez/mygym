@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { Button } from '@/components/Button'
 import { LocalExercise, LocalWorkout } from '@/types/workout/viewTypes'
-import { ChevronLeft, Dumbbell, Eye, Info, Play, TimerIcon, Lock, Target, Layers, Share2 } from 'lucide-react'
+import { ChevronLeft, Dumbbell, Eye, Info, Play, TimerIcon, Lock, Target, Layers, Share2, Trophy } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -82,6 +82,8 @@ export function WorkoutOverview({
 
   const durationLabel = formatDuration(totalDurationSeconds)
   const hasHeroImage = Boolean(heroImage && !hasHeroImageError)
+  const isChallengeWorkout = Boolean(workout.challenge)
+  const challengeSectionName = workout.sections.find((section) => section.id === workout.challenge?.challengeSectionId)?.name
 
   const handleStart = () => {
     if (!isAuthenticated) {
@@ -227,6 +229,17 @@ export function WorkoutOverview({
            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/20 backdrop-blur-md text-primary text-xs font-medium mb-4 border border-primary/20">
              <Dumbbell className="w-3 h-3" /> {workout.tags?.[0] || 'Workout'}
            </div>
+           {isChallengeWorkout && (
+             <div className="mb-4 flex flex-wrap gap-2">
+               <span className="inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/12 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-emerald-200">
+                 <Trophy className="h-3 w-3" />
+                 Reto AMRAP
+               </span>
+               <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/20 px-3 py-1 text-[11px] font-semibold text-white/75">
+                 {challengeSectionName || 'Section'} en bucle
+               </span>
+             </div>
+           )}
            <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-foreground mb-2 drop-shadow-sm">
              {workout.title}
            </h1>

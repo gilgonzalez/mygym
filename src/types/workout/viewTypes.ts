@@ -34,6 +34,22 @@ export interface LocalSection {
   exercises: LocalExercise[]
 }
 
+export interface LocalWorkoutChallenge {
+  mode: 'amrap_section'
+  challengeSectionId: string
+  timeCapSeconds: number
+  scoreType: 'rounds_plus_reps'
+}
+
+export interface LocalWorkoutChallengeResult {
+  mode: 'amrap_section'
+  roundsCompleted: number
+  extraReps: number
+  score: number
+  timeCapSeconds: number
+  isPr?: boolean
+}
+
 export interface LocalWorkout {
   id: string
   title: string
@@ -43,4 +59,5 @@ export interface LocalWorkout {
   difficulty?: string
   audio?: string[] // YouTube URLs
   sections: LocalSection[]
+  challenge?: LocalWorkoutChallenge | null
 }

@@ -477,6 +477,112 @@ export type Database = {
           },
         ]
       }
+      workout_challenge_results: {
+        Row: {
+          created_at: string
+          extra_reps: number
+          is_pr: boolean
+          mode: string
+          rounds_completed: number
+          score: number
+          time_cap_seconds: number
+          user_id: string
+          workout_id: string
+          workout_log_id: string
+        }
+        Insert: {
+          created_at?: string
+          extra_reps?: number
+          is_pr?: boolean
+          mode?: string
+          rounds_completed?: number
+          score?: number
+          time_cap_seconds: number
+          user_id: string
+          workout_id: string
+          workout_log_id: string
+        }
+        Update: {
+          created_at?: string
+          extra_reps?: number
+          is_pr?: boolean
+          mode?: string
+          rounds_completed?: number
+          score?: number
+          time_cap_seconds?: number
+          user_id?: string
+          workout_id?: string
+          workout_log_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workout_challenge_results_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workout_challenge_results_workout_id_fkey"
+            columns: ["workout_id"]
+            isOneToOne: false
+            referencedRelation: "workouts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workout_challenge_results_workout_log_id_fkey"
+            columns: ["workout_log_id"]
+            isOneToOne: true
+            referencedRelation: "workout_logs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workout_challenges: {
+        Row: {
+          challenge_section_id: string
+          created_at: string
+          mode: string
+          score_type: string
+          time_cap_seconds: number
+          updated_at: string
+          workout_id: string
+        }
+        Insert: {
+          challenge_section_id: string
+          created_at?: string
+          mode?: string
+          score_type?: string
+          time_cap_seconds: number
+          updated_at?: string
+          workout_id: string
+        }
+        Update: {
+          challenge_section_id?: string
+          created_at?: string
+          mode?: string
+          score_type?: string
+          time_cap_seconds?: number
+          updated_at?: string
+          workout_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workout_challenges_challenge_section_id_fkey"
+            columns: ["challenge_section_id"]
+            isOneToOne: false
+            referencedRelation: "sections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workout_challenges_workout_id_fkey"
+            columns: ["workout_id"]
+            isOneToOne: true
+            referencedRelation: "workouts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workout_sections: {
         Row: {
           created_at: string | null

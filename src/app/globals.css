@@ -51,6 +51,11 @@
 }
 
 @layer utilities {
+  .font-timer {
+    font-family: "DSEG7 Classic", monospace;
+    font-variant-numeric: tabular-nums;
+  }
+
   .glass {
     @apply bg-background/60 backdrop-blur-md border-b border-border/50;
   }
@@ -80,5 +85,4 @@
     @apply shadow-[0_0_50px_-10px_rgba(74,222,128,0.3)] border-primary/80 ring-1 ring-primary/40 bg-secondary/30 -translate-y-1;
   }
 }
-
 

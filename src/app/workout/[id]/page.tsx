@@ -5,9 +5,10 @@ import { useRouter } from 'next/navigation'
 import { Loader2 } from 'lucide-react'
 import { WorkoutOverview } from '@/components/workout/WorkoutOverview'
 import { ActiveSession } from '@/components/workout/ActiveSession'
+import { WorkoutChallengeExecutionView } from '@/components/workout/WorkoutChallengeExecutionView'
 import { WorkoutCompleted } from '@/components/workout/WorkoutCompleted'
 import { WorkoutError } from '@/components/workout/WorkoutError'
-import { LocalWorkout } from '@/types/workout/viewTypes'
+import { LocalWorkout, LocalWorkoutChallengeResult } from '@/types/workout/viewTypes'
 import { useWorkoutStore } from '@/store/workOutStore'
 import { useQuery } from '@tanstack/react-query'
 import { getWorkoutById } from '@/app/actions/workout/get'
@@ -57,6 +58,12 @@ export default function WorkoutSessionPage({ params }: { params: { id: string } 
   const hasLoggedRef = useRef(false)
   const [currentLogId, setCurrentLogId] = useState<string | null>(null)
   const [xpEarnedState, setXpEarnedState] = useState<number>(0)
+  const [challengeHasStarted, setChallengeHasStarted] = useState(false)
+  const [challengeIsCompleted, setChallengeIsCompleted] = useState(false)
+  const [challengeResult, setChallengeResult] = useState<LocalWorkoutChallengeResult | null>(null)
+  const [challengeDurationSeconds, setChallengeDurationSeconds] = useState(0)
+  const [challengeLogId, setChallengeLogId] = useState<string | null>(null)
+  const [challengeXpEarned, setChallengeXpEarned] = useState(0)
   
   // Zustand Store
   const { 
@@ -106,6 +113,14 @@ export default function WorkoutSessionPage({ params }: { params: { id: string } 
       tags: workoutData.tags || [],
       difficulty: workoutData.difficulty || undefined,
       audio: workoutData.audio || [],
+      challenge: workoutData.challenge
+        ? {
+            mode: 'amrap_section',
+            challengeSectionId: workoutData.challenge.challenge_section_id,
+            timeCapSeconds: workoutData.challenge.time_cap_seconds,
+            scoreType: 'rounds_plus_reps',
+          }
+        : null,
       sections: workoutData.sections.map(s => ({
         id: s.id,
         name: s.name,
@@ -134,15 +149,28 @@ export default function WorkoutSessionPage({ params }: { params: { id: string } 
     }
   }, [exerciseDescriptionMap, workoutData])
 
+  const isChallengeWorkout = Boolean(workout?.challenge?.mode === 'amrap_section')
+
   // Initialize store with workout data
   useEffect(() => {
-    if (workout && (!activeWorkout || activeWorkout.id !== workout.id)) {
+    if (workout && !isChallengeWorkout && (!activeWorkout || activeWorkout.id !== workout.id)) {
       initializeWorkout(workout)
     }
-  }, [workout, activeWorkout, initializeWorkout])
+  }, [workout, activeWorkout, initializeWorkout, isChallengeWorkout])
+
+  useEffect(() => {
+    setChallengeHasStarted(false)
+    setChallengeIsCompleted(false)
+    setChallengeResult(null)
+    setChallengeDurationSeconds(0)
+    setChallengeLogId(null)
+    setChallengeXpEarned(0)
+  }, [workout?.id])
 
   // Handle Workout Completion (Log Stats)
   useEffect(() => {
+    if (isChallengeWorkout) return
+
     if (isCompleted && activeWorkout && user && !hasLoggedRef.current) {
         hasLoggedRef.current = true
         
@@ -177,21 +205,34 @@ export default function WorkoutSessionPage({ params }: { params: { id: string } 
         setCurrentLogId(null)
         setXpEarnedState(0)
     }
-  }, [isCompleted, activeWorkout, user, canSaveProgress, elapsedMs])
+  }, [isCompleted, activeWorkout, user, canSaveProgress, elapsedMs, isChallengeWorkout])
 
 
   // Helper to determine if we have a session in progress
-  const hasActiveSession = activeWorkout?.id === workout?.id && !isCompleted && Boolean(
-    startTime ||
-    elapsedMs > 0 ||
-    currentSectionIndex > 0 ||
-    currentExerciseIndex > 0 ||
-    currentSet > 1 ||
-    isResting
-  )
+  const hasActiveSession = isChallengeWorkout
+    ? false
+    : activeWorkout?.id === workout?.id && !isCompleted && Boolean(
+        startTime ||
+        elapsedMs > 0 ||
+        currentSectionIndex > 0 ||
+        currentExerciseIndex > 0 ||
+        currentSet > 1 ||
+        isResting
+      )
 
   const handleStartFromOverview = () => {
     if (!workout) return
+
+    if (isChallengeWorkout) {
+      setChallengeResult(null)
+      setChallengeDurationSeconds(0)
+      setChallengeLogId(null)
+      setChallengeXpEarned(0)
+      setChallengeIsCompleted(false)
+      setChallengeHasStarted(true)
+      return
+    }
+
     initializeWorkout(workout)
     restartWorkout()
   }
@@ -202,8 +243,65 @@ export default function WorkoutSessionPage({ params }: { params: { id: string } 
     jumpToStep(sectionIndex, exerciseIndex)
   }
 
+  const handleChallengeComplete = (result: LocalWorkoutChallengeResult, elapsedSeconds: number) => {
+    if (!workout) return
+
+    setChallengeHasStarted(false)
+    setChallengeIsCompleted(true)
+    setChallengeResult(result)
+    setChallengeDurationSeconds(elapsedSeconds)
+
+    const durationMinutes = Math.max(1, Math.ceil(elapsedSeconds / 60))
+    const xpEarned = Math.ceil(durationMinutes * 5) + 50
+    setChallengeXpEarned(xpEarned)
+
+    if (!user || !canSaveProgress) {
+      return
+    }
+
+    completeWorkoutAction({
+      workoutId: workout.id,
+      durationMinutes,
+      xpEarned,
+      challengeResult: {
+        mode: result.mode,
+        roundsCompleted: result.roundsCompleted,
+        extraReps: result.extraReps,
+        score: result.score,
+        timeCapSeconds: result.timeCapSeconds,
+      }
+    }).then((completionResult) => {
+      if (!completionResult.success) {
+        console.error('Error logging workout challenge stats:', completionResult.error)
+        return
+      }
+
+      const completionData = completionResult.data as
+        | { log_id?: string; challenge_result?: { is_pr?: boolean } }
+        | null
+        | undefined
+
+      if (typeof completionData?.log_id === 'string') {
+        setChallengeLogId(completionData.log_id)
+      }
+
+      if (completionData?.challenge_result?.is_pr) {
+        setChallengeResult((previous) => previous ? { ...previous, isPr: true } : previous)
+      }
+    })
+  }
+
+  const handleRestartChallenge = () => {
+    setChallengeResult(null)
+    setChallengeDurationSeconds(0)
+    setChallengeLogId(null)
+    setChallengeXpEarned(0)
+    setChallengeIsCompleted(false)
+    setChallengeHasStarted(true)
+  }
+
   // Render Logic
-  if (isLoading || (workout && !activeWorkout) || (activeWorkout && activeWorkout.id !== params.id)) {
+  if (isLoading || (workout && !isChallengeWorkout && !activeWorkout) || (activeWorkout && activeWorkout.id !== params.id)) {
     return (
       <div className="flex h-screen w-full flex-col items-center justify-center gap-4 bg-background">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
@@ -217,6 +315,20 @@ export default function WorkoutSessionPage({ params }: { params: { id: string } 
   }
 
   // 1. Completion View
+  if (isChallengeWorkout && challengeIsCompleted && workout && challengeResult) {
+    return (
+      <WorkoutCompleted
+        workout={workout}
+        onRestart={handleRestartChallenge}
+        initialLogId={challengeLogId}
+        xpEarned={challengeXpEarned}
+        canSaveProgress={canSaveProgress}
+        challengeResult={challengeResult}
+        durationOverrideSeconds={challengeDurationSeconds}
+      />
+    )
+  }
+
   if (isCompleted && activeWorkout) {
     return (
       <WorkoutCompleted 
@@ -230,12 +342,12 @@ export default function WorkoutSessionPage({ params }: { params: { id: string } 
   }
 
   // 2. Intro View
-  if (!hasStarted && workout) {
+  if ((!hasStarted && !challengeHasStarted) && workout) {
     return (
       <WorkoutOverview 
         workout={workout}
         onStart={handleStartFromOverview}
-        onResume={startSession}
+        onResume={isChallengeWorkout ? undefined : startSession}
         onBack={() => router.push('/')}
         hasActiveSession={hasActiveSession}
         onExerciseClick={handleJumpToExerciseFromOverview}
@@ -246,6 +358,17 @@ export default function WorkoutSessionPage({ params }: { params: { id: string } 
   }
 
   // 3. Active Session View
+  if (isChallengeWorkout && workout) {
+    return (
+      <WorkoutChallengeExecutionView
+        workout={workout}
+        canAccessTutorial={canSaveProgress}
+        onExit={() => setChallengeHasStarted(false)}
+        onComplete={handleChallengeComplete}
+      />
+    )
+  }
+
   if (!activeWorkout) return null
 
   return (

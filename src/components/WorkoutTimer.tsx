@@ -124,7 +124,7 @@ export function WorkoutTimer({ duration, mode, onComplete, onSkip }: WorkoutTime
 
       {/* Time Text & Controls Side-by-Side */}
       <div className="flex flex-col items-center gap-2">
-        <div className={`text-2xl font-mono font-bold tracking-tighter tabular-nums leading-none drop-shadow-md ${mode === 'exercise' ? 'text-white' : 'text-foreground'}`}>
+        <div className={`font-timer text-2xl tracking-[0.08em] leading-none drop-shadow-md ${mode === 'exercise' ? 'text-white' : 'text-foreground'}`}>
            {formatDuration(timeLeft, { style: 'clock' })}
         </div>
         
@@ -151,4 +151,3 @@ export function WorkoutTimer({ duration, mode, onComplete, onSkip }: WorkoutTime
     </div>
   )
 }
-

@@ -13,6 +13,7 @@ import { useWorkoutStore } from '@/store/workOutStore'
 import { FEELING_CONFIG } from '@/constants/feeling'
 import { PremiumFeatureDialog } from '@/components/premium/PremiumFeatureDialog'
 import { formatDuration } from '@/lib/time'
+import { LocalWorkoutChallengeResult } from '@/types/workout/viewTypes'
 
 
 interface WorkoutCompletedProps {
@@ -21,9 +22,19 @@ interface WorkoutCompletedProps {
   initialLogId?: string | null
   xpEarned?: number
   canSaveProgress: boolean
+  challengeResult?: LocalWorkoutChallengeResult | null
+  durationOverrideSeconds?: number
 }
 
-export function WorkoutCompleted({ workout, onRestart, initialLogId, xpEarned, canSaveProgress }: WorkoutCompletedProps) {
+export function WorkoutCompleted({
+  workout,
+  onRestart,
+  initialLogId,
+  xpEarned,
+  canSaveProgress,
+  challengeResult,
+  durationOverrideSeconds,
+}: WorkoutCompletedProps) {
   const router = useRouter()
   const [notes, setNotes] = useState('')
   const [rating, setRating] = useState(5)
@@ -36,11 +47,13 @@ export function WorkoutCompleted({ workout, onRestart, initialLogId, xpEarned, c
   const { elapsedMs, lastActiveAt } = useWorkoutStore()
 
   // Calculate Duration
-  const durationMs = elapsedMs + (lastActiveAt ? Math.max(Date.now() - lastActiveAt, 0) : 0)
+  const durationMs = typeof durationOverrideSeconds === 'number'
+    ? durationOverrideSeconds * 1000
+    : elapsedMs + (lastActiveAt ? Math.max(Date.now() - lastActiveAt, 0) : 0)
   const timeString = formatDuration(Math.floor(durationMs / 1000), { style: 'clock' })
 
   // Calculate Stats
-  const totalSets = workout.sections.reduce((acc, section) => 
+  const totalSets = workout.sections.reduce((acc, section) =>
     acc + section.exercises.reduce((exAcc, ex) => exAcc + (ex.sets || 0), 0)
   , 0)
   
@@ -70,12 +83,16 @@ export function WorkoutCompleted({ workout, onRestart, initialLogId, xpEarned, c
       <div className="grid grid-cols-3 gap-3 w-full">
         <div className="flex flex-col items-center justify-center p-3 rounded-2xl bg-secondary/20 hover:bg-secondary/30 transition-colors">
             <Dumbbell className="w-5 h-5 text-blue-500 mb-1" />
-            <span className="text-xl font-bold tracking-tight">{totalSets}</span>
-            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Sets</span>
+            <span className="text-xl font-bold tracking-tight">
+              {challengeResult ? `${challengeResult.roundsCompleted} + ${challengeResult.extraReps}` : totalSets}
+            </span>
+            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+              {challengeResult ? 'Score' : 'Sets'}
+            </span>
         </div>
         <div className="flex flex-col items-center justify-center p-3 rounded-2xl bg-secondary/20 hover:bg-secondary/30 transition-colors">
             <Timer className="w-5 h-5 text-green-500 mb-1" />
-            <span className="text-xl font-bold tracking-tight">{timeString}</span>
+            <span className="font-timer text-xl tracking-[0.08em]">{timeString}</span>
             <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Time</span>
         </div>
         <div className="flex flex-col items-center justify-center p-3 rounded-2xl bg-secondary/20 hover:bg-secondary/30 transition-colors relative overflow-hidden group">
@@ -85,6 +102,27 @@ export function WorkoutCompleted({ workout, onRestart, initialLogId, xpEarned, c
             <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">XP</span>
         </div>
       </div>
+
+      {challengeResult && (
+        <div className="w-full rounded-[22px] border border-emerald-500/20 bg-emerald-500/5 px-4 py-3 text-left">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.18em] text-emerald-600 dark:text-emerald-400">
+              Reto AMRAP
+            </span>
+            {challengeResult.isPr && (
+              <span className="rounded-full border border-amber-500/20 bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.18em] text-amber-600 dark:text-amber-400">
+                Nueva marca
+              </span>
+            )}
+          </div>
+          <p className="mt-3 text-lg font-black text-foreground">
+            {challengeResult.roundsCompleted} rondas + {challengeResult.extraReps} reps
+          </p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Resultado final del reto dentro del time cap.
+          </p>
+        </div>
+      )}
 
       <div className="flex flex-col gap-6 w-full py-2">
         <div className="space-y-2">

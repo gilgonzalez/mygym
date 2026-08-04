@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server"
 import { Database } from "@/types/database"
+import { syncWorkoutChallengeConfig, WorkoutChallengeInput } from "./challenge"
 
 type DbWorkout = Database['public']['Tables']['workouts']['Insert']
 type DbExercise = Database['public']['Tables']['exercises']['Insert']
@@ -38,6 +39,7 @@ export type WorkoutInput = Omit<DbWorkout, 'id' | 'created_at' | 'updated_at' | 
     exp_earned?: number
     stats?: Record<string, number>
     sections: SectionInput[]
+    challenge?: WorkoutChallengeInput | null
 }
 
 export async function createWorkoutAction(data: WorkoutInput) {
@@ -58,6 +60,12 @@ export async function createWorkoutAction(data: WorkoutInput) {
       console.error('RPC Error:', error)
       throw new Error(`Transaction failed: ${error.message}`)
     }
+
+    if (!workoutId) {
+      throw new Error('Workout ID missing after creation')
+    }
+
+    await syncWorkoutChallengeConfig(supabase, workoutId, data.challenge)
 
     return { success: true, workoutId }
   } catch (error: any) {

@@ -15,6 +15,7 @@ export async function getWorkoutById(id: string): Promise<{ success: boolean, da
       .from('workouts')
       .select(`
         *,
+        challenge:workout_challenges(*),
         user:users!user_id(id, username, name, avatar_url),
         workout_sections(
           order_index,
@@ -84,8 +85,13 @@ export async function getWorkoutById(id: string): Promise<{ success: boolean, da
     }
 
     // Transform deeply nested response to flat UI structure
+    const challengeData = Array.isArray((data as any).challenge)
+      ? (data as any).challenge[0]
+      : (data as any).challenge
+
     const workout: Workout = {
       ...data,
+      challenge: challengeData || null,
       user: data.user,
       viewer_follow_status: viewerFollowStatus,
       sections: (data.workout_sections || [])

@@ -6,7 +6,7 @@ import { PremiumFeatureDialog } from '@/components/premium/PremiumFeatureDialog'
 import { ExerciseTutorialDialog } from './ExerciseTutorialDialog'
 import { MusicPlayer } from './MusicPlayer'
 import { LocalWorkout, ExerciseTutorial } from '@/types/workout/viewTypes'
-import { CheckCircle2, ChevronLeft, Dumbbell, Info, Pause, Play, Plus, SkipForward } from 'lucide-react'
+import { CheckCircle2, ChevronLeft, Clock, Dumbbell, Info, Pause, Play, Plus, SkipForward } from 'lucide-react'
 import { getNextWorkoutCursor, getStepInfo } from '@/lib/workout/sessionNavigation'
 import { formatDuration } from '@/lib/time'
 import { useWorkoutStore } from '@/store/workOutStore'
@@ -473,16 +473,16 @@ export function WorkoutExecutionView({
                       </div>
 
                       <div className="shrink-0 text-right">
-                        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/35">
-                          Sesion
-                        </p>
                         <div className="flex flex-wrap justify-end gap-1.5">
-                          <p className="rounded-full border border-white/10 bg-white/[0.06] px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-white/70">
+                          <p className="flex flex-row items-center justify-center rounded-full border border-white/10 bg-white/[0.06] px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-white/70">
                             {totalExercisesBeforeActive + 1} / {totalExerciseCount}
                           </p>
-                          <p className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-2.5 py-1 text-[11px] font-bold tabular-nums tracking-[0.12em] text-emerald-200">
+                          <span  className='flex flex-row gap-2 rounded-full justify-center items-center border border-emerald-400/20 bg-emerald-400/10 px-2.5 py-1 text-[11px] tracking-[0.08em] text-emerald-200'>
+                          <Clock className='w-4'/>
+                          <p className="font-timer ">
                             {workoutDurationLabel}
                           </p>
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -496,12 +496,7 @@ export function WorkoutExecutionView({
                 <div className="hidden min-w-0 flex-1 flex-wrap items-center gap-3 lg:flex">
                   {flattenedRoadmap.map(({ section, sectionIndex, exercises }) => (
                     <div key={section.id} className="flex items-center gap-3">
-                      <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-2.5 py-2">
-                        <span className="block truncate text-[9px] font-bold uppercase tracking-[0.18em] text-white/45">
-                          {section.name}
-                        </span>
-
-                        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                        <div className="flex flex-wrap items-center gap-1.5 py-2">
                           {Array.from({ length: Math.max(...exercises.map(({ exercise }) => exercise.sets || 1), 1) }).map((_, seriesIndex) => {
                             const seriesNumber = seriesIndex + 1
                             const exercisesInSeries = exercises
@@ -557,7 +552,6 @@ export function WorkoutExecutionView({
                               </div>
                             )
                           })}
-                        </div>
                       </div>
 
                       {sectionIndex < flattenedRoadmap.length - 1 ? (
@@ -565,15 +559,6 @@ export function WorkoutExecutionView({
                       ) : null}
                     </div>
                   ))}
-                </div>
-
-                <div className="hidden shrink-0 text-right lg:block">
-                  <p className="rounded-full border border-white/10 bg-white/[0.06] px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-white/70">
-                    {totalExercisesBeforeActive + 1} / {totalExerciseCount}
-                  </p>
-                  <p className="mt-2 max-w-[200px] truncate text-sm font-semibold text-white/80">
-                    {displaySection?.name || workout.title}
-                  </p>
                 </div>
               </div>
 
@@ -641,7 +626,7 @@ export function WorkoutExecutionView({
               <span className="text-[10px] font-bold uppercase tracking-[0.22em] text-emerald-200/70">
                 Sesion total
               </span>
-              <span className="mt-1 text-2xl font-black tabular-nums tracking-[0.08em] text-emerald-200">
+              <span className="font-timer mt-1 text-2xl tracking-[0.08em] text-emerald-200">
                 {workoutDurationLabel}
               </span>
             </div>
@@ -658,9 +643,9 @@ export function WorkoutExecutionView({
               </h1>
               <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
                 <span className={`rounded-[16px] border px-4 py-2 text-sm font-bold uppercase tracking-[0.16em] ${stageTheme.badgeClass}`}>
-                  Status: {stageTheme.badge}
+                  {stageTheme.badge}
                 </span>
-                <span className="rounded-[16px] border border-white/10 bg-white/[0.06] px-4 py-2 text-sm font-bold uppercase tracking-[0.16em] text-white/78">
+                <span className={`rounded-[16px] border border-white/10 bg-white/[0.06] px-4 py-2 text-sm font-bold uppercase tracking-[0.16em] text-white/78 ${hasTimer ? 'font-timer normal-case tracking-[0.08em]' : ''}`}>
                   {timerLabel}
                 </span>
               </div>
@@ -868,7 +853,7 @@ export function WorkoutExecutionView({
             </div>
             {showCompactTimerLabel ? (
               <p
-                className={`font-black tabular-nums tracking-[-0.06em] sm:text-5xl md:text-6xl lg:text-7xl ${
+                className={`${hasTimer ? 'font-timer tracking-[0.08em]' : 'font-black tracking-[-0.06em]'} sm:text-5xl md:text-6xl lg:text-7xl ${
                   isCompactMobileViewport ? 'text-[clamp(1.75rem,8vw,2.25rem)]' : 'text-[clamp(2.25rem,10vw,3.4rem)]'
                 }`}
               >

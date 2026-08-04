@@ -99,6 +99,15 @@ const workoutSchema = z.object({
   difficulty: z.enum(['beginner', 'intermediate', 'advanced']).optional(),
   visibility: z.enum(['draft', 'public', 'private', 'followers']).default('private'),
   audio: z.array(z.string()).optional(),
+  challenge: z.object({
+    enabled: z.boolean().default(false),
+    challengeSectionId: z.string().optional(),
+    timeCapSeconds: z.coerce.number().min(30).max(7200).default(600),
+  }).default({
+    enabled: false,
+    challengeSectionId: undefined,
+    timeCapSeconds: 600,
+  }),
   sections: z.array(sectionSchema),
 })
 
@@ -322,6 +331,11 @@ function CreateWorkoutContent() {
             difficulty: (w.difficulty as any) || 'beginner',
             visibility: w.visibility || 'private',
             audio: w.audio || [],
+            challenge: {
+                enabled: Boolean(w.challenge),
+                challengeSectionId: w.challenge?.challenge_section_id || w.sections[0]?.id,
+                timeCapSeconds: w.challenge?.time_cap_seconds || 600,
+            },
             sections: w.sections.map((s: any) => ({
                 id: s.id,
                 name: s.name,
@@ -375,6 +389,11 @@ function CreateWorkoutContent() {
       cover: '',
       visibility: 'private',
       audio: [],
+      challenge: {
+        enabled: false,
+        challengeSectionId: undefined,
+        timeCapSeconds: 600,
+      },
       sections: [
         {
           id: 'section-1',
@@ -410,7 +429,6 @@ function CreateWorkoutContent() {
         initializedRef.current = true
     }
   }, [loadedWorkout, workoutId, reset])
-
 
   const { mutate: createWorkout } = useMutation({
     mutationFn: async (data: WorkoutFormValues) => {
@@ -616,6 +634,17 @@ function CreateWorkoutContent() {
                 tags: data.tags,
                 cover: coverUrl,
                 audio: validAudioUrls,
+                challenge: data.challenge?.enabled
+                  ? {
+                      mode: 'amrap_section',
+                      challenge_section_index: Math.max(
+                        sectionsWithMedia.findIndex((section: WorkoutFormSection) => section.id === data.challenge?.challengeSectionId),
+                        0
+                      ),
+                      time_cap_seconds: data.challenge.timeCapSeconds,
+                      score_type: 'rounds_plus_reps',
+                    }
+                  : null,
                 sections: sectionsWithMedia.map((s: WorkoutFormSection) => ({
                     id: s.id,
                     name: s.name,
@@ -693,8 +722,23 @@ function CreateWorkoutContent() {
     control,
     name: "sections"
   })
+  const isChallengeEnabled = watch('challenge.enabled')
+  const selectedChallengeSectionId = watch('challenge.challengeSectionId')
   const totalExercises = (formValues.sections || []).reduce((sum, section) => sum + (section.exercises?.length || 0), 0)
   const builderLabel = workoutId ? 'Editar workout' : 'Nuevo workout'
+
+  React.useEffect(() => {
+    if (!isChallengeEnabled) return
+
+    const sections = formValues.sections || []
+    if (!sections.length) return
+
+    const selectedSectionStillExists = sections.some((section) => section.id === selectedChallengeSectionId)
+
+    if (!selectedChallengeSectionId || !selectedSectionStillExists) {
+      setValue('challenge.challengeSectionId', sections[0].id, { shouldDirty: true })
+    }
+  }, [formValues.sections, isChallengeEnabled, selectedChallengeSectionId, setValue])
 
   React.useEffect(() => {
     if (!isLoading && !user) {
@@ -1414,6 +1458,103 @@ function CreateWorkoutContent() {
                     </Select>
                   )}
                 />
+              </div>
+
+              <div className="space-y-4 rounded-[24px] border border-border/60 bg-muted/20 p-3.5 sm:p-5 md:col-span-2">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Modo reto</p>
+                    <p className="mt-2 text-sm font-medium text-foreground">
+                      Convierte el workout en una section que se repite tantas rondas como puedas dentro de un tiempo limite.
+                    </p>
+                  </div>
+                  <Controller
+                    control={control}
+                    name="challenge.enabled"
+                    render={({ field }) => (
+                      <button
+                        type="button"
+                        onClick={() => field.onChange(!field.value)}
+                        className={cn(
+                          'inline-flex h-10 items-center rounded-full border px-4 text-xs font-bold uppercase tracking-[0.18em] transition-colors',
+                          field.value
+                            ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                            : 'border-border/60 bg-background text-muted-foreground'
+                        )}
+                      >
+                        {field.value ? 'Reto activo' : 'Workout normal'}
+                      </button>
+                    )}
+                  />
+                </div>
+
+                {isChallengeEnabled && (
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <label className="pl-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                        Section que se repite
+                      </label>
+                      <Controller
+                        control={control}
+                        name="challenge.challengeSectionId"
+                        render={({ field }) => (
+                          <Select
+                            value={field.value || formValues.sections?.[0]?.id}
+                            onValueChange={field.onChange}
+                          >
+                            <SelectTrigger className="h-10 w-full rounded-2xl border-border/50 bg-background text-sm font-medium focus:ring-primary/20 sm:h-11">
+                              <SelectValue placeholder="Selecciona la section" />
+                            </SelectTrigger>
+                            <SelectContent className="rounded-xl border-border/50 shadow-xl">
+                              {(formValues.sections || []).map((section, index) => (
+                                <SelectItem key={section.id} value={section.id} className="rounded-lg my-1 cursor-pointer font-medium">
+                                  {index + 1}. {section.name || `Section ${index + 1}`}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="pl-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                        Tiempo limite
+                      </label>
+                      <Controller
+                        control={control}
+                        name="challenge.timeCapSeconds"
+                        render={({ field }) => (
+                          <Input
+                            type="number"
+                            min={30}
+                            step={30}
+                            value={field.value || 600}
+                            onChange={(event) => field.onChange(Number(event.target.value))}
+                            className="h-10 rounded-2xl border-border/50 bg-background text-sm font-bold focus-visible:ring-primary/20 sm:h-11"
+                          />
+                        )}
+                      />
+                      <p className="pl-1 text-xs text-muted-foreground">
+                        Score final: rondas completas + reps extra del ejercicio actual al sonar el cap.
+                      </p>
+                    </div>
+
+                    <div className="rounded-[20px] border border-emerald-500/15 bg-emerald-500/5 p-4 md:col-span-2">
+                      <p className="text-xs font-semibold text-foreground">
+                        V1 recomendada: usa una sola pasada por ejercicio dentro de la section del reto.
+                      </p>
+                      <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                        Si metes varias series por ejercicio en esa section, la ronda puede volverse ambigua. Para que el reto se sienta limpio, mejor una section corta y directa.
+                      </p>
+                      {selectedChallengeSectionId && (
+                        <p className="mt-3 text-xs font-medium text-emerald-700 dark:text-emerald-300">
+                          Section seleccionada: {(formValues.sections || []).find((section) => section.id === selectedChallengeSectionId)?.name || 'Sin nombre'}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -2323,14 +2464,14 @@ function MediaInput({ value, onChange, placeholder, type = 'media', variant = 'd
                         {/* Controls */}
                         <div className="relative z-10 flex flex-col items-center gap-8">
                             {countdown !== null ? (
-                                <div className="text-[150px] font-black text-white animate-pulse drop-shadow-2xl">
+                                <div className="font-timer text-[150px] tracking-[0.08em] text-white animate-pulse drop-shadow-2xl">
                                     {countdown}
                                 </div>
                             ) : mediaRecorderRef.current?.state === 'recording' ? (
                                 <div className="flex flex-col items-center gap-4">
                                     <div className="flex items-center gap-2 bg-red-600/80 px-4 py-2 rounded-full backdrop-blur-md">
                                         <div className="w-3 h-3 bg-white rounded-full animate-pulse" />
-                                        <span className="font-mono text-white font-bold text-xl">
+                                        <span className="font-timer text-xl tracking-[0.08em] text-white">
                                             {new Date(recordingTime * 1000).toISOString().slice(14, 19)}
                                         </span>
                                     </div>

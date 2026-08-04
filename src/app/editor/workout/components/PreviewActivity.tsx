@@ -137,7 +137,7 @@ export function PreviewActivity({
 
         <div className="text-center">
           <span className="block text-xs text-gray-500 uppercase tracking-widest mb-1">Timer</span>
-          <span className="font-mono text-xl sm:text-2xl font-bold">{formatDuration(0, { style: 'clock' })}</span>
+          <span className="font-timer text-xl tracking-[0.08em] sm:text-2xl">{formatDuration(0, { style: 'clock' })}</span>
         </div>
 
         <Button
