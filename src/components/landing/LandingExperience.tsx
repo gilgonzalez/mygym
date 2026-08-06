@@ -2,7 +2,9 @@
 
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/Button'
+import { useAuthStore } from '@/store/authStore'
 import {
   ArrowRight,
   Dumbbell,
@@ -1462,7 +1464,7 @@ function ProfileProgressMockup() {
   )
 }
 
-function PricingMockup() {
+function PricingMockup({ hasSession, onRegister }: { hasSession: boolean; onRegister: (e: React.MouseEvent) => void }) {
   const [billing, setBilling] = useState<'monthly' | 'yearly'>('yearly')
   const [hovered, setHovered] = useState<'free' | 'pro' | null>(null)
   const saveMonth = Math.round((9 - 4) / 9 * 100)
@@ -1537,9 +1539,11 @@ function PricingMockup() {
                 </li>
               ))}
             </ul>
-            <Button variant="outline" className="mt-8 w-full h-14 rounded-full border-white/15 bg-white/5 text-white font-black text-sm hover:bg-white/10">
-              Empezar gratis
-            </Button>
+            <Link href="#" onClick={onRegister} className="mt-8 block">
+              <Button variant="outline" className="w-full h-14 rounded-full border-white/15 bg-white/5 text-white font-black text-sm hover:bg-white/10">
+                {hasSession ? 'Ir al feed' : 'Empezar gratis'}
+              </Button>
+            </Link>
           </div>
         </div>
 
@@ -1608,9 +1612,9 @@ function PricingMockup() {
                 <p className="text-xs text-emerald-100/80 font-semibold">Prueba Pro sin compromiso, cancela antes.</p>
               </div>
             </div>
-            <Link href="/auth/register?next=%2Ffeed" className="mt-6 block">
+            <Link href="#" onClick={onRegister} className="mt-6 block">
               <Button size="lg" className="w-full h-14 rounded-full bg-emerald-400 text-emerald-950 hover:bg-emerald-300 font-black text-base shadow-[0_20px_50px_-10px_rgba(74,222,128,0.55)]">
-                Empezar prueba gratis
+                {hasSession ? 'Ir al feed' : 'Empezar prueba gratis'}
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
             </Link>
@@ -1645,6 +1649,37 @@ function SectionCard({ eyebrow, eyebrowIcon, eyebrowColor, title, hook }: {
 }
 
 export default function LandingExperience() {
+  const router = useRouter()
+  const { user, isLoading } = useAuthStore()
+  const hasSession = Boolean(user) && !isLoading
+
+  const handleAuthAction = (e: React.MouseEvent) => {
+    e.preventDefault()
+    if (hasSession) {
+      router.push('/feed')
+    } else {
+      router.push('/auth/login?next=%2Ffeed')
+    }
+  }
+
+  const handleRegisterAction = (e: React.MouseEvent) => {
+    e.preventDefault()
+    if (hasSession) {
+      router.push('/feed')
+    } else {
+      router.push('/auth/register?next=%2Ffeed')
+    }
+  }
+
+  const handleFeedAction = (e: React.MouseEvent) => {
+    e.preventDefault()
+    if (hasSession) {
+      router.push('/feed')
+    } else {
+      router.push('/auth/register?next=%2Ffeed')
+    }
+  }
+
   return (
     <main className="relative min-h-screen overflow-x-hidden bg-[#050608] text-foreground">
       <div className="pointer-events-none fixed inset-0 z-0">
@@ -1682,9 +1717,9 @@ export default function LandingExperience() {
             ))}
           </nav>
           <div className="flex items-center gap-1.5 sm:gap-2">
-            <Link href="/auth/login?next=%2Ffeed">
+            <Link href="#" onClick={handleAuthAction}>
               <Button className="rounded-full px-3.5 sm:px-5 h-9 sm:h-11 text-xs sm:text-sm font-black shadow-[0_18px_40px_rgba(74,222,128,0.22)]">
-                Iniciar sesion
+                {hasSession ? 'Ir al feed' : 'Iniciar sesion'}
               </Button>
             </Link>
           </div>
@@ -1706,9 +1741,9 @@ export default function LandingExperience() {
             Crea rutinas profesionales, ejecuta entrenamientos con retos AMRAP, comparte tu progreso y gamifica cada repeticion. Todo en una sola app.
           </p>
           <div className="mt-8 sm:mt-10 flex flex-wrap items-center justify-center gap-2.5 sm:gap-3">
-            <Link href="/feed">
+            <Link href="#" onClick={handleFeedAction}>
               <Button size="lg" className="h-12 sm:h-14 rounded-full px-6 sm:px-8 font-black text-sm sm:text-base shadow-[0_20px_50px_-10px_rgba(16,185,129,0.55)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_26px_60px_-12px_rgba(16,185,129,0.65)] active:translate-y-0">
-                Probar MyGym gratis
+                {hasSession ? 'Ir al feed' : 'Probar MyGym gratis'}
                 <ArrowRight className="ml-1.5 sm:ml-2 h-4 w-4 sm:h-5 sm:w-5" />
               </Button>
             </Link>
@@ -1797,7 +1832,7 @@ export default function LandingExperience() {
           hook="Todo lo basico para entrenar 100% gratis. Actualiza a Pro para desbloquear IA, metricas avanzadas, plantillas premium, gamificacion completa y 14 dias de prueba sin riesgo."
         />
         <div className="grid grid-cols-1 gap-5 sm:gap-7 max-w-5xl mx-auto">
-          <PricingMockup />
+          <PricingMockup hasSession={hasSession} onRegister={handleRegisterAction} />
         </div>
       </section>
 
@@ -1814,9 +1849,9 @@ export default function LandingExperience() {
               Crea tu cuenta en 60 segundos y empieza hoy mismo. Cancela cuando quieras, sin preguntas.
             </p>
             <div className="mt-9 sm:mt-10 flex flex-wrap items-center justify-center gap-3">
-              <Link href="/auth/register?next=%2Ffeed">
+              <Link href="#" onClick={handleRegisterAction}>
                 <Button size="lg" className="h-14 rounded-full px-10 font-black text-base shadow-[0_20px_50px_rgba(74,222,128,0.28)]">
-                  Empezar gratis
+                  {hasSession ? 'Ir al feed' : 'Empezar gratis'}
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
               </Link>

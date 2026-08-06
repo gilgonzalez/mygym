@@ -79,9 +79,8 @@ function AuthCallbackContent() {
             setUser(tempUser as any)
         }
         
-        const next = searchParams.get('redirect') || searchParams.get('next')
-        router.push(next || ('/feed' as any))
-        router.refresh()
+        const next = searchParams.get('redirect') || searchParams.get('next') || '/feed'
+        window.location.href = next
 
       } catch (err: any) {
         console.error('Auth callback error:', err)

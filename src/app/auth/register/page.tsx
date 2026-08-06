@@ -1,12 +1,13 @@
 'use client'
 
-import { useState, Suspense } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/Button'
 import { Input } from '@/components/ui/input'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Loader2, AlertCircle, ShieldCheck } from 'lucide-react'
+import { useAuthStore } from '@/store/authStore'
 import { GoogleAuthButton } from '@/components/auth/GoogleAuthButton'
 
 function RegisterContent() {
@@ -14,7 +15,8 @@ function RegisterContent() {
   const [error, setError] = useState('')
   const router = useRouter()
   const searchParams = useSearchParams()
-  const redirect = searchParams?.get('redirect') || searchParams?.get('next')
+  const redirect = searchParams?.get('redirect') || searchParams?.get('next') || '/feed'
+  const { isAuthenticated, isLoading: authLoading } = useAuthStore()
 
   const [formData, setFormData] = useState({
     name: '',
@@ -22,6 +24,12 @@ function RegisterContent() {
     email: '',
     password: ''
   })
+
+  useEffect(() => {
+    if (!authLoading && isAuthenticated) {
+      window.location.href = redirect
+    }
+  }, [isAuthenticated, authLoading, redirect])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }))
@@ -98,7 +106,7 @@ function RegisterContent() {
             <GoogleAuthButton 
               text="Continue with Google"
               className="w-full flex items-center justify-center gap-2 h-11"
-              next={redirect || undefined}
+              next={redirect}
             />
 
             <div className="relative">

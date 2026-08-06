@@ -18,8 +18,8 @@ function LoginForm() {
   const [successMessage, setSuccessMessage] = useState('')
   const router = useRouter()
   const searchParams = useSearchParams()
-  const redirect = searchParams?.get('redirect') || searchParams?.get('next')
-  const { setUser } = useAuthStore()
+  const redirect = searchParams?.get('redirect') || searchParams?.get('next') || '/feed'
+  const { setUser, isAuthenticated, isLoading: authLoading } = useAuthStore()
   const [supportMessage, setSupportMessage] = useState('')
 
   const [formData, setFormData] = useState({
@@ -28,10 +28,14 @@ function LoginForm() {
   })
 
   useEffect(() => {
+    if (!authLoading && isAuthenticated) {
+      window.location.href = redirect
+      return
+    }
     if (searchParams?.get('registered') === 'true') {
       setSuccessMessage('Cuenta creada correctamente. Por favor, ve a tu bandeja de entrada o spam y verifica el mail.')
     }
-  }, [searchParams])
+  }, [searchParams, isAuthenticated, authLoading, redirect])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }))
@@ -63,9 +67,8 @@ function LoginForm() {
         if (userData) {
           setUser(userData)
         }
-        
-        router.push(redirect as any ?? '/feed')
-        router.refresh()
+
+        window.location.href = redirect
       }
     } catch (err: any) {
       if (err.message === 'Email not confirmed') {
@@ -111,7 +114,7 @@ function LoginForm() {
           <GoogleAuthButton 
             text="Sign in with Google"
             className="w-full flex items-center justify-center gap-2 h-11"
-            next={redirect || undefined}
+            next={redirect}
           />
 
           <div className="relative">
