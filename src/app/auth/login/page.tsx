@@ -64,7 +64,7 @@ function LoginForm() {
           setUser(userData)
         }
         
-        router.push(redirect as any ?? '/')
+        router.push(redirect as any ?? '/feed')
         router.refresh()
       }
     } catch (err: any) {

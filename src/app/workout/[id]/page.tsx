@@ -348,7 +348,7 @@ export default function WorkoutSessionPage({ params }: { params: { id: string } 
         workout={workout}
         onStart={handleStartFromOverview}
         onResume={isChallengeWorkout ? undefined : startSession}
-        onBack={() => router.push('/')}
+        onBack={() => router.push('/feed')}
         hasActiveSession={hasActiveSession}
         onExerciseClick={handleJumpToExerciseFromOverview}
         isAuthenticated={!!user}

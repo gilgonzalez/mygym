@@ -705,7 +705,7 @@ function CreateWorkoutContent() {
         setSubmitStatus('success')
         setSubmitMessage(workoutId ? 'Workout actualizado correctamente. Redirigiendo al feed...' : 'Workout guardado correctamente. Redirigiendo al feed...')
         reset()
-        router.push('/')
+        router.push('/feed')
     },
     onError: (error: Error) => {
         setSubmitStatus('error')
@@ -888,7 +888,7 @@ function CreateWorkoutContent() {
         <div className="flex flex-col gap-1.5 sm:gap-2 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-2.5">
             <Link
-              href="/"
+              href="/feed"
               className="rounded-full border border-border/60 p-1.5 text-muted-foreground transition-colors hover:text-foreground"
             >
               <ArrowLeft className="h-3.5 w-3.5 sm:h-5 sm:w-5" />

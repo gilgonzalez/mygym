@@ -53,7 +53,7 @@ export function WorkoutError({ onRetry, error }: WorkoutErrorProps) {
           <Button 
             variant="outline" 
             size="lg" 
-            onClick={() => router.push('/')} 
+            onClick={() => router.push('/feed')} 
             className="w-full gap-2 border-2 hover:bg-accent/50"
           >
             <Home className="w-4 h-4" />

@@ -196,8 +196,8 @@ export function ExercisePreviewDialog({
                   <PrimaryMedia exercise={exercise} />
                   <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(2,6,23,0.08)_0%,rgba(2,6,23,0.26)_36%,rgba(2,6,23,0.92)_100%)]" />
 
-                  <div className="absolute inset-x-0 bottom-0 hidden p-6 sm:block sm:p-8">
-                    <div className="mb-4 flex max-w-full flex-wrap gap-2">
+                  <div className="absolute inset-x-0 bottom-0 hidden sm:block p-6 sm:p-8 max-h-[calc(100%-56px)] min-h-0 flex flex-col pointer-events-none">
+                    <div className="pointer-events-auto shrink-0 mb-3 flex max-w-full flex-wrap gap-2">
                       {sectionName ? (
                         <Badge className="max-w-full border-white/10 bg-white/12 text-white hover:bg-white/12">
                           {sectionName}
@@ -208,18 +208,18 @@ export function ExercisePreviewDialog({
                       </Badge>
                     </div>
 
-                    <DialogHeader className="text-left">
-                      <DialogTitle className="max-w-3xl break-words text-3xl font-semibold leading-tight tracking-tight text-white sm:text-4xl">
+                    <DialogHeader className="pointer-events-auto text-left shrink-0">
+                      <DialogTitle className="max-w-3xl break-words text-3xl font-semibold leading-tight tracking-tight text-white sm:text-4xl line-clamp-2">
                         {exercise.name}
                       </DialogTitle>
                       {exercise.description?.trim() ? (
-                        <DialogDescription className="mt-3 max-w-3xl rounded-2xl border border-white/10 bg-black/30 px-4 py-3 break-words text-sm font-medium leading-7 text-white/90 shadow-[0_12px_30px_rgba(0,0,0,0.18)] backdrop-blur-md sm:text-[15px]">
+                        <DialogDescription className="mt-3 max-w-3xl rounded-2xl border border-white/10 bg-black/30 px-4 py-3 break-words text-sm font-medium leading-7 text-white/90 shadow-[0_12px_30px_rgba(0,0,0,0.18)] backdrop-blur-md sm:text-[15px] max-h-[160px] sm:max-h-[200px] overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
                           {exercise.description.trim()}
                         </DialogDescription>
                       ) : null}
                     </DialogHeader>
 
-                    <div className="mt-5 grid gap-2.5 sm:grid-cols-3">
+                    <div className="pointer-events-auto shrink-0 mt-4 grid gap-2.5 sm:grid-cols-3">
                       <MetricChip
                         icon={<Layers3 className="h-4 w-4" />}
                         label="Series"
@@ -242,50 +242,48 @@ export function ExercisePreviewDialog({
                     </div>
                   </div>
 
-                  <div className="absolute inset-x-0 bottom-0 p-4 sm:hidden">
-                    <div>
-                      <div className="mb-4 flex max-w-full flex-wrap gap-2">
-                        {sectionName ? (
-                          <Badge className="max-w-full border-white/10 bg-white/12 text-white hover:bg-white/12">
-                            {sectionName}
-                          </Badge>
-                        ) : null}
-                        <Badge variant="outline" className="max-w-full border-white/15 bg-black/20 text-white">
-                          {exercise.type === 'time' ? 'Por tiempo' : 'Por repeticiones'}
+                  <div className="absolute inset-x-0 bottom-0 p-4 sm:hidden max-h-[calc(100%-24px)] min-h-0 flex flex-col pointer-events-none">
+                    <div className="pointer-events-auto shrink-0 mb-3 flex max-w-full flex-wrap gap-2">
+                      {sectionName ? (
+                        <Badge className="max-w-full border-white/10 bg-white/12 text-white hover:bg-white/12">
+                          {sectionName}
                         </Badge>
-                      </div>
+                      ) : null}
+                      <Badge variant="outline" className="max-w-full border-white/15 bg-black/20 text-white">
+                        {exercise.type === 'time' ? 'Por tiempo' : 'Por repeticiones'}
+                      </Badge>
+                    </div>
 
-                      <DialogHeader className="text-left">
-                        <DialogTitle className="max-w-3xl break-words text-3xl font-semibold leading-tight tracking-tight text-white">
-                          {exercise.name}
-                        </DialogTitle>
-                        {exercise.description?.trim() ? (
-                          <DialogDescription className="mt-3 max-w-3xl rounded-2xl border border-white/10 bg-black/30 px-4 py-3 break-words text-sm font-medium leading-7 text-white/90 shadow-[0_12px_30px_rgba(0,0,0,0.18)] backdrop-blur-md">
-                            {exercise.description.trim()}
-                          </DialogDescription>
-                        ) : null}
-                      </DialogHeader>
+                    <DialogHeader className="pointer-events-auto text-left shrink-0">
+                      <DialogTitle className="max-w-3xl break-words text-2xl font-semibold leading-tight tracking-tight text-white line-clamp-2">
+                        {exercise.name}
+                      </DialogTitle>
+                      {exercise.description?.trim() ? (
+                        <DialogDescription className="mt-3 max-w-3xl rounded-2xl border border-white/10 bg-black/30 px-4 py-3 break-words text-sm font-medium leading-7 text-white/90 shadow-[0_12px_30px_rgba(0,0,0,0.18)] backdrop-blur-md max-h-[130px] overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+                          {exercise.description.trim()}
+                        </DialogDescription>
+                      ) : null}
+                    </DialogHeader>
 
-                      <div className="mt-5 grid gap-2.5">
-                        <MetricChip
-                          icon={<Layers3 className="h-4 w-4" />}
-                          label="Series"
-                          value={`${exercise.sets || 0}`}
-                        />
-                        <MetricChip
-                          icon={<Target className="h-4 w-4" />}
-                          label="Trabajo"
-                          value={
-                            exercise.type === 'time'
-                              ? `${formatDuration(exercise.duration || 0)} / serie`
-                              : `${exercise.reps || 0} reps / serie`}
-                        />
-                        <MetricChip
-                          icon={<Clock3 className="h-4 w-4" />}
-                          label="Descanso"
-                          value={formatDuration(exercise.rest || 0)}
-                        />
-                      </div>
+                    <div className="pointer-events-auto shrink-0 mt-4 grid gap-2.5">
+                      <MetricChip
+                        icon={<Layers3 className="h-4 w-4" />}
+                        label="Series"
+                        value={`${exercise.sets || 0}`}
+                      />
+                      <MetricChip
+                        icon={<Target className="h-4 w-4" />}
+                        label="Trabajo"
+                        value={
+                          exercise.type === 'time'
+                            ? `${formatDuration(exercise.duration || 0)} / serie`
+                            : `${exercise.reps || 0} reps / serie`}
+                      />
+                      <MetricChip
+                        icon={<Clock3 className="h-4 w-4" />}
+                        label="Descanso"
+                        value={formatDuration(exercise.rest || 0)}
+                      />
                     </div>
                   </div>
                 </div>

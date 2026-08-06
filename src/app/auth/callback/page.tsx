@@ -80,7 +80,7 @@ function AuthCallbackContent() {
         }
         
         const next = searchParams.get('redirect') || searchParams.get('next')
-        router.push(next || ('/' as any))
+        router.push(next || ('/feed' as any))
         router.refresh()
 
       } catch (err: any) {

@@ -502,7 +502,7 @@ export default function ProfilePage() {
             <div className="rounded-[28px] border border-dashed border-white/10 bg-white/[0.03] py-14 text-center">
                 <Dumbbell className="mx-auto mb-4 h-12 w-12 text-muted-foreground/50" />
                 <h3 className="text-lg font-semibold">No workouts found</h3>
-                <p className="mb-4 text-sm text-muted-foreground">You haven't created any workouts yet.</p>
+                <p className="mb-4 text-sm text-muted-foreground">You haven&apos;t created any workouts yet.</p>
                 <Link href="/editor/workout/create">
                     <Button variant="outline" size="sm" className="rounded-xl">Create your first workout</Button>
                 </Link>

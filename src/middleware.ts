@@ -3,7 +3,11 @@ import { NextResponse } from 'next/server'
 import { updateSession } from './lib/supabase/middleware'
 
 export async function middleware(request: NextRequest) {
-  if (request.nextUrl.pathname.startsWith('/editor') || request.nextUrl.pathname.startsWith('/profile')) {
+  if (
+    request.nextUrl.pathname.startsWith('/editor') ||
+    request.nextUrl.pathname.startsWith('/profile') ||
+    request.nextUrl.pathname.startsWith('/feed')
+  ) {
     const sessionResponse = await updateSession(request)
     const isRedirect = sessionResponse.headers.get('location')
 

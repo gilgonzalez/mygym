@@ -41,6 +41,7 @@ export async function updateSession(request: NextRequest) {
   const pathname = request.nextUrl.pathname
   const isPublicPath =
     pathname === '/' ||
+    pathname === '/landing' ||
     pathname.startsWith('/workout/') ||
     PUBLIC_PATH_PREFIXES.some((prefix) => pathname.startsWith(prefix))
 

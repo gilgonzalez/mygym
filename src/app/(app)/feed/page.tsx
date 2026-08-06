@@ -6,7 +6,7 @@ import { Button } from '@/components/Button'
 import { Input } from '@/components/ui/input'
 import { Loader2, RefreshCcw, Search, Sparkles, TrendingUp } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
-import { getWorkoutsAction } from '../actions/workout/list'
+import { getWorkoutsAction } from '@/app/actions/workout/list'
 
 type FeedSort = 'newest' | 'popular'
 
