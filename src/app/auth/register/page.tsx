@@ -37,7 +37,7 @@ function RegisterContent() {
         email: formData.email,
         password: formData.password,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback?next=/auth/login`,
+          emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirect || '/feed')}`,
           data: {
             username: formData.username,
             name: formData.name
@@ -73,7 +73,7 @@ function RegisterContent() {
           </h2>
           <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
             Or{' '}
-            <Link href="/auth/login" className="font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400">
+            <Link href={`/auth/login${redirect ? `?next=${encodeURIComponent(redirect)}` : ''}`} className="font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400">
               sign in to your existing account
             </Link>
           </p>

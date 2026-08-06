@@ -82,7 +82,7 @@ export function FollowButton({
 
   const handleClick = () => {
     if (!user) {
-      const redirectTo = pathname || '/'
+      const redirectTo = pathname || '/feed'
       router.push(`/auth/login?redirect=${encodeURIComponent(redirectTo)}`)
       return
     }

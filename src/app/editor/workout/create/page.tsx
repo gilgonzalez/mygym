@@ -26,7 +26,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/form/TextArea'
 import { Badge } from '@/components/ui/badge'
 import { useAuthStore } from '@/store/authStore'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 
 import { Controller, Resolver, useFieldArray, useForm } from 'react-hook-form'
@@ -201,6 +201,7 @@ function createEmptyExercise() {
 function CreateWorkoutContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const pathname = usePathname()
   const workoutId = searchParams.get('id')
   
   const { user, isLoading } = useAuthStore()
@@ -742,9 +743,10 @@ function CreateWorkoutContent() {
 
   React.useEffect(() => {
     if (!isLoading && !user) {
-      router.push('/auth/login')
+      const redirectUrl = `${pathname}${workoutId ? `?id=${workoutId}` : ''}`
+      router.push(`/auth/login?redirect=${encodeURIComponent(redirectUrl)}`)
     }
-  }, [user, isLoading, router])
+  }, [user, isLoading, router, pathname, workoutId])
 
   const isWorkoutLoading = !!workoutId && isLoadingWorkout
   const isAuthLoading = isLoading && !user

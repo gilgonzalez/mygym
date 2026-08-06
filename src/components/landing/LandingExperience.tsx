@@ -1608,7 +1608,7 @@ function PricingMockup() {
                 <p className="text-xs text-emerald-100/80 font-semibold">Prueba Pro sin compromiso, cancela antes.</p>
               </div>
             </div>
-            <Link href="/auth/register" className="mt-6 block">
+            <Link href="/auth/register?next=%2Ffeed" className="mt-6 block">
               <Button size="lg" className="w-full h-14 rounded-full bg-emerald-400 text-emerald-950 hover:bg-emerald-300 font-black text-base shadow-[0_20px_50px_-10px_rgba(74,222,128,0.55)]">
                 Empezar prueba gratis
                 <ArrowRight className="ml-2 h-5 w-5" />
@@ -1682,7 +1682,7 @@ export default function LandingExperience() {
             ))}
           </nav>
           <div className="flex items-center gap-1.5 sm:gap-2">
-            <Link href="/auth/login">
+            <Link href="/auth/login?next=%2Ffeed">
               <Button className="rounded-full px-3.5 sm:px-5 h-9 sm:h-11 text-xs sm:text-sm font-black shadow-[0_18px_40px_rgba(74,222,128,0.22)]">
                 Iniciar sesion
               </Button>
@@ -1814,7 +1814,7 @@ export default function LandingExperience() {
               Crea tu cuenta en 60 segundos y empieza hoy mismo. Cancela cuando quieras, sin preguntas.
             </p>
             <div className="mt-9 sm:mt-10 flex flex-wrap items-center justify-center gap-3">
-              <Link href="/auth/register">
+              <Link href="/auth/register?next=%2Ffeed">
                 <Button size="lg" className="h-14 rounded-full px-10 font-black text-base shadow-[0_20px_50px_rgba(74,222,128,0.28)]">
                   Empezar gratis
                   <ArrowRight className="ml-2 h-5 w-5" />
