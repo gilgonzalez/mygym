@@ -86,7 +86,7 @@ function LoginForm() {
         </h2>
         <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
           Don't have an account?{' '}
-          <Link href={`/auth/register${redirect ? `?redirect=${encodeURIComponent(redirect)}` : ''}` as string} className="font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400">
+          <Link href={`/auth/register${redirect ? `?redirect=${encodeURIComponent(redirect)}` : ''}` as any} className="font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400">
             Sign up for free
           </Link>
         </p>
