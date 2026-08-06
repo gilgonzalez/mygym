@@ -220,7 +220,7 @@ function ExerciseVaultMockup() {
               return (
                 <article
                   key={ex.name}
-                  className="group flex h-full flex-col overflow-hidden rounded-[22px] border border-white/10 bg-card/95 shadow-[0_18px_50px_-35px_rgba(0,0,0,0.45)] transition-all duration-300 hover:-translate-y-1 hover:border-border/40 hover:shadow-[0_30px_80px_-45px_rgba(0,0,0,0.55)]"
+                  className={`group flex h-full flex-col overflow-hidden rounded-[22px] border border-white/10 bg-card/95 shadow-[0_18px_50px_-35px_rgba(0,0,0,0.45)] transition-all duration-300 hover:-translate-y-1 hover:border-border/40 hover:shadow-[0_30px_80px_-45px_rgba(0,0,0,0.55)] ${idx >= 2 ? 'hidden sm:flex' : ''}`}
                 >
                   <div className="relative isolate aspect-square overflow-hidden rounded-t-[22px] bg-[#111111] sm:aspect-[4/3]">
                     <img

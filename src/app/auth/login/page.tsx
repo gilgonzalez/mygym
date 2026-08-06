@@ -4,8 +4,8 @@ import { useState, useEffect, Suspense } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/Button'
 import { Input } from '@/components/ui/input'
-import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { Loader2, AlertCircle, CheckCircle2, ArrowRight, ShieldCheck } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { GoogleAuthButton } from '@/components/auth/GoogleAuthButton'
@@ -16,7 +16,6 @@ function LoginForm() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
-  const router = useRouter()
   const searchParams = useSearchParams()
   const redirect = searchParams?.get('redirect') || searchParams?.get('next') || '/feed'
   const { setUser, isAuthenticated, isLoading: authLoading } = useAuthStore()
