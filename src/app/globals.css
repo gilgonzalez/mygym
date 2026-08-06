@@ -96,3 +96,38 @@
   }
 }
 
+/* -------------------- Sonner (toasts) · Posicionamiento responsive -------------------- */
+/* Tablet y Desktop: esquina inferior derecha (valor por defecto del Toaster). */
+/* Móvil (<= 767px): ancla a la parte inferior centrada, a todo ancho, evitando solapes con el UI del sistema. */
+
+@media (max-width: 767px) {
+  [data-sonner-toaster][data-position="bottom-right"] {
+    left: 0 !important;
+    right: 0 !important;
+    transform: none !important;
+    width: 100% !important;
+    padding: 0 12px !important;
+    bottom: calc(12px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+  [data-sonner-toaster][data-position="bottom-right"] > div,
+  [data-sonner-toaster][data-position="bottom-right"] li {
+    width: 100% !important;
+    max-width: none !important;
+  }
+
+  [data-sonner-toaster][data-position="bottom-right"] li[data-expanded="false"] {
+    width: 100% !important;
+    max-width: none !important;
+  }
+}
+
+/* Pequeños ajustes visuales en desktop/tablet para evitar que quede demasiado pegado al borde */
+@media (min-width: 768px) {
+  [data-sonner-toaster][data-position="bottom-right"] {
+    bottom: 24px !important;
+    right: 24px !important;
+  }
+}
+
+

@@ -6,6 +6,7 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { cn } from "@/lib/utils";
 import { AuthInitializer } from "@/components/AuthInitializer";
+import { Toaster } from "sonner";
 
 import { QueryProvider } from "@/components/QueryProvider";
 
@@ -142,6 +143,20 @@ export default function RootLayout({
             <AuthInitializer />
             <QueryProvider>
               {children}
+              <Toaster
+                position="bottom-right"
+                richColors
+                closeButton
+                expand={false}
+                duration={5000}
+                offset={20}
+                className="mygym-sonner-root"
+                toastOptions={{
+                  classNames: {
+                    toast: 'mygym-sonner-toast',
+                  },
+                }}
+              />
             </QueryProvider>
         </ThemeProvider>
       </body>

@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, Suspense } from 'react'
+import { toast } from 'sonner'
 
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -239,7 +240,9 @@ function CreateWorkoutContent() {
     }
 
     if (typeof window !== 'undefined' && !('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-        alert("Speech recognition is not supported in this browser. Please use Chrome or Edge.")
+        toast.error('Tu navegador no admite entrada por voz', {
+            description: 'El reconocimiento de voz solo está disponible en Chrome o Edge. Intenta usando uno de esos navegadores.',
+        })
         return
     }
 
@@ -268,6 +271,15 @@ function CreateWorkoutContent() {
     recognition.onerror = (event: any) => {
         console.error("Speech recognition error", event.error)
         setIsListening(false)
+        const errorMessages: Record<string, { title: string; desc: string }> = {
+            'no-speech': { title: 'No se detectó voz', desc: 'Intenta hablar más fuerte o acerca el micrófono.' },
+            'audio-capture': { title: 'No hay micrófono disponible', desc: 'Verifica que tu navegador tenga permiso para acceder al micrófono.' },
+            'not-allowed': { title: 'Permiso de micrófono denegado', desc: 'Activa el permiso de micrófono en la configuración de tu navegador para usar esta función.' },
+            'network': { title: 'Error de red', desc: 'Necesitas conexión a Internet para el reconocimiento de voz.' },
+            'aborted': { title: 'Reconocimiento interrumpido', desc: 'La captura de voz se detuvo inesperadamente. Vuelve a intentarlo.' },
+        }
+        const err = errorMessages[event.error] || { title: 'Error al escuchar', desc: 'Ocurrió un problema con el reconocimiento de voz. Vuelve a intentarlo.' }
+        toast.error(err.title, { description: err.desc })
     }
 
     recognition.onresult = (event: any) => {
@@ -312,16 +324,16 @@ function CreateWorkoutContent() {
     return () => window.removeEventListener('resize', syncViewport)
   }, [])
 
-  const { isLoading: isLoadingWorkout, data: loadedWorkout } = useQuery({
+  const { isLoading: isLoadingWorkout, data: loadedWorkout, error: loadError } = useQuery({
     queryKey: ['workout', workoutId],
     queryFn: async () => {
       if (!workoutId) return null
       const timeout = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('Timeout cargando el workout')), 20000)
+        setTimeout(() => reject(new Error('timeout_loading')), 20000)
       )
       const fetch = (async () => {
         const res = await getWorkoutById(workoutId)
-        if (!res.success || !res.data) throw new Error(res.error || 'Failed to fetch workout')
+        if (!res.success || !res.data) throw new Error(res.error || 'fetch_failed')
         const w = res.data
         return {
             id: w.id,
@@ -379,8 +391,26 @@ function CreateWorkoutContent() {
     },
     retry: 1,
     enabled: !!workoutId,
-    refetchOnWindowFocus: false
+    refetchOnWindowFocus: false,
   })
+
+  React.useEffect(() => {
+    if (!loadError) return
+    const msg = loadError instanceof Error ? loadError.message : 'unknown'
+    if (msg === 'timeout_loading') {
+      toast.error('La carga del workout tardó demasiado', {
+        description: 'Revisa tu conexión a Internet y recarga la página para volver a intentarlo.',
+      })
+    } else if (msg === 'fetch_failed') {
+      toast.error('No pudimos cargar el workout', {
+        description: 'Es posible que no exista o que no tengas permiso para editarlo. Intenta recargando la página.',
+      })
+    } else {
+      toast.error('Error al cargar el workout', {
+        description: 'Ocurrió un problema inesperado al recuperar la información. Intenta recargando la página.',
+      })
+    }
+  }, [loadError])
 
   const form = useForm<WorkoutFormValues>({
     resolver: zodResolver(workoutSchema) as unknown as Resolver<WorkoutFormValues>,
@@ -431,7 +461,7 @@ function CreateWorkoutContent() {
     }
   }, [loadedWorkout, workoutId, reset])
 
-  const { mutate: createWorkout } = useMutation({
+  const { mutateAsync: createWorkout } = useMutation({
     mutationFn: async (data: WorkoutFormValues) => {
         // Timeout safeguard: 30 seconds
         const timeout = new Promise<never>((_, reject) => 
@@ -702,16 +732,61 @@ function CreateWorkoutContent() {
 
         return Promise.race([processUpload(), timeout])
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
         setSubmitStatus('success')
-        setSubmitMessage(workoutId ? 'Workout actualizado correctamente. Redirigiendo al feed...' : 'Workout guardado correctamente. Redirigiendo al feed...')
+        const successMsg = workoutId ? 'Workout actualizado correctamente' : 'Workout guardado correctamente'
+        setSubmitMessage(`${successMsg}. Redirigiendo al feed...`)
+        toast.success(successMsg, {
+            description: workoutId
+              ? 'Los cambios se han sincronizado correctamente. Ya puedes verlo en tu perfil.'
+              : 'Se ha creado correctamente. Redirigiendo al feed...',
+        })
         reset()
-        router.push('/feed')
+        setTimeout(() => router.push('/feed'), 800)
     },
     onError: (error: Error) => {
         setSubmitStatus('error')
         console.error(error)
-        setSubmitMessage(error.message || 'No pudimos guardar el workout. Revisa tu contenido y vuelve a intentarlo.')
+        const rawMsg = error.message || ''
+
+        let title = 'No pudimos guardar el workout'
+        let desc = 'Revisa tu contenido y vuelve a intentarlo. Si el problema persiste, recarga la página.'
+
+        if (rawMsg.includes('timed out') || rawMsg.includes('timeout')) {
+            title = 'La operación tardó demasiado'
+            desc = 'Revisa tu conexión a Internet y vuelve a intentarlo. Evita cerrar la pestaña durante la subida.'
+        } else if (rawMsg.includes('User not found') || rawMsg.includes('inicia sesion') || rawMsg.includes('sesión')) {
+            title = 'Necesitas iniciar sesión'
+            desc = 'Vuelve a iniciar sesión para poder guardar tus workouts.'
+        } else if (rawMsg.includes('portada') || rawMsg.includes('cover')) {
+            title = 'Error al subir la portada'
+            desc = rawMsg.includes('blob:')
+              ? 'La portada no terminó de subirse correctamente. Vuelve a seleccionar la imagen y guarda de nuevo.'
+              : rawMsg
+        } else if (rawMsg.includes('audio') || rawMsg.includes('audios')) {
+            title = 'Error al subir un audio'
+            desc = rawMsg.includes('blob:')
+              ? 'Uno de los audios no terminó de subirse. Vuelve a pegar o subir el enlace y guarda de nuevo.'
+              : rawMsg
+        } else if (rawMsg.includes('thumbnail') || rawMsg.includes('Thumbnail')) {
+            title = 'Error al subir una imagen de ejercicio'
+            desc = rawMsg.includes('blob:')
+              ? 'Una de las imágenes no terminó de subirse. Vuelve a seleccionarla y guarda de nuevo.'
+              : rawMsg
+        } else if (rawMsg.includes('tutorial')) {
+            title = 'Error al subir un recurso de tutorial'
+            desc = rawMsg.includes('blob:')
+              ? 'El GIF o video del tutorial no terminó de subirse. Vuelve a seleccionarlo y guarda de nuevo.'
+              : rawMsg
+        } else if (rawMsg.includes('Invalid response')) {
+            title = 'Respuesta inesperada del servidor'
+            desc = 'Ocurrió un problema al comunicarse con el servidor. Vuelve a intentarlo en unos segundos.'
+        } else if (rawMsg) {
+            desc = rawMsg
+        }
+
+        setSubmitMessage(desc)
+        toast.error(title, { description: desc })
         setIsSubmitting(false)
         setIsRetry(true)
     }
@@ -795,7 +870,12 @@ function CreateWorkoutContent() {
       return
     }
 
-    if (!aiPrompt.trim()) return
+    if (!aiPrompt.trim()) {
+      toast.warning('Describe el workout que quieres generar', {
+        description: 'Escribe al menos un par de palabras sobre el objetivo, músculos o duración para que la IA pueda ayudarte.',
+      })
+      return
+    }
     
     setIsGenerating(true)
     try {
@@ -836,12 +916,19 @@ function CreateWorkoutContent() {
             setValue('sections', newSections)
             setIsAiOpen(false)
             setAiPrompt('')
+            toast.success('Estructura generada', {
+                description: 'Revisa el título, ejercicios y ajusta lo que necesites antes de guardar el workout.',
+            })
         } else {
-            alert(res.error || "No se pudo generar el workout")
+            toast.error('La IA no pudo generar el workout', {
+                description: res.error || 'Vuelve a intentarlo con una descripción más clara, por ejemplo: "Full body 45 minutos sin material".',
+            })
         }
     } catch (err) {
         console.error(err)
-        alert("Ocurrio un error al comunicarse con el asistente")
+        toast.error('Error al comunicarse con el asistente', {
+            description: 'Revisa tu conexión a Internet y vuelve a intentarlo. Si el problema persiste, inténtalo de nuevo en unos minutos.',
+        })
     } finally {
         setIsGenerating(false)
     }
@@ -850,7 +937,20 @@ function CreateWorkoutContent() {
   const onSubmit = async (data: WorkoutFormValues) => {
     if (!user) {
         setSubmitStatus('error')
-        setSubmitMessage('Debes iniciar sesion para guardar workouts.')
+        const msg = 'Debes iniciar sesión para guardar workouts.'
+        setSubmitMessage(msg)
+        toast.error('Sesión no detectada', {
+            description: 'Vuelve a iniciar sesión y podrás guardar todos tus workouts sin problemas.',
+        })
+        return
+    }
+
+    const hasSections = Array.isArray(data.sections) && data.sections.length > 0
+    const hasExercises = hasSections && data.sections.some(s => Array.isArray(s.exercises) && s.exercises.length > 0)
+    if (!hasExercises) {
+        toast.warning('El workout está vacío', {
+            description: 'Añade al menos un ejercicio en una sección para poder guardarlo.',
+        })
         return
     }
     
@@ -863,7 +963,7 @@ function CreateWorkoutContent() {
     setIsSubmitting(true)
     setSubmitStatus('loading')
     setSubmitMessage(workoutId ? 'Actualizando workout y sincronizando media...' : 'Guardando workout y preparando archivos...')
-    createWorkout(data)
+    createWorkout(data).catch(() => {})
   }
 
   const onInvalidSubmit = (formErrors: typeof errors) => {
@@ -871,7 +971,37 @@ function CreateWorkoutContent() {
 
     console.error('Workout submit blocked by validation', formErrors)
     setSubmitStatus('error')
-    setSubmitMessage(firstErrorMessage || 'Hay campos incompletos o invalidos en el workout. Revisa los bloques del editor y vuelve a intentarlo.')
+
+    let title = 'Revisa los datos del formulario'
+    let desc = 'Hay campos incompletos o inválidos. Revisa los bloques del editor y asegúrate de rellenar todos los campos obligatorios.'
+
+    const hasTitleError = Boolean(formErrors.title)
+    const hasSectionName = Object.values(formErrors.sections || {}).some((s: any) => s?.name)
+    const hasExerciseName = Object.values(formErrors.sections || {}).some((s: any) =>
+      Object.values(s?.exercises || {}).some((e: any) => e?.name)
+    )
+    const hasChallenge = Boolean(formErrors.challenge)
+
+    if (hasTitleError) {
+      title = 'Añade un título al workout'
+      desc = 'El título es obligatorio. Abre la ventana de "Detalles y guardar" y escribe un nombre reconocible para tu rutina.'
+    } else if (hasSectionName) {
+      title = 'Hay secciones sin nombre'
+      desc = 'Una de las secciones tiene un campo vacío. Añade un nombre corto como "Calentamiento" o "Fuerza principal" y vuelve a guardar.'
+    } else if (hasExerciseName) {
+      title = 'Hay ejercicios sin nombre'
+      desc = 'Revisa los ejercicios marcados en rojo y dales un nombre reconocible antes de guardar.'
+    } else if (hasChallenge) {
+      title = 'Revisa la configuración del modo reto'
+      desc = 'El tiempo límite debe estar entre 30 segundos y 2 horas. Ajusta los valores y vuelve a intentarlo.'
+    } else if (firstErrorMessage) {
+      desc = firstErrorMessage === 'Required' || firstErrorMessage === 'Title required'
+        ? desc
+        : firstErrorMessage
+    }
+
+    setSubmitMessage(desc)
+    toast.error(title, { description: desc })
   }
 
   const handleOpenAiAssistant = () => {
