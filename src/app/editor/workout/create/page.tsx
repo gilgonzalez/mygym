@@ -302,8 +302,7 @@ function CreateWorkoutContent() {
   const [previewDevice, setPreviewDevice] = useState<'mobile' | 'desktop'>('mobile')
   const [uploadProgress, setUploadProgress] = useState(0)
   const [uploadStatus, setUploadStatus] = useState('')
-  const [submitStatus, setSubmitStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
-  const [submitMessage, setSubmitMessage] = useState('')
+  const submitToastIdRef = React.useRef<string | number | null>(null)
   
   // Voice Input State
   const [isListening, setIsListening] = useState(false)
@@ -538,6 +537,33 @@ function CreateWorkoutContent() {
         initializedRef.current = true
     }
   }, [loadedWorkout, workoutId, reset])
+
+  React.useEffect(() => {
+    if (!isSubmitting || submitToastIdRef.current === null) return
+
+    const baseStatus = uploadStatus?.trim() || (workoutId ? 'Actualizando workout...' : 'Guardando workout...')
+    const progress = Math.max(0, Math.min(100, Math.round(uploadProgress || 0)))
+    const title = progress > 0 ? `${baseStatus} (${progress}%)` : baseStatus
+    const description =
+      progress >= 95
+        ? 'Casi terminamos. No cierres esta pantalla.'
+        : 'No cierres esta pantalla mientras terminamos de subir y guardar todo.'
+
+    toast.loading(title, {
+      id: submitToastIdRef.current,
+      description,
+      duration: Infinity,
+    })
+  }, [uploadStatus, uploadProgress, isSubmitting, workoutId])
+
+  React.useEffect(() => {
+    return () => {
+      if (submitToastIdRef.current !== null) {
+        toast.dismiss(submitToastIdRef.current)
+        submitToastIdRef.current = null
+      }
+    }
+  }, [])
 
   const { mutateAsync: createWorkout } = useMutation({
     mutationFn: async (data: WorkoutFormValues) => {
@@ -811,11 +837,12 @@ function CreateWorkoutContent() {
         return Promise.race([processUpload(), timeout])
     },
     onSuccess: () => {
-        setSubmitStatus('success')
-        const finalMsg = workoutId
-          ? 'Workout actualizado correctamente. Redirigiendo al feed...'
-          : 'Workout guardado correctamente. Redirigiendo al feed...'
-        setSubmitMessage(finalMsg)
+        if (submitToastIdRef.current !== null) {
+          toast.dismiss(submitToastIdRef.current)
+          submitToastIdRef.current = null
+        }
+        setUploadProgress(0)
+        setUploadStatus('')
         toast.success(workoutId ? 'Workout actualizado' : 'Workout guardado', {
           description: workoutId
             ? 'Los cambios se guardaron y ya están sincronizados.'
@@ -825,17 +852,21 @@ function CreateWorkoutContent() {
         setTimeout(() => router.push('/feed'), 600)
     },
     onError: (error: Error) => {
-        setSubmitStatus('error')
+        if (submitToastIdRef.current !== null) {
+          toast.dismiss(submitToastIdRef.current)
+          submitToastIdRef.current = null
+        }
         console.error(error)
         const message =
           error?.message?.trim() ||
           'No pudimos guardar el workout. Revisa tu contenido y vuelve a intentarlo.'
-        setSubmitMessage(message)
         toast.error('No pudimos guardar el workout', {
           description: message,
         })
         setIsSubmitting(false)
         setIsRetry(true)
+        setUploadProgress(0)
+        setUploadStatus('')
     }
   })
 
@@ -980,8 +1011,6 @@ function CreateWorkoutContent() {
   const onSubmit = async (data: WorkoutFormValues) => {
     if (!user) {
         const msg = 'Debes iniciar sesión para guardar workouts.'
-        setSubmitStatus('error')
-        setSubmitMessage(msg)
         toast.error('Sesión no detectada', { description: msg })
         return
     }
@@ -990,20 +1019,31 @@ function CreateWorkoutContent() {
     setIsMetaOpen(false)
 
     setUploadProgress(0)
-    setUploadStatus('')
+    setUploadStatus(workoutId ? 'Actualizando workout y sincronizando media...' : 'Guardando workout y preparando archivos...')
     setIsRetry(false)
     setIsSubmitting(true)
-    setSubmitStatus('loading')
-    setSubmitMessage(workoutId ? 'Actualizando workout y sincronizando media...' : 'Guardando workout y preparando archivos...')
-    createWorkout(data).catch(() => {})
+
+    if (submitToastIdRef.current !== null) {
+      toast.dismiss(submitToastIdRef.current)
+    }
+    submitToastIdRef.current = toast.loading(workoutId ? 'Actualizando workout...' : 'Guardando workout...', {
+      description: workoutId
+        ? 'Sincronizamos cambios y subimos cualquier medio nuevo. No cierres esta pantalla.'
+        : 'Preparamos los archivos y subimos lo que haga falta. No cierres esta pantalla.',
+      duration: Infinity,
+    })
+
+    try {
+      await createWorkout(data)
+    } catch {
+      // El onError del hook ya gestiona el toast de error final.
+    }
   }
 
   const onInvalidSubmit = (formErrors: typeof errors) => {
     const summary = summarizeFormErrors(formErrors)
 
     console.error('Workout submit blocked by validation', formErrors)
-    setSubmitStatus('error')
-    setSubmitMessage(summary.first)
 
     if (summary.count === 1) {
       toast.error('Revisa el formulario', {
