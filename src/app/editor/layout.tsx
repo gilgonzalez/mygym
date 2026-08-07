@@ -16,6 +16,16 @@ export const metadata: Metadata = {
     type: 'website',
     locale: 'es_ES',
     countryName: 'España',
+    siteName: 'MyGym',
+    images: [
+      {
+        url: '/og-image.png',
+        width: 1200,
+        height: 630,
+        alt: 'MyGym · Creador de Workouts',
+        type: 'image/png',
+      },
+    ],
   },
   twitter: {
     card: 'summary_large_image',
@@ -24,6 +34,7 @@ export const metadata: Metadata = {
       'Crea rutinas profesionales con el editor drag & drop de MyGym.',
     creator: '@mygym',
     site: '@mygym',
+    images: ['/og-image.png'],
   },
 }
 

@@ -94,6 +94,14 @@ export const metadata: Metadata = {
       "Crea workouts profesionales, ejecuta entrenamientos con retos AMRAP, comparte tu progreso y gamifica cada repetición.",
     creator: "@mygym",
     site: "@mygym",
+    images: [
+      {
+        url: `${APP_URL}/og-image.png`,
+        width: 1200,
+        height: 630,
+        alt: "MyGym · Plataforma fitness social",
+      },
+    ],
   },
   robots: {
     index: true,

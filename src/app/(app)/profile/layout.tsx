@@ -19,6 +19,15 @@ export const metadata: Metadata = {
     locale: 'es_ES',
     countryName: 'España',
     siteName: 'MyGym',
+    images: [
+      {
+        url: '/og-image.png',
+        width: 1200,
+        height: 630,
+        alt: 'MyGym · Mi Perfil',
+        type: 'image/png',
+      },
+    ],
   },
   twitter: {
     card: 'summary_large_image',
@@ -26,6 +35,7 @@ export const metadata: Metadata = {
     description: 'Tu perfil, estadísticas y progreso en MyGym.',
     creator: '@mygym',
     site: '@mygym',
+    images: ['/og-image.png'],
   },
 }
 
