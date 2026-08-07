@@ -1698,7 +1698,7 @@ function CreateWorkoutContent() {
                 <DialogDescription>
                     Describe your goal and let AI build the structure for you.
                     <br/>
-                    <span className="text-xs text-muted-foreground/80 italic">e.g., "Leg day focused on quads, advanced level" or "30 min HIIT cardio without equipment"</span>
+                    <span className="text-xs text-muted-foreground/80 italic">e.g., &quot;Leg day focused on quads, advanced level&quot; or &quot;30 min HIIT cardio without equipment&quot;</span>
                 </DialogDescription>
             </DialogHeader>
             <div className="relative">
