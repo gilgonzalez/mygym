@@ -1,7 +1,7 @@
 'use client'
 
 import { Dumbbell, Home, RefreshCw, AlertCircle } from 'lucide-react'
-import { Button } from '@/components/Button'
+import { Button } from '@/components/ui/button'
 import { useRouter } from 'next/navigation'
 
 interface WorkoutErrorProps {

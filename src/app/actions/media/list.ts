@@ -18,7 +18,7 @@ export async function listMediaAction(typeFilter?: 'image' | 'audio' | 'video', 
     const { data: { user } } = await supabase.auth.getUser()
 
     if (!user) {
-      return { success: false, error: 'Unauthorized' }
+      return { success: false, error: 'No autorizado' }
     }
 
     let query = supabase

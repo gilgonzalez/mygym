@@ -28,7 +28,7 @@ export async function logWorkoutCompletion(
     }
 
     if (!profile?.isPremium) {
-      return { success: false, error: 'Premium subscription required to save workout progress' }
+      return { success: false, error: 'Suscripción Premium requerida para guardar el progreso del workout' }
     }
 
     if (isUpdatingExistingLog) {

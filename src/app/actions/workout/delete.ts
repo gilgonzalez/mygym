@@ -8,7 +8,7 @@ export async function deleteWorkoutAction(workoutId: string) {
     const { data: { user } } = await supabase.auth.getUser()
     
     if (!user) {
-      throw new Error('Unauthorized')
+      throw new Error('No autorizado')
     }
 
     // 1. Verify ownership
@@ -18,8 +18,8 @@ export async function deleteWorkoutAction(workoutId: string) {
         .eq('id', workoutId)
         .single()
     
-    if (fetchError || !workout) throw new Error('Workout not found')
-    if (workout.user_id !== user.id) throw new Error('Unauthorized')
+    if (fetchError || !workout) throw new Error('Workout no encontrado')
+    if (workout.user_id !== user.id) throw new Error('No autorizado')
 
     // 2. Get related Section IDs before deleting the workout
     const { data: workoutSections } = await supabase

@@ -15,7 +15,7 @@ export async function createMediaAction(media: {
     const { data: { user } } = await supabase.auth.getUser()
 
     if (!user) {
-        return { error: 'Unauthorized' }
+        return { error: 'No autorizado' }
     }
 
     // Determine media type (image/video/audio)

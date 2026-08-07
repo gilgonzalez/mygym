@@ -1,4 +1,4 @@
-import { Button } from '@/components/Button'
+import { Button } from '@/components/ui/button'
 import { WorkoutTimer } from '@/components/WorkoutTimer'
 import { CheckCircle2, ChevronLeft, Dumbbell, Info, Volume2, VolumeX } from 'lucide-react'
 import { LocalExercise, LocalSection } from '@/types/workout/viewTypes'
@@ -166,7 +166,7 @@ export function ExerciseView({
               <div className="flex-1 space-y-2 max-w-2xl w-full">
                  <div className="flex items-center gap-2 mb-2">
                    <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-primary text-primary-foreground">
-                     {currentExercise.type === 'time' ? 'Duration' : 'Reps'}
+                     {currentExercise.type === 'time' ? 'Duración' : 'Repeticiones'}
                    </span>
                    <span className="text-white/60 text-xs font-mono">
                      {currentExerciseIndex + 1} / {currentSection.exercises.length}
@@ -181,7 +181,7 @@ export function ExerciseView({
                                 {currentExercise.reps}
                             </span>
                             <span className="text-xl sm:text-2xl font-medium text-white/60 uppercase tracking-widest ml-2">
-                                Reps
+                                Repeticiones
                             </span>
                         </>
                     ) : (
@@ -195,7 +195,7 @@ export function ExerciseView({
 
                  {totalSets > 1 && (
                     <div className="inline-block px-3 py-1 mb-2 rounded-full bg-orange-500/20 text-orange-400 text-xs font-bold uppercase tracking-wider border border-orange-500/20">
-                      Set {currentSet} of {totalSets} <span className="text-white/40 ml-1">• {totalSets - currentSet} Left</span>
+                      Serie {currentSet} de {totalSets} <span className="text-white/40 ml-1">• {totalSets - currentSet} Restantes</span>
                     </div>
                  )}
                  <h2 className="text-2xl sm:text-3xl font-bold text-white leading-tight tracking-tight">
@@ -226,8 +226,8 @@ export function ExerciseView({
                  >
                    <CheckCircle2 className="mr-3 w-6 h-6" /> 
                    {currentExercise.type === 'reps' 
-                     ? `Done` 
-                     : currentSet < totalSets ? 'Next Set' : 'Next Exercise'
+                     ? `Hecho` 
+                     : currentSet < totalSets ? 'Siguiente Serie' : 'Siguiente Ejercicio'
                    }
                  </Button>
               </div>

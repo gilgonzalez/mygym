@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { ChevronDown, Info, Lock, Trash2 } from 'lucide-react'
-import { Button } from '@/components/Button'
+import { Button } from '@/components/ui/button'
 import { PremiumFeatureDialog } from '@/components/premium/PremiumFeatureDialog'
 
 interface ActivityTutorialEditorProps {

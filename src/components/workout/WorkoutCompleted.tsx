@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { Button } from '@/components/Button'
-import { Card, CardContent } from '@/components/Card'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
 import { LocalWorkout } from '@/types/workout/viewTypes'
 import { ShareWorkoutDialog } from '../share/ShareWorkoutDialog'
 import { Trophy, Dumbbell, Loader2, Star, Timer, Lock, Sparkles } from 'lucide-react'
@@ -87,13 +87,13 @@ export function WorkoutCompleted({
               {challengeResult ? `${challengeResult.roundsCompleted} + ${challengeResult.extraReps}` : totalSets}
             </span>
             <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-              {challengeResult ? 'Score' : 'Sets'}
+              {challengeResult ? 'Puntuación' : 'Series'}
             </span>
         </div>
         <div className="flex flex-col items-center justify-center p-3 rounded-2xl bg-secondary/20 hover:bg-secondary/30 transition-colors">
             <Timer className="w-5 h-5 text-green-500 mb-1" />
             <span className="font-timer text-xl tracking-[0.08em]">{timeString}</span>
-            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Time</span>
+            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Tiempo</span>
         </div>
         <div className="flex flex-col items-center justify-center p-3 rounded-2xl bg-secondary/20 hover:bg-secondary/30 transition-colors relative overflow-hidden group">
             <div className="absolute inset-0 bg-gradient-to-br from-amber-500/10 to-orange-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -126,7 +126,7 @@ export function WorkoutCompleted({
 
       <div className="flex flex-col gap-6 w-full py-2">
         <div className="space-y-2">
-          <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Rate Workout</label>
+          <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Valora el workout</label>
           <div className="flex items-center justify-center gap-2">
               {[1, 2, 3, 4, 5].map((star) => (
                   <button
@@ -151,7 +151,7 @@ export function WorkoutCompleted({
         </div>
 
         <div className="space-y-2">
-          <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest">How do you feel?</label>
+          <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest">¿Cómo te sientes?</label>
           <div className="flex items-center justify-center gap-4">
               {Object.values(FEELING_CONFIG).map((item) => (
                   <button
@@ -177,7 +177,7 @@ export function WorkoutCompleted({
             id="notes"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            placeholder="Add notes about your workout... (Optional)"
+            placeholder="Añade notas sobre tu workout... (Opcional)"
             className="w-full h-20 p-3 rounded-xl bg-secondary/20 border border-input focus:border-primary/50 focus:ring-2 focus:ring-primary/20 outline-none resize-none transition-all text-sm placeholder:text-muted-foreground/50"
         />
       </div>
@@ -192,10 +192,10 @@ export function WorkoutCompleted({
           {isPending ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Saving Progress...
+              Guardando progreso...
             </>
           ) : (
-            'Save & Finish Workout'
+            'Guardar y finalizar workout'
           )}
         </Button>
       </div>
@@ -212,7 +212,7 @@ export function WorkoutCompleted({
             <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-3 ring-4 ring-primary/10 animate-bounce-slow">
               <Trophy className="w-8 h-8 text-primary" />
             </div>
-            <h2 className="text-2xl font-black tracking-tight text-foreground">Workout Crushed!</h2>
+            <h2 className="text-2xl font-black tracking-tight text-foreground">¡Workout completado!</h2>
             <p className="text-sm text-muted-foreground">
               You completed <span className="font-bold text-primary">{workout.title}</span>
             </p>
@@ -249,7 +249,7 @@ export function WorkoutCompleted({
 
                     <div className="hidden shrink-0 items-center gap-1 rounded-full border border-amber-500/15 bg-amber-500/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-amber-500 sm:flex">
                       <Sparkles className="h-3 w-3" />
-                      Locked
+                      Bloqueado
                     </div>
                   </div>
 
@@ -271,7 +271,7 @@ export function WorkoutCompleted({
                   onClick={onRestart}
                   className="text-sm text-muted-foreground hover:text-primary transition-colors py-2"
               >
-                  I want to repeat this workout
+                  Quiero repetir este workout
               </button>
           )}
 

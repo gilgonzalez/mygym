@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Button } from '@/components/Button'
+import { Button } from '@/components/ui/button'
 import { Loader2 } from 'lucide-react'
 import { signInWithProvider } from '@/app/auth/actions'
 
@@ -35,7 +35,7 @@ interface GoogleAuthButtonProps {
   next?: string
 }
 
-export function GoogleAuthButton({ text = "Sign in with Google", className, variant = "outline", next }: GoogleAuthButtonProps) {
+export function GoogleAuthButton({ text = "Acceder con Google", className, variant = "outline", next }: GoogleAuthButtonProps) {
   const [isLoading, setIsLoading] = useState(false)
 
   const handleProviderSignIn = async () => {

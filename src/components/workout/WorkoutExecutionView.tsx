@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Button } from '@/components/Button'
+import { Button } from '@/components/ui/button'
 import { PremiumFeatureDialog } from '@/components/premium/PremiumFeatureDialog'
 import { ExerciseTutorialDialog } from './ExerciseTutorialDialog'
 import { MusicPlayer } from './MusicPlayer'
@@ -703,7 +703,7 @@ export function WorkoutExecutionView({
                         <div className="flex h-full w-full items-center justify-center">
                           <img
                             src={executionCircleMediaUrl}
-                            alt={displayExercise?.name || 'Exercise preview'}
+                            alt={displayExercise?.name || 'Vista previa del ejercicio'}
                             className="h-full w-full object-cover"
                           />
                         </div>

@@ -583,6 +583,39 @@ export type Database = {
           },
         ]
       }
+      workout_likes: {
+        Row: {
+          created_at: string
+          user_id: string
+          workout_id: string
+        }
+        Insert: {
+          created_at?: string
+          user_id: string
+          workout_id: string
+        }
+        Update: {
+          created_at?: string
+          user_id?: string
+          workout_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workout_likes_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workout_likes_workout_id_fkey"
+            columns: ["workout_id"]
+            isOneToOne: false
+            referencedRelation: "workouts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workout_sections: {
         Row: {
           created_at: string | null
@@ -756,6 +789,18 @@ export type Database = {
       }
       update_complete_workout: {
         Args: { p_user_id: string; p_workout_data: Json; p_workout_id: string }
+        Returns: boolean
+      }
+      toggle_workout_like: {
+        Args: { p_workout_id: string }
+        Returns: boolean
+      }
+      get_workout_likes_count: {
+        Args: { p_workout_id: string }
+        Returns: number
+      }
+      is_workout_liked_by_user: {
+        Args: { p_workout_id: string; p_user_id?: string }
         Returns: boolean
       }
     }

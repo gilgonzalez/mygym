@@ -1,14 +1,19 @@
 'use client'
 
+import type { Metadata } from 'next'
 import { useState, useEffect, Suspense } from 'react'
 import { supabase } from '@/lib/supabase'
-import { Button } from '@/components/Button'
+import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { Loader2, AlertCircle, CheckCircle2, ArrowRight, ShieldCheck } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { GoogleAuthButton } from '@/components/auth/GoogleAuthButton'
+
+export const metadata: Metadata = {
+  title: 'Iniciar sesión',
+}
 
 
 
@@ -16,7 +21,6 @@ function LoginForm() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
-  const router = useRouter()
   const searchParams = useSearchParams()
   const redirect = searchParams?.get('redirect') || searchParams?.get('next') || '/feed'
   const { setUser, isAuthenticated, isLoading: authLoading } = useAuthStore()
@@ -74,7 +78,7 @@ function LoginForm() {
       if (err.message === 'Email not confirmed') {
         setError('Por favor, ve a tu bandeja de entrada o spam y verifica el mail')
       } else {
-        setError(err.message || 'Failed to sign in')
+        setError(err.message || 'Error al iniciar sesión')
       }
     } finally {
       setIsLoading(false)
@@ -85,12 +89,12 @@ function LoginForm() {
     <div className="max-w-md w-full space-y-8">
       <div className="text-center">
         <h2 className="mt-6 text-3xl font-extrabold text-gray-900 dark:text-white">
-          Welcome back
+          Bienvenido de nuevo
         </h2>
         <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-          Don't have an account?{' '}
+          ¿No tienes cuenta?{' '}
           <Link href={`/auth/register${redirect ? `?redirect=${encodeURIComponent(redirect)}` : ''}` as any} className="font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400">
-            Sign up for free
+            Regístrate gratis
           </Link>
         </p>
       </div>
@@ -112,7 +116,7 @@ function LoginForm() {
       <div className="mt-8 space-y-6">
         <div className="space-y-4">
           <GoogleAuthButton 
-            text="Sign in with Google"
+            text="Acceder con Google"
             className="w-full flex items-center justify-center gap-2 h-11"
             next={redirect}
           />
@@ -123,7 +127,7 @@ function LoginForm() {
             </div>
             <div className="relative flex justify-center text-sm">
               <span className="px-2 bg-gray-50 dark:bg-slate-950 text-gray-500">
-                Or continue with email
+                O continúa con email
               </span>
             </div>
           </div>
@@ -153,7 +157,7 @@ function LoginForm() {
             <div className="space-y-4">
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Email address
+                  Correo electrónico
                 </label>
                 <Input
                   id="email"
@@ -161,7 +165,7 @@ function LoginForm() {
                   type="email"
                   required
                   className="mt-1"
-                  placeholder="john@example.com"
+                  placeholder="tu@correo.com"
                   value={formData.email}
                   onChange={handleChange}
                   disabled={isLoading}
@@ -171,7 +175,7 @@ function LoginForm() {
               <div>
                 <div className="flex items-center justify-between">
                   <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Password
+                    Contraseña
                   </label>
                   <button
                     type="button"
@@ -181,7 +185,7 @@ function LoginForm() {
                       setError('')
                     }}
                   >
-                    Forgot password?
+                    ¿Has olvidado tu contraseña?
                   </button>
                 </div>
                 <Input
@@ -204,7 +208,7 @@ function LoginForm() {
               disabled={isLoading}
             >
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Sign in
+              Iniciar sesión
               {!isLoading && <ArrowRight className="h-4 w-4" />}
             </Button>
 

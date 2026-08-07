@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Button } from '@/components/Button'
+import { Button } from '@/components/ui/button'
 import { Volume2, VolumeX, Play, Pause, Music2, SkipForward, SkipBack, ChevronUp, ChevronDown } from 'lucide-react'
 import { useWorkoutStore } from '@/store/workOutStore'
 
@@ -139,7 +139,7 @@ export function MusicPlayer({ playlist, className }: MusicPlayerProps) {
                 width="100%"
                 height="100%"
                 src={embedUrl}
-                title="Background Music"
+                title="Música de fondo"
                 frameBorder="0"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 allowFullScreen

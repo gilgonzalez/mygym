@@ -18,7 +18,7 @@ export async function POST(request: Request) {
     } = await supabase.auth.getUser()
 
     if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     }
 
     const { data: mediaRecord, error: mediaError } = await supabase
@@ -29,7 +29,7 @@ export async function POST(request: Request) {
       .single()
 
     if (mediaError || !mediaRecord) {
-      return NextResponse.json({ error: 'Media not found or access denied' }, { status: 404 })
+      return NextResponse.json({ error: 'Medio no encontrado o acceso denegado' }, { status: 404 })
     }
 
     const command = new DeleteObjectCommand({
@@ -43,7 +43,7 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error('Error deleting file from R2:', error)
     return NextResponse.json(
-      { error: 'Internal Server Error' },
+      { error: 'Error interno del servidor' },
       { status: 500 }
     )
   }

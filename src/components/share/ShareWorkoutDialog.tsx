@@ -27,7 +27,7 @@ export function ShareWorkoutDialog({ open, onOpenChange, workout }: ShareWorkout
     }
 
     const handleInstagramCopy = () => {
-        const text = `Check out this workout: ${workout.title}\n\n${shareUrl}`
+        const text = `Mira este workout: ${workout.title}\n\n${shareUrl}`
         navigator.clipboard.writeText(text)
         setCopiedInstagram(true)
         setTimeout(() => setCopiedInstagram(false), 2000)
@@ -62,13 +62,13 @@ export function ShareWorkoutDialog({ open, onOpenChange, workout }: ShareWorkout
             name: "WhatsApp",
             icon: WhatsAppIcon,
             color: "bg-[#25D366] text-white hover:bg-[#25D366]/90",
-            url: `https://wa.me/?text=${encodeURIComponent(`Check out this workout: ${workout.title} ${shareUrl}`)}`
+            url: `https://wa.me/?text=${encodeURIComponent(`Mira este workout: ${workout.title} ${shareUrl}`)}`
         },
         {
             name: "X",
             icon: XIcon,
             color: "bg-black text-white hover:bg-black/80 dark:bg-white dark:text-black",
-            url: `https://twitter.com/intent/tweet?text=${encodeURIComponent(`Check out this workout: ${workout.title}`)}&url=${encodeURIComponent(shareUrl)}`
+            url: `https://twitter.com/intent/tweet?text=${encodeURIComponent(`Mira este workout: ${workout.title}`)}&url=${encodeURIComponent(shareUrl)}`
         },
         {
             name: "LinkedIn",
@@ -85,7 +85,7 @@ export function ShareWorkoutDialog({ open, onOpenChange, workout }: ShareWorkout
                     {/* Header & Preview */}
                     <div className="space-y-3 sm:space-y-4">
                         <div className="flex items-center justify-between">
-                            <h2 className="text-lg font-semibold tracking-tight">Share Workout</h2>
+                            <h2 className="text-lg font-semibold tracking-tight">Compartir workout</h2>
                             <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full -mr-2" onClick={() => onOpenChange(false)}>
                                 <X className="w-4 h-4" />
                             </Button>
@@ -105,7 +105,7 @@ export function ShareWorkoutDialog({ open, onOpenChange, workout }: ShareWorkout
                                 <div className="flex-1 p-3 sm:p-4 flex flex-col justify-center min-w-0">
                                     <h3 className="font-bold text-sm sm:text-base text-foreground truncate">{workout.title}</h3>
                                     <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1 truncate">
-                                        Check out this routine on MyGym
+                                        Mira este workout en MyGym
                                     </p>
                                 </div>
                             </div>
@@ -145,14 +145,14 @@ export function ShareWorkoutDialog({ open, onOpenChange, workout }: ShareWorkout
                                 {copiedInstagram ? <Check className="w-5 h-5 sm:w-6 sm:h-6" /> : <InstagramIcon className="w-5 h-5 sm:w-6 sm:h-6" />}
                             </button>
                             <span className="text-[9px] sm:text-[10px] font-medium text-muted-foreground group-hover:text-foreground transition-colors">
-                                {copiedInstagram ? "Copied!" : "Stories"}
+                                {copiedInstagram ? "¡Copiado!" : "Stories"}
                             </span>
                         </div>
                     </div>
 
                     {/* Copy Link Input */}
                     <div className="space-y-1.5 sm:space-y-2 pt-1 sm:pt-2">
-                        <label className="text-[10px] sm:text-xs font-semibold text-muted-foreground ml-1 uppercase tracking-wider">Page Link</label>
+                        <label className="text-[10px] sm:text-xs font-semibold text-muted-foreground ml-1 uppercase tracking-wider">Enlace de la página</label>
                         <div className="flex items-center gap-2 p-1.5 rounded-xl border bg-muted/40 focus-within:ring-2 focus-within:ring-primary/20 transition-all">
                             <div className="p-1.5 sm:p-2 rounded-lg bg-background border shadow-sm shrink-0">
                                 <LinkIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground" />
@@ -171,7 +171,7 @@ export function ShareWorkoutDialog({ open, onOpenChange, workout }: ShareWorkout
                                 )}
                             >
                                 {copied ? <Check className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> : <Copy className="w-3 h-3 sm:w-3.5 sm:h-3.5" />}
-                                <span>{copied ? "Copied" : "Copy"}</span>
+                                <span>{copied ? "Copiado" : "Copiar"}</span>
                             </Button>
                         </div>
                     </div>

@@ -7,7 +7,7 @@ export const metadata: Metadata = {
     template: '%s · MyGym',
   },
   description:
-    'Explora el feed público de rutinas, descubre nuevos workouts y conecta con la comunidad MyGym.',
+    'Explora el feed público de workouts, descubre nuevos workouts y conecta con la comunidad MyGym.',
   robots: {
     index: true,
     follow: true,
@@ -17,7 +17,7 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: 'Feed · MyGym',
-    description: 'Explora rutinas de gimnasio compartidas por la comunidad.',
+    description: 'Explora workouts de gimnasio compartidas por la comunidad.',
     url: '/feed',
     type: 'website',
     locale: 'es_ES',

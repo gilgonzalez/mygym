@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import type { FollowStatus } from '@/types/social'
-import { Workout } from '@/types/workout/composite'
+import { Workout, WorkoutLikerPreview } from '@/types/workout/composite'
 
 async function buildViewerFollowStatusMap(
   supabase: Awaited<ReturnType<typeof createClient>>,
@@ -38,6 +38,90 @@ async function buildViewerFollowStatusMap(
   }, {})
 }
 
+async function buildWorkoutLikesData(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  viewerId: string | undefined,
+  workoutIds: string[]
+) {
+  const uniqueIds = [...new Set(workoutIds.filter(Boolean))]
+
+  if (uniqueIds.length === 0) {
+    return {
+      likesCounts: {} as Record<string, number>,
+      likedByUser: {} as Record<string, boolean>,
+      likesPreviews: {} as Record<string, WorkoutLikerPreview[]>,
+    }
+  }
+
+  const { data: likesData, error: likesError } = await supabase
+    .from('workout_likes')
+    .select(`
+      workout_id,
+      user_id,
+      created_at,
+      user:users!workout_likes_user_id_fkey(id, username, name, avatar_url)
+    `)
+    .in('workout_id', uniqueIds)
+    .order('created_at', { ascending: false })
+
+  if (likesError) throw likesError
+
+  const likesCounts: Record<string, number> = {}
+  const likedByUser: Record<string, boolean> = {}
+  const likesPreviewsAcc: Record<string, WorkoutLikerPreview[]> = {}
+
+  for (const row of likesData ?? []) {
+    likesCounts[row.workout_id] = (likesCounts[row.workout_id] || 0) + 1
+    if (viewerId && row.user_id === viewerId) {
+      likedByUser[row.workout_id] = true
+    }
+
+    const userRow = (row as any).user
+    if (userRow) {
+      const previewArr = likesPreviewsAcc[row.workout_id] ?? (likesPreviewsAcc[row.workout_id] = [])
+      if (previewArr.length < 3) {
+        previewArr.push({
+          id: userRow.id,
+          username: userRow.username ?? null,
+          name: userRow.name ?? null,
+          avatar_url: userRow.avatar_url ?? null,
+        })
+      }
+    }
+  }
+
+  return { likesCounts, likedByUser, likesPreviews: likesPreviewsAcc }
+}
+
+async function buildWorkoutCommentsCount(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  workoutIds: string[]
+) {
+  const uniqueIds = [...new Set(workoutIds.filter(Boolean))]
+
+  if (uniqueIds.length === 0) {
+    return {} as Record<string, number>
+  }
+
+  const { data, error } = await supabase
+    .from('workout_logs')
+    .select('workout_id')
+    .in('workout_id', uniqueIds)
+    .not('notes', 'is', null)
+    .neq('notes', '')
+
+  if (error) throw error
+
+  const counts: Record<string, number> = {}
+  for (const row of data ?? []) {
+    const workoutId = row.workout_id
+    if (!workoutId) continue
+    counts[workoutId] = (counts[workoutId] || 0) + 1
+  }
+
+  return counts
+}
+
 export async function getWorkoutsAction(): Promise<{ success: boolean, data?: Workout[], error?: string }> {
   try {
     const supabase = await createClient()
@@ -69,9 +153,21 @@ export async function getWorkoutsAction(): Promise<{ success: boolean, data?: Wo
       ((data as any[]) ?? []).map((workout: any) => workout.user_id)
     )
 
+    const workoutIds = ((data as any[]) ?? []).map((workout: any) => workout.id)
+    const { likesCounts, likedByUser, likesPreviews } = await buildWorkoutLikesData(
+      supabase,
+      user?.id,
+      workoutIds
+    )
+    const commentsCounts = await buildWorkoutCommentsCount(supabase, workoutIds)
+
     const workouts: Workout[] = (data as any).map((workout: any) => ({
       ...workout,
       user: workout.user,
+      likes_count: likesCounts[workout.id] || 0,
+      is_liked: likedByUser[workout.id] || false,
+      likes_preview: likesPreviews[workout.id] || [],
+      comments_count: commentsCounts[workout.id] || 0,
       viewer_follow_status:
         workout.user_id && workout.user_id !== user?.id
           ? followStatusByOwner[workout.user_id] || 'none'
@@ -95,6 +191,9 @@ export async function getWorkoutsAction(): Promise<{ success: boolean, data?: Wo
 export async function getUserWorkoutsAction(userId: string): Promise<{ success: boolean, data?: Workout[], error?: string }> {
   try {
     const supabase = await createClient()
+    const {
+      data: { user: viewer },
+    } = await supabase.auth.getUser()
 
     const query = supabase
       .from('workouts')
@@ -116,9 +215,21 @@ export async function getUserWorkoutsAction(userId: string): Promise<{ success: 
 
     if (error) throw error
 
+    const workoutIdsUser = ((data as any[]) ?? []).map((workout: any) => workout.id)
+    const { likesCounts, likedByUser, likesPreviews } = await buildWorkoutLikesData(
+      supabase,
+      viewer?.id,
+      workoutIdsUser
+    )
+    const commentsCounts = await buildWorkoutCommentsCount(supabase, workoutIdsUser)
+
     const workouts: Workout[] = (data as any).map((workout: any) => ({
       ...workout,
       user: workout.user,
+      likes_count: likesCounts[workout.id] || 0,
+      is_liked: likedByUser[workout.id] || false,
+      likes_preview: likesPreviews[workout.id] || [],
+      comments_count: commentsCounts[workout.id] || 0,
       sections: (workout.workout_sections || [])
         .sort((a: any, b: any) => a.order_index - b.order_index)
         .map((ws: any) => ({

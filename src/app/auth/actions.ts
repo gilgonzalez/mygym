@@ -41,7 +41,7 @@ export const signInWithProvider = async (provider: "google" | "github", next?: s
     return data?.url; 
   } catch (error) {
     console.error("Error during OAuth authentication:", error);
-    throw new Error("Authentication failed.");
+    throw new Error("Autenticación fallida.");
   }
 };
 

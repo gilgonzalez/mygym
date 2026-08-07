@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState, useTransition } from 'react'
 import { Check, Inbox, Loader2, UserPlus, Users, X } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
-import { Button } from '@/components/Button'
+import { Button } from '@/components/ui/button'
 import {
   acceptFollowRequestAction,
   rejectFollowRequestAction,

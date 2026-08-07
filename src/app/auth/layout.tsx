@@ -6,7 +6,7 @@ export const metadata: Metadata = {
     template: '%s · MyGym',
   },
   description:
-    'Accede a tu cuenta MyGym o regístrate gratis para empezar a crear rutinas, seguir tu progreso y conectar con la comunidad.',
+    'Accede a tu cuenta MyGym o regístrate gratis para empezar a crear workouts, seguir tu progreso y conectar con la comunidad.',
   robots: {
     index: false,
     follow: false,

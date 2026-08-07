@@ -4,7 +4,7 @@ import * as React from "react"
 import { Moon, Sun } from "lucide-react"
 import { useTheme } from "next-themes"
 import { cn } from "@/lib/utils"
-import { Switch } from "@/components/Switch"
+import { Switch } from "@/components/ui/switch"
 
 export function ModeToggle() {
   const { setTheme, resolvedTheme } = useTheme()
@@ -26,7 +26,7 @@ export function ModeToggle() {
       <Switch
         checked={isDark}
         onCheckedChange={(checked) => setTheme(checked ? "dark" : "light")}
-        aria-label="Toggle dark mode"
+        aria-label="Cambiar a modo oscuro"
       />
       <Moon className={cn("h-3.5 w-3.5 transition-colors sm:h-4 sm:w-4", isDark ? "text-primary" : "text-muted-foreground")} />
     </div>

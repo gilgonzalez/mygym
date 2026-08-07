@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react'
 import { Play, Dumbbell, TimerIcon, Info, ChevronLeft, Clock, Trophy } from 'lucide-react'
-import { Button } from '@/components/Button'
+import { Button } from '@/components/ui/button'
 import { PreviewActivity } from './PreviewActivity'
 import { LocalWorkout } from '@/types/workout/viewTypes'
 import { formatDuration } from '@/lib/time'
@@ -18,8 +18,8 @@ export function PreviewWorkout({ data, onClose }: PreviewWorkoutProps) {
   const workout: LocalWorkout = useMemo(() => {
     return {
       id: 'preview',
-      title: data.title || 'Untitled Workout',
-      description: data.description || 'No description provided.',
+      title: data.title || 'Workout sin título',
+      description: data.description || 'Sin descripción.',
       cover: data.cover || 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=1470&auto=format&fit=crop',
       tags: data.tags,
       difficulty: data.difficulty,
@@ -32,11 +32,11 @@ export function PreviewWorkout({ data, onClose }: PreviewWorkoutProps) {
       } : null,
       sections: (data.sections || []).map((s: any) => ({
         id: s.id,
-        name: s.name || 'Untitled Section',
+        name: s.name || 'Sección sin título',
         orderType: s.orderType || 'single',
         exercises: (s.exercises || []).map((e: any) => ({
           id: e.id,
-          name: e.name || 'Untitled Exercise',
+          name: e.name || 'Ejercicio sin título',
           type: e.type || 'reps',
           reps: e.reps,
           sets: e.sets,
@@ -139,7 +139,7 @@ export function PreviewWorkout({ data, onClose }: PreviewWorkoutProps) {
          <div className="absolute inset-0">
            <img 
              src={workout.cover} 
-             alt="Workout Cover" 
+             alt="Portada de workout" 
              className="w-full h-full object-cover opacity-90"
            />
            <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-black/30" />
@@ -147,7 +147,7 @@ export function PreviewWorkout({ data, onClose }: PreviewWorkoutProps) {
          
          <div className="absolute bottom-0 left-0 right-0 p-5 sm:p-6 w-full z-10">
            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/20 backdrop-blur-md text-primary text-xs font-medium mb-3 border border-primary/20">
-             <Dumbbell className="w-3 h-3" /> {data.category || 'Strength Training'}
+             <Dumbbell className="w-3 h-3" /> {data.category || 'Entrenamiento de Fuerza'}
            </div>
            {workout.challenge && (
              <div className="mb-3 flex flex-wrap gap-2">
@@ -168,7 +168,7 @@ export function PreviewWorkout({ data, onClose }: PreviewWorkoutProps) {
                <TimerIcon className="w-3 h-3 md:w-4 md:h-4" /> {formatDuration(totalDurationSeconds || 45 * 60)}
              </span>
              <span className="flex items-center gap-1">
-               <Info className="w-3 h-3 md:w-4 md:h-4" /> {data.difficulty || 'Intermediate'}
+               <Info className="w-3 h-3 md:w-4 md:h-4" /> {data.difficulty || 'Intermedio'}
              </span>
            </div>
          </div>
@@ -229,7 +229,7 @@ export function PreviewWorkout({ data, onClose }: PreviewWorkoutProps) {
                  ))}
                  {section.exercises.length === 0 && (
                     <div className="text-center py-4 text-xs text-muted-foreground italic">
-                        No exercises added yet.
+                        Aún no se han añadido ejercicios.
                     </div>
                  )}
                </div>
@@ -246,7 +246,7 @@ export function PreviewWorkout({ data, onClose }: PreviewWorkoutProps) {
            disabled={flatSteps.length === 0}
          >
            <Play className="w-5 h-5 mr-2 fill-current" /> 
-           Start Preview
+           Iniciar vista previa
          </Button>
       </div>
     </div>

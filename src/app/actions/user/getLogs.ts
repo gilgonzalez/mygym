@@ -8,7 +8,7 @@ export async function getWorkoutLogsAction(userId: string, startDate: string, en
     const { data: { user } } = await supabase.auth.getUser()
 
     if (!user) {
-        return { error: 'Unauthorized' }
+        return { error: 'No autorizado' }
     }
     const { data, error } = await supabase
       .from('workout_logs')
