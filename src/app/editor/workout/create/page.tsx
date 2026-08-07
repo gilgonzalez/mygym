@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, Suspense } from 'react'
+import { toast } from 'sonner'
 
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -45,7 +46,6 @@ import { generateWorkoutAction } from '@/app/actions/workout/generate-by-ai'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { ActivityTutorialEditor } from '../components/ActivityTutorialEditor'
 import { PremiumFeatureDialog } from '@/components/premium/PremiumFeatureDialog'
-import { toast } from 'sonner'
 
 // --- Schema Definition ---
 const tutorialStepSchema = z.object({
@@ -349,6 +349,15 @@ function CreateWorkoutContent() {
     recognition.onerror = (event: any) => {
         console.error("Speech recognition error", event.error)
         setIsListening(false)
+        const errorMessages: Record<string, { title: string; desc: string }> = {
+            'no-speech': { title: 'No se detectó voz', desc: 'Intenta hablar más fuerte o acerca el micrófono.' },
+            'audio-capture': { title: 'No hay micrófono disponible', desc: 'Verifica que tu navegador tenga permiso para acceder al micrófono.' },
+            'not-allowed': { title: 'Permiso de micrófono denegado', desc: 'Activa el permiso de micrófono en la configuración de tu navegador para usar esta función.' },
+            'network': { title: 'Error de red', desc: 'Necesitas conexión a Internet para el reconocimiento de voz.' },
+            'aborted': { title: 'Reconocimiento interrumpido', desc: 'La captura de voz se detuvo inesperadamente. Vuelve a intentarlo.' },
+        }
+        const err = errorMessages[event.error] || { title: 'Error al escuchar', desc: 'Ocurrió un problema con el reconocimiento de voz. Vuelve a intentarlo.' }
+        toast.error(err.title, { description: err.desc })
     }
 
     recognition.onresult = (event: any) => {
@@ -393,16 +402,16 @@ function CreateWorkoutContent() {
     return () => window.removeEventListener('resize', syncViewport)
   }, [])
 
-  const { isLoading: isLoadingWorkout, data: loadedWorkout } = useQuery({
+  const { isLoading: isLoadingWorkout, data: loadedWorkout, error: loadError } = useQuery({
     queryKey: ['workout', workoutId],
     queryFn: async () => {
       if (!workoutId) return null
       const timeout = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('Timeout cargando el workout')), 20000)
+        setTimeout(() => reject(new Error('timeout_loading')), 20000)
       )
       const fetch = (async () => {
         const res = await getWorkoutById(workoutId)
-        if (!res.success || !res.data) throw new Error(res.error || 'Failed to fetch workout')
+        if (!res.success || !res.data) throw new Error(res.error || 'fetch_failed')
         const w = res.data
         return {
             id: w.id,
@@ -460,8 +469,26 @@ function CreateWorkoutContent() {
     },
     retry: 1,
     enabled: !!workoutId,
-    refetchOnWindowFocus: false
+    refetchOnWindowFocus: false,
   })
+
+  React.useEffect(() => {
+    if (!loadError) return
+    const msg = loadError instanceof Error ? loadError.message : 'unknown'
+    if (msg === 'timeout_loading') {
+      toast.error('La carga del workout tardó demasiado', {
+        description: 'Revisa tu conexión a Internet y recarga la página para volver a intentarlo.',
+      })
+    } else if (msg === 'fetch_failed') {
+      toast.error('No pudimos cargar el workout', {
+        description: 'Es posible que no exista o que no tengas permiso para editarlo. Intenta recargando la página.',
+      })
+    } else {
+      toast.error('Error al cargar el workout', {
+        description: 'Ocurrió un problema inesperado al recuperar la información. Intenta recargando la página.',
+      })
+    }
+  }, [loadError])
 
   const form = useForm<WorkoutFormValues>({
     resolver: zodResolver(workoutSchema) as unknown as Resolver<WorkoutFormValues>,
@@ -512,7 +539,7 @@ function CreateWorkoutContent() {
     }
   }, [loadedWorkout, workoutId, reset])
 
-  const { mutate: createWorkout } = useMutation({
+  const { mutateAsync: createWorkout } = useMutation({
     mutationFn: async (data: WorkoutFormValues) => {
         // Timeout safeguard: 30 seconds
         const timeout = new Promise<never>((_, reject) => 
@@ -890,7 +917,12 @@ function CreateWorkoutContent() {
       return
     }
 
-    if (!aiPrompt.trim()) return
+    if (!aiPrompt.trim()) {
+      toast.warning('Describe el workout que quieres generar', {
+        description: 'Escribe al menos un par de palabras sobre el objetivo, músculos o duración para que la IA pueda ayudarte.',
+      })
+      return
+    }
     
     setIsGenerating(true)
     try {
@@ -931,6 +963,9 @@ function CreateWorkoutContent() {
             setValue('sections', newSections)
             setIsAiOpen(false)
             setAiPrompt('')
+            toast.success('Estructura generada', {
+                description: 'Revisa el título, ejercicios y ajusta lo que necesites antes de guardar el workout.',
+            })
         } else {
             toast.error(res.error || "No se pudo generar el workout. Inténtalo de nuevo.")
         }
@@ -960,7 +995,7 @@ function CreateWorkoutContent() {
     setIsSubmitting(true)
     setSubmitStatus('loading')
     setSubmitMessage(workoutId ? 'Actualizando workout y sincronizando media...' : 'Guardando workout y preparando archivos...')
-    createWorkout(data)
+    createWorkout(data).catch(() => {})
   }
 
   const onInvalidSubmit = (formErrors: typeof errors) => {
@@ -1719,7 +1754,7 @@ function CreateWorkoutContent() {
 }
 
 
-function ExercisesFieldArray({ nestIndex, control, register, setValue, watch, errors, isCompactMobile = false }: { nestIndex: number, control: any, register: any, setValue: any, watch: any, errors: any, isCompactMobile?: boolean }) {
+function ExercisesFieldArray({ nestIndex, control, register, setValue, watch, isCompactMobile = false }: { nestIndex: number, control: any, register: any, setValue: any, watch: any, errors: any, isCompactMobile?: boolean }) {
   const { fields, append, remove } = useFieldArray({
     control,
     name: `sections.${nestIndex}.exercises`

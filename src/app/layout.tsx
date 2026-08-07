@@ -146,7 +146,7 @@ export default function RootLayout({
               <Toaster
                 richColors
                 closeButton
-                position="top-right"
+                position="bottom-right"
                 toastOptions={{
                   classNames: {
                     toast: 'group-[.toaster]:shadow-lg',
