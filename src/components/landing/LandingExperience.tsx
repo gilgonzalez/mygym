@@ -360,12 +360,10 @@ function WorkoutCreatorMockup() {
     },
     {
       id: 2,
-      name: 'Bloque Principal - Pierna Potente',
+      name: 'Pierna Potente',
       gradient: 'from-violet-500 to-fuchsia-500',
       chip: 'bg-violet-500/10 text-violet-300 border-violet-500/20',
-      isChallenge: true,
-      challengeType: 'AMRAP',
-      challengeMinutes: 12,
+      
       exercises: [
         { id: 'e3', name: 'Hip Thrust con barra', img: 'https://images.unsplash.com/photo-1574680096145-d05b474e2155?q=80&w=300&auto=format&fit=crop', type: 'reps', value: '12', sets: 4, rest: 90 },
         { id: 'e4', name: 'Bulgarian Split Squat', img: 'https://images.unsplash.com/photo-1574680096145-d05b474e2155?q=80&w=300&auto=format&fit=crop', type: 'reps', value: '10', sets: 3, rest: 75 },
@@ -376,8 +374,11 @@ function WorkoutCreatorMockup() {
     },
     {
       id: 3,
-      name: 'Finisher - Core',
+      name: 'Finisher',
       gradient: 'from-emerald-500 to-teal-500',
+      isChallenge: true,
+      challengeType: 'AMRAP',
+      challengeMinutes: 12,
       chip: 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20',
       exercises: [
         { id: 'e7', name: 'Plank', img: 'https://images.unsplash.com/photo-1566241440091-ec10de8db2e1?q=80&w=300&auto=format&fit=crop', type: 'time', value: '60', sets: 3, rest: 30 },
@@ -1680,8 +1681,17 @@ export default function LandingExperience() {
     }
   }
 
+  const [scrolled, setScrolled] = useState(false)
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8)
+    onScroll()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
+
   return (
-    <main className="relative min-h-screen overflow-x-hidden bg-[#050608] text-foreground">
+    <main className="relative min-h-screen bg-[#050608] text-foreground">
       <div className="pointer-events-none fixed inset-0 z-0">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 h-[600px] w-[1600px] rounded-full bg-emerald-500/[0.08] blur-[140px]" />
         <div className="absolute top-[500px] right-0 h-[500px] w-[900px] rounded-full bg-violet-500/[0.10] blur-[130px]" />
@@ -1690,7 +1700,13 @@ export default function LandingExperience() {
         <div className="absolute top-[3000px] left-1/2 -translate-x-1/2 h-[500px] w-[1100px] rounded-full bg-emerald-500/[0.08] blur-[140px]" />
       </div>
 
-      <div className="relative z-10 border-b border-white/10 bg-black/30 backdrop-blur-md sticky top-0 z-30">
+      <header
+        className={`fixed top-0 left-0 right-0 z-50 border-b backdrop-blur-md transition-all duration-300 ${
+          scrolled
+            ? 'border-white/10 bg-black/70 shadow-[0_12px_40px_-20px_rgba(0,0,0,0.8)]'
+            : 'border-white/10 bg-black/40'
+        }`}
+      >
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 xl:px-10 py-3 sm:py-4 flex items-center justify-between gap-4">
           <Link href="/" className="inline-flex items-center gap-2">
             <img
@@ -1724,9 +1740,11 @@ export default function LandingExperience() {
             </Link>
           </div>
         </div>
-      </div>
+      </header>
 
-      <section className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 xl:px-10 pt-14 sm:pt-20 md:pt-24 pb-16 sm:pb-24 md:pb-28">
+      <div aria-hidden className="h-[52px] sm:h-[68px]" />
+
+      <section className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 xl:px-10 pt-6 sm:pt-10 md:pt-14 pb-16 sm:pb-24 md:pb-28">
         <div className="text-center max-w-5xl mx-auto">
           <span className="inline-flex items-center gap-2 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-4 py-1.5 text-[11px] font-black uppercase tracking-[0.2em] text-emerald-300">
             <Sparkles className="h-3.5 w-3.5" /> Nueva v2.0 · Retos AMRAP y gamificacion
@@ -1768,7 +1786,7 @@ export default function LandingExperience() {
         </div>
       </section>
 
-      <section id="crear" className="relative z-10 mx-auto max-w-[1500px] sm:max-w-[1700px] px-3 sm:px-5 md:px-7 lg:px-10 pb-20 sm:pb-28 md:pb-36">
+      <section id="crear" className="relative z-10 mx-auto max-w-[1500px] sm:max-w-[1700px] px-3 sm:px-5 md:px-7 lg:px-10 pb-20 sm:pb-28 md:pb-36 scroll-mt-16 sm:scroll-mt-[72px] pt-4 sm:pt-6">
         <SectionCard
           eyebrow="01 · Creacion"
           eyebrowIcon={Dumbbell}
@@ -1782,7 +1800,7 @@ export default function LandingExperience() {
         </div>
       </section>
 
-      <section id="entrenar" className="relative z-10 mx-auto max-w-[1500px] sm:max-w-[1700px] px-3 sm:px-5 md:px-7 lg:px-10 pb-20 sm:pb-28 md:pb-36">
+      <section id="entrenar" className="relative z-10 mx-auto max-w-[1500px] sm:max-w-[1700px] px-3 sm:px-5 md:px-7 lg:px-10 pb-20 sm:pb-28 md:pb-36 scroll-mt-16 sm:scroll-mt-[72px] pt-4 sm:pt-6">
         <SectionCard
           eyebrow="02 · Realizacion"
           eyebrowIcon={Play}
@@ -1796,7 +1814,7 @@ export default function LandingExperience() {
         </div>
       </section>
 
-      <section id="compartir" className="relative z-10 mx-auto max-w-[1500px] sm:max-w-[1700px] px-3 sm:px-5 md:px-7 lg:px-10 pb-20 sm:pb-28 md:pb-36">
+      <section id="compartir" className="relative z-10 mx-auto max-w-[1500px] sm:max-w-[1700px] px-3 sm:px-5 md:px-7 lg:px-10 pb-20 sm:pb-28 md:pb-36 scroll-mt-16 sm:scroll-mt-[72px] pt-4 sm:pt-6">
         <SectionCard
           eyebrow="03 · Tablon de workouts"
           eyebrowIcon={Users}
@@ -1809,7 +1827,7 @@ export default function LandingExperience() {
         </div>
       </section>
 
-      <section id="progreso" className="relative z-10 mx-auto max-w-[1500px] sm:max-w-[1700px] px-3 sm:px-5 md:px-7 lg:px-10 pb-20 sm:pb-28 md:pb-36">
+      <section id="progreso" className="relative z-10 mx-auto max-w-[1500px] sm:max-w-[1700px] px-3 sm:px-5 md:px-7 lg:px-10 pb-20 sm:pb-28 md:pb-36 scroll-mt-16 sm:scroll-mt-[72px] pt-4 sm:pt-6">
         <SectionCard
           eyebrow="04 · Perfil y progreso"
           eyebrowIcon={Trophy}
@@ -1823,7 +1841,7 @@ export default function LandingExperience() {
         </div>
       </section>
 
-      <section id="precios" className="relative z-10 mx-auto max-w-[1500px] sm:max-w-[1700px] px-3 sm:px-5 md:px-7 lg:px-10 pb-20 sm:pb-28 md:pb-36">
+      <section id="precios" className="relative z-10 mx-auto max-w-[1500px] sm:max-w-[1700px] px-3 sm:px-5 md:px-7 lg:px-10 pb-20 sm:pb-28 md:pb-36 scroll-mt-16 sm:scroll-mt-[72px] pt-4 sm:pt-6">
         <SectionCard
           eyebrow="05 · Free y Premium"
           eyebrowIcon={Crown}

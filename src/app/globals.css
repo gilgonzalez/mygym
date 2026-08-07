@@ -3,8 +3,20 @@
 @tailwind utilities;
 
 @layer base {
+  html,
+  body {
+    overflow-x: hidden;
+  }
+
   html {
     scroll-behavior: smooth;
+    scroll-padding-top: 12px;
+  }
+
+  @media (min-width: 640px) {
+    html {
+      scroll-padding-top: 12px;
+    }
   }
 
   @media (prefers-reduced-motion: reduce) {
