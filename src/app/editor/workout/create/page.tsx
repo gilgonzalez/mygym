@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/tooltip"
 import Link from 'next/link'
 
-import { Button } from '@/components/Button'
+import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/form/TextArea'
 import { Badge } from '@/components/ui/badge'
@@ -50,8 +50,8 @@ import { PremiumFeatureDialog } from '@/components/premium/PremiumFeatureDialog'
 // --- Schema Definition ---
 const tutorialStepSchema = z.object({
   id: z.string().optional(),
-  title: z.string().min(1, "Required"),
-  description: z.string().min(1, "Required"),
+  title: z.string().min(1, "Requerido"),
+  description: z.string().min(1, "Requerido"),
 })
 
 const tutorialSchema = z.object({
@@ -66,7 +66,7 @@ const tutorialSchema = z.object({
 const exerciseSchema = z.object({
   id: z.string(),
   db_id: z.string().optional(),
-  name: z.string().min(1, "Required"),
+  name: z.string().min(1, "Requerido"),
   type: z.enum(['reps', 'time']).default('reps'),
   reps: z.coerce.number().optional(),
   sets: z.coerce.number().optional(),
@@ -86,14 +86,14 @@ const exerciseSchema = z.object({
 
 const sectionSchema = z.object({
   id: z.string(),
-  name: z.string().min(1, "Required"),
+  name: z.string().min(1, "Requerido"),
   orderType: z.enum(['linear', 'single']).default('single'),
   exercises: z.array(exerciseSchema),
 })
 
 const workoutSchema = z.object({
   id: z.string().optional(),
-  title: z.string().min(3, "Title required"),
+  title: z.string().min(3, "Título requerido"),
   description: z.string().optional(),
   cover: z.string().optional(),
   tags: z.array(z.string()).optional(),
@@ -569,7 +569,7 @@ function CreateWorkoutContent() {
     mutationFn: async (data: WorkoutFormValues) => {
         // Timeout safeguard: 30 seconds
         const timeout = new Promise<never>((_, reject) => 
-            setTimeout(() => reject(new Error("Request timed out. Please check your connection and try again.")), 30000)
+            setTimeout(() => reject(new Error("Tiempo de espera agotado. Comprueba tu conexión e inténtalo de nuevo.")), 30000)
         )
 
         const processUpload = async () => {
@@ -591,13 +591,13 @@ function CreateWorkoutContent() {
                 setUploadStatus(text);
             }
             
-            setUploadStatus('Preparing uploads...');
+            setUploadStatus('Preparando subidas...');
 
             // 1. Upload Media First (Client-side)
             // Upload Cover
             let coverUrl = normalizeMediaUrl(data.cover)
             if (data.cover?.startsWith('blob:')) {
-                setUploadStatus('Uploading cover image...')
+                setUploadStatus('Subiendo imagen de portada...')
                 const res = await uploadFile(normalizeMediaUrl(data.cover))
                 if (!res?.url) {
                     throw new Error('La portada del workout no se pudo subir correctamente. Vuelve a intentarlo.')
@@ -615,7 +615,7 @@ function CreateWorkoutContent() {
                         if (!res?.url) {
                             throw new Error('Uno de los audios del workout no se pudo subir correctamente. Vuelve a intentarlo.')
                         }
-                        updateProgress('Audio track uploaded')
+                        updateProgress('Pista de audio subida')
                         return res.url
                     }
                     return ensureUploadedUrl(url, 'Uno de los audios del workout')
@@ -658,7 +658,7 @@ function CreateWorkoutContent() {
                             bucket_path: res.bucket_path || null,
                             media_type: finalTutorial.media_type || inferMediaType(finalTutorial.media_url),
                         }
-                        updateProgress(`Tutorial uploaded: ${exercise.name}`)
+                        updateProgress(`Tutorial subido: ${exercise.name}`)
                     }
                     if (finalTutorial?.media_url) {
                         finalTutorial = {
@@ -678,7 +678,7 @@ function CreateWorkoutContent() {
                 return { ...section, exercises: exercisesWithMedia }
             }))
 
-            setUploadStatus('Finalizing workout...')
+            setUploadStatus('Finalizando workout...')
 
             // Calculate estimated time (in seconds)
             const estimatedTime = data.sections.reduce((total: number, section: WorkoutFormSection) => {
@@ -816,21 +816,21 @@ function CreateWorkoutContent() {
             let result;
             if (data.id) {
                 // Update existing
-                setUploadStatus('Updating workout...')
+                setUploadStatus('Actualizando workout...')
                 result = await updateWorkoutAction(data.id, cleanData)
             } else {
                 // Create new
-                setUploadStatus('Creating workout...')
+                setUploadStatus('Creando workout...')
                 result = await createWorkoutAction(cleanData)
             }
 
             if (!result || typeof result !== 'object' || !('success' in result)) {
-                throw new Error('Invalid response while saving workout')
+                throw new Error('Respuesta no válida al guardar el workout')
             }
 
-            if (!result.success) throw new Error(result.error || 'Failed to save workout')
+            if (!result.success) throw new Error(result.error || 'Error al guardar el workout')
             
-            updateProgress('Done!')
+            updateProgress('¡Listo!')
             return result
         }
 
@@ -846,7 +846,7 @@ function CreateWorkoutContent() {
         toast.success(workoutId ? 'Workout actualizado' : 'Workout guardado', {
           description: workoutId
             ? 'Los cambios se guardaron y ya están sincronizados.'
-            : 'Tu rutina está lista en el feed. Ahora a entrenar 💪',
+            : 'Tu workout está listo en el feed. Ahora a entrenar 💪',
         })
         reset()
         setTimeout(() => router.push('/feed'), 600)
@@ -1082,7 +1082,7 @@ function CreateWorkoutContent() {
               <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
                 {builderLabel}
               </p>
-              <h1 className="truncate text-[13px] font-semibold leading-none text-foreground sm:text-base">Workout Builder</h1>
+              <h1 className="truncate text-[13px] font-semibold leading-none text-foreground sm:text-base">Creador de Workouts</h1>
               <p className="mt-0.5 text-[11px] leading-none text-muted-foreground sm:text-xs">
                 {sectionFields.length} secciones · {totalExercises} ejercicios
               </p>
@@ -1152,7 +1152,7 @@ function CreateWorkoutContent() {
                   <>
                     <RotateCw className="mr-1.5 h-3.5 w-3.5 sm:mr-2 sm:h-4 sm:w-4" />
                     <span className="hidden sm:inline">Reintentar</span>
-                    <span className="sm:hidden">Retry</span>
+                    <span className="sm:hidden">Reintentar</span>
                   </>
                 ) : (
                   <>
@@ -1205,7 +1205,7 @@ function CreateWorkoutContent() {
                     setShowPreview(true)
                   }}
                 >
-                  <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">Preview</p>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">Vista previa</p>
                   <p className="mt-1 text-xs font-semibold text-foreground">Abrir</p>
                 </button>
               </div>
@@ -1612,7 +1612,7 @@ function CreateWorkoutContent() {
                             onValueChange={field.onChange}
                           >
                             <SelectTrigger className="h-10 w-full rounded-2xl border-border/50 bg-background text-sm font-medium focus:ring-primary/20 sm:h-11">
-                              <SelectValue placeholder="Selecciona la section" />
+                              <SelectValue placeholder="Selecciona la sección" />
                             </SelectTrigger>
                             <SelectContent className="rounded-xl border-border/50 shadow-xl">
                               {(formValues.sections || []).map((section, index) => (
@@ -1684,7 +1684,7 @@ function CreateWorkoutContent() {
         open={isPremiumDialogOpen}
         onOpenChange={setIsPremiumDialogOpen}
         title="Asistente de IA premium"
-        description="La generacion de rutinas con IA esta disponible solo para usuarios premium. Actualiza tu plan para desbloquear prompts, voz y creacion asistida."
+        description="La generacion de workouts con IA esta disponible solo para usuarios premium. Actualiza tu plan para desbloquear prompts, voz y creacion asistida."
       />
 
       {/* AI Assistant Dialog */}
@@ -1717,7 +1717,7 @@ function CreateWorkoutContent() {
                         isListening && "animate-pulse scale-110 ring-4 ring-red-500/20"
                     )}
                     onClick={toggleListening}
-                    title={isListening ? "Stop Listening" : "Start Voice Input"}
+                    title={isListening ? "Detener escucha" : "Iniciar entrada por voz"}
                 >
                     <Mic className={cn("h-4 w-4", isListening ? "animate-bounce" : "")} />
                 </Button>
@@ -1727,12 +1727,12 @@ function CreateWorkoutContent() {
                     {isGenerating ? (
                         <>
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Generating...
+                            Generando...
                         </>
                     ) : (
                         <>
                             <Sparkles className="mr-2 h-4 w-4" />
-                            Generate Magic
+                            Generar magia
                         </>
                     )}
                 </Button>
@@ -1753,7 +1753,7 @@ function CreateWorkoutContent() {
                 )}
               >
                 <Smartphone className="mr-1 inline h-3.5 w-3.5" />
-                Mobile
+                Móvil
               </button>
               <button
                 type="button"
@@ -1764,7 +1764,7 @@ function CreateWorkoutContent() {
                 )}
               >
                 <Monitor className="mr-1 inline h-3.5 w-3.5" />
-                Desktop
+                Escritorio
               </button>
             </div>
             <Button variant="ghost" size="sm" className="rounded-full px-3" onClick={() => setShowPreview(false)}>
@@ -1945,7 +1945,7 @@ function ExercisesFieldArray({ nestIndex, control, register, setValue, watch, is
                                           <ImageIcon className="h-4 w-4" />
                                         </div>
                                         <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                                          Thumbnail
+                                          Miniatura
                                         </label>
                                       </div>
                                       {renderHint('Sube una imagen o gif que identifique visualmente el ejercicio. Se usa como vista previa en tarjetas y listados.')}
@@ -2014,7 +2014,7 @@ function ExercisesFieldArray({ nestIndex, control, register, setValue, watch, is
                                                 </div>
                                                 <div className={cn('min-w-0 flex-1 pr-6 sm:pr-7', isCompactMobile && 'sr-only')}>
                                                   <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground sm:text-[10px]">
-                                                    {isCompactMobile ? 'Repeticiones' : 'Reps'}
+                                                    {isCompactMobile ? 'Repeticiones' : 'Repeticiones'}
                                                   </span>
                                                 </div>
                                               </div>
@@ -2037,7 +2037,7 @@ function ExercisesFieldArray({ nestIndex, control, register, setValue, watch, is
                                                 </div>
                                                 <div className={cn('min-w-0 flex-1 pr-6 sm:pr-7', isCompactMobile && 'sr-only')}>
                                                   <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground sm:text-[10px]">
-                                                    {isCompactMobile ? 'Tiempo' : 'Time'}
+                                                    {isCompactMobile ? 'Tiempo' : 'Tiempo'}
                                                   </span>
                                                 </div>
                                               </div>
@@ -2056,8 +2056,8 @@ function ExercisesFieldArray({ nestIndex, control, register, setValue, watch, is
                                             <div className={cn('flex items-center gap-1 pr-7 sm:pr-6', isCompactMobile && 'sr-only')}>
                                               <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground sm:text-[10px]">
                                                 {selectedType === 'time'
-                                                  ? (isCompactMobile ? 'Segundos' : 'Seconds')
-                                                  : (isCompactMobile ? 'Repeticiones' : 'Reps')}
+                                                  ? (isCompactMobile ? 'Segundos' : 'Segundos')
+                                                  : (isCompactMobile ? 'Repeticiones' : 'Repeticiones')}
                                               </span>
                                             </div>
                                           </div>
@@ -2090,7 +2090,7 @@ function ExercisesFieldArray({ nestIndex, control, register, setValue, watch, is
                                             </div>
                                             <div className={cn('flex items-center gap-1 pr-7 sm:pr-6', isCompactMobile && 'sr-only')}>
                                               <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground sm:text-[10px]">
-                                                {isCompactMobile ? 'Series' : 'Sets'}
+                                                Series
                                               </span>
                                             </div>
                                           </div>
@@ -2148,7 +2148,7 @@ function ExercisesFieldArray({ nestIndex, control, register, setValue, watch, is
                                     <div className="grid gap-2.5 md:grid-cols-3 md:gap-3">
                                       <div className="space-y-2">
                                         <label className="pl-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                                          {isCompactMobile ? 'Level' : 'Difficulty'}
+                                          {isCompactMobile ? 'Nivel' : 'Dificultad'}
                                         </label>
                                         <Controller
                                           control={control}
@@ -2156,7 +2156,7 @@ function ExercisesFieldArray({ nestIndex, control, register, setValue, watch, is
                                           render={({ field }) => (
                                             <Select onValueChange={field.onChange} value={field.value || 'beginner'}>
                                               <SelectTrigger className="h-9 rounded-2xl border-border/60 bg-muted/20 text-sm font-medium shadow-none sm:h-11">
-                                                <SelectValue placeholder={isCompactMobile ? 'Nivel' : 'Select difficulty'} />
+                                                <SelectValue placeholder={isCompactMobile ? 'Nivel' : 'Seleccionar dificultad'} />
                                               </SelectTrigger>
                                               <SelectContent>
                                                 <SelectItem value="beginner">Principiante</SelectItem>
@@ -2170,7 +2170,7 @@ function ExercisesFieldArray({ nestIndex, control, register, setValue, watch, is
 
                                       <div className="space-y-2">
                                         <label className="pl-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                                          {isCompactMobile ? 'Muscles' : 'Target Muscles'}
+                                          {isCompactMobile ? 'Músculos' : 'Músculos objetivo'}
                                         </label>
                                         <Controller
                                           control={control}
@@ -2179,7 +2179,7 @@ function ExercisesFieldArray({ nestIndex, control, register, setValue, watch, is
                                             <TagInput
                                               value={field.value || []}
                                               onChange={field.onChange}
-                                              placeholder={isCompactMobile ? "Muscles..." : "Add muscles..."}
+                                              placeholder={isCompactMobile ? "Músculos..." : "Añadir músculos..."}
                                               variant="orange"
                                               compact={isCompactMobile}
                                             />
@@ -2609,7 +2609,7 @@ function MediaInput({ value, onChange, placeholder, type = 'media', variant = 'd
                                         className="rounded-full px-6"
                                         onClick={closeVideoRecorder}
                                     >
-                                        Cancel
+                                        Cancelar
                                     </Button>
                                 </div>
                             )}
@@ -2647,7 +2647,7 @@ function MediaInput({ value, onChange, placeholder, type = 'media', variant = 'd
                                 </div>
                             ) : (
                                 <div className="w-full h-full relative">
-                                    <img src={value} alt="Preview" className="w-full h-full object-contain" />
+                                    <img src={value} alt="Vista previa" className="w-full h-full object-contain" />
                                 </div>
                             )}
                             <Button 
@@ -2669,7 +2669,7 @@ function MediaInput({ value, onChange, placeholder, type = 'media', variant = 'd
                                      <Music className="h-8 w-8 text-indigo-500" />
                                  </div>
                             ) : (
-                                 <img src={value} alt="Preview" className="w-full h-full object-cover" />
+                                 <img src={value} alt="Vista previa" className="w-full h-full object-cover" />
                             )}
                             
                             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
@@ -2681,7 +2681,7 @@ function MediaInput({ value, onChange, placeholder, type = 'media', variant = 'd
                                  </Button>
                             </div>
                             <div className="absolute bottom-1 right-1 px-1.5 py-0.5 bg-black/50 backdrop-blur rounded text-[8px] font-bold text-white uppercase pointer-events-none">
-                                {isVideo ? 'Video' : isAudio ? 'Audio' : 'Image'}
+                                {isVideo ? 'Vídeo' : isAudio ? 'Audio' : 'Imagen'}
                             </div>
                         </div>
                     )
@@ -2707,7 +2707,7 @@ function MediaInput({ value, onChange, placeholder, type = 'media', variant = 'd
                                 type="button"
                                 className="flex min-h-[38px] items-center justify-center gap-2 rounded-xl border border-border/40 bg-background/60 text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground transition-colors hover:text-emerald-500"
                                 onClick={() => setIsLibraryOpen(true)}
-                                title="Select from Library"
+                                title="Seleccionar de la biblioteca"
                             >
                                  <Library className="h-4 w-4 opacity-80" />
                                  <span className="text-[9px] font-bold uppercase">Lib</span>
@@ -2718,7 +2718,7 @@ function MediaInput({ value, onChange, placeholder, type = 'media', variant = 'd
                                   type="button"
                                   className="flex min-h-[38px] items-center justify-center gap-2 rounded-xl border border-border/40 bg-background/60 text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground transition-colors hover:text-blue-500"
                                   onClick={() => openCamera()}
-                                  title="Record Video"
+                                  title="Grabar vídeo"
                               >
                                    <Camera className="h-4 w-4 opacity-80" />
                                    <span className="text-[9px] font-bold uppercase">Cam</span>
@@ -2729,7 +2729,7 @@ function MediaInput({ value, onChange, placeholder, type = 'media', variant = 'd
                                 type="button"
                                 className="flex min-h-[38px] items-center justify-center gap-2 rounded-xl border border-border/40 bg-background/60 text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground transition-colors hover:text-foreground"
                                 onClick={() => fileInputRef.current?.click()}
-                                title="Upload File"
+                                title="Subir archivo"
                             >
                                  <Upload className="h-4 w-4 opacity-80" />
                                  <span className="text-[9px] font-bold uppercase">Up</span>
@@ -2740,7 +2740,7 @@ function MediaInput({ value, onChange, placeholder, type = 'media', variant = 'd
                                   type="button"
                                   className="flex min-h-[38px] items-center justify-center gap-2 rounded-xl border border-border/40 bg-background/60 text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground transition-colors hover:text-red-500"
                                   onClick={() => startAudioRecording()}
-                                  title="Record Audio"
+                                  title="Grabar audio"
                               >
                                    <Mic className="h-4 w-4 opacity-80" />
                                    <span className="text-[9px] font-bold uppercase">Mic</span>
@@ -2753,7 +2753,7 @@ function MediaInput({ value, onChange, placeholder, type = 'media', variant = 'd
                                 type="button"
                                 className="flex-1 flex flex-col items-center justify-center gap-1 hover:bg-black/5 transition-colors text-muted-foreground hover:text-emerald-500"
                                 onClick={() => setIsLibraryOpen(true)}
-                                title="Select from Library"
+                                title="Seleccionar de la biblioteca"
                             >
                                  <Library className="h-5 w-5 opacity-70" />
                                  <span className="text-[8px] font-bold uppercase">Lib</span>
@@ -2764,7 +2764,7 @@ function MediaInput({ value, onChange, placeholder, type = 'media', variant = 'd
                                   type="button"
                                   className="flex-1 flex flex-col items-center justify-center gap-1 hover:bg-black/5 transition-colors text-muted-foreground hover:text-blue-500"
                                   onClick={() => openCamera()}
-                                  title="Record Video"
+                                  title="Grabar vídeo"
                               >
                                    <Camera className="h-5 w-5 opacity-70" />
                                    <span className="text-[8px] font-bold uppercase">Cam</span>
@@ -2775,7 +2775,7 @@ function MediaInput({ value, onChange, placeholder, type = 'media', variant = 'd
                                 type="button"
                                 className="flex-1 flex flex-col items-center justify-center gap-1 hover:bg-black/5 transition-colors text-muted-foreground hover:text-foreground"
                                 onClick={() => fileInputRef.current?.click()}
-                                title="Upload File"
+                                title="Subir archivo"
                             >
                                  <Upload className="h-5 w-5 opacity-70" />
                                  <span className="text-[8px] font-bold uppercase">Up</span>
@@ -2786,7 +2786,7 @@ function MediaInput({ value, onChange, placeholder, type = 'media', variant = 'd
                                   type="button"
                                   className="flex-1 flex flex-col items-center justify-center gap-1 hover:bg-black/5 transition-colors text-muted-foreground hover:text-red-500"
                                   onClick={() => startAudioRecording()}
-                                  title="Record Audio"
+                                  title="Grabar audio"
                               >
                                    <Mic className="h-5 w-5 opacity-70" />
                                    <span className="text-[8px] font-bold uppercase">Mic</span>
@@ -2822,7 +2822,7 @@ function MediaInput({ value, onChange, placeholder, type = 'media', variant = 'd
                 <Input 
                     value={value || ''} 
                     onChange={(e) => onChange(e.target.value)}
-                    placeholder={placeholder || "Media URL or File"} 
+                    placeholder={placeholder || "URL o archivo de medio"} 
                     className="h-9 text-xs bg-muted/30 border-transparent text-muted-foreground w-full pl-8 pr-24"
                 />
                 <div className="absolute left-2.5 top-2.5 text-muted-foreground">

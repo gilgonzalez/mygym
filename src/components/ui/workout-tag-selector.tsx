@@ -1,13 +1,13 @@
 import React, { useState, useMemo } from 'react'
 import { Check, Plus, X, Search } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/Button'
+import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/Dropdown'
+} from '@/components/ui/dropdown-menu'
 import { WORKOUT_TAGS } from '@/constants/workout-tags'
 import { cn } from '@/lib/utils'
 
@@ -47,7 +47,7 @@ export function WorkoutTagSelector({ value = [], onChange }: WorkoutTagSelectorP
                     className="w-full justify-between bg-background border-border/50 h-10 rounded-xl px-3"
                 >
                     <span className="text-muted-foreground font-normal">
-                        {value.length > 0 ? `${value.length} tags selected` : "Select tags..."}
+                        {value.length > 0 ? `${value.length} etiquetas seleccionadas` : "Seleccionar etiquetas..."}
                     </span>
                     <Plus className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
@@ -57,7 +57,7 @@ export function WorkoutTagSelector({ value = [], onChange }: WorkoutTagSelectorP
                     <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
                     <input
                        className="flex h-10 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
-                       placeholder="Search tags..."
+                       placeholder="Buscar etiquetas..."
                        value={searchTerm}
                        onChange={(e) => setSearchTerm(e.target.value)}
                        autoFocus
@@ -66,7 +66,7 @@ export function WorkoutTagSelector({ value = [], onChange }: WorkoutTagSelectorP
                 <div className="max-h-[300px] overflow-y-auto p-1">
                     {filteredTags.length === 0 && (
                         <div className="py-6 text-center text-sm text-muted-foreground">
-                            No tags found.
+                            No se encontraron etiquetas.
                         </div>
                     )}
                     {filteredTags.map((tag) => {

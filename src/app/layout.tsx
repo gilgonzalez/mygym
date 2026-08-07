@@ -17,14 +17,14 @@ const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://mygymgigo.vercel.app
 export const metadata: Metadata = {
   metadataBase: new URL(APP_URL),
   title: {
-    default: "MyGym · Crea, comparte y ejecuta rutinas de gimnasio",
+    default: "MyGym · Crea, comparte y ejecuta workouts de gimnasio",
     template: "%s | MyGym",
   },
   description:
-    "MyGym es la plataforma fitness social para crear rutinas profesionales, ejecutar entrenamientos con retos AMRAP, compartir tu progreso y gamificar cada repetición con una biblioteca de más de 2300 ejercicios.",
+    "MyGym es la plataforma fitness social para crear workouts profesionales, ejecutar entrenamientos con retos AMRAP, compartir tu progreso y gamificar cada repetición con una biblioteca de más de 2300 ejercicios.",
   keywords: [
     "mygym",
-    "rutinas gimnasio",
+    "workouts gimnasio",
     "entrenamiento",
     "workout",
     "ejercicios gym",
@@ -33,7 +33,7 @@ export const metadata: Metadata = {
     "gamificacion fitness",
     "social network gym",
     "gym rats",
-    "crear rutina",
+    "crear workout",
     "retos fitness",
     "progreso gym",
     "ejercicios musculacion",
@@ -71,14 +71,14 @@ export const metadata: Metadata = {
     siteName: "MyGym",
     title: "MyGym · Entrena. Comparte. Evoluciona.",
     description:
-      "Crea rutinas profesionales, ejecuta entrenamientos con retos AMRAP, comparte tu progreso y gamifica cada repetición. Todo en una sola app.",
+      "Crea workouts profesionales, ejecuta entrenamientos con retos AMRAP, comparte tu progreso y gamifica cada repetición. Todo en una sola app.",
     locale: "es_ES",
     images: [
       {
         url: "/og-image.png",
         width: 1200,
         height: 630,
-        alt: "MyGym - Plataforma fitness para crear y compartir rutinas de gimnasio",
+        alt: "MyGym - Plataforma fitness para crear y compartir workouts de gimnasio",
         type: "image/png",
       },
     ],
@@ -87,7 +87,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "MyGym · Entrena. Comparte. Evoluciona.",
     description:
-      "Crea rutinas profesionales, ejecuta entrenamientos con retos AMRAP, comparte tu progreso y gamifica cada repetición.",
+      "Crea workouts profesionales, ejecuta entrenamientos con retos AMRAP, comparte tu progreso y gamifica cada repetición.",
     creator: "@mygym",
     images: [
       {

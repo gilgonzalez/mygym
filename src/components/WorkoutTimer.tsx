@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Button } from '@/components/Button'
+import { Button } from '@/components/ui/button'
 import { Play, Pause, SkipForward } from 'lucide-react'
 import { formatDuration } from '@/lib/time'
 
@@ -134,7 +134,7 @@ export function WorkoutTimer({ duration, mode, onComplete, onSkip }: WorkoutTime
              <button 
                className="text-white/80 hover:text-white transition-colors p-1"
                onClick={toggleTimer}
-               aria-label={isRunning ? "Pause" : "Resume"}
+               aria-label={isRunning ? "Pausar" : "Reanudar"}
              >
                {isRunning ? <Pause className="w-6 h-6 fill-current" /> : <Play className="w-6 h-6 fill-current" />}
              </button>
@@ -142,7 +142,7 @@ export function WorkoutTimer({ duration, mode, onComplete, onSkip }: WorkoutTime
              <div className="flex gap-2">
                 <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={addTime}>+10s</Button>
                 <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={onSkip || onComplete}>
-                   Skip <SkipForward className="w-3 h-3 ml-1" />
+                   Saltar <SkipForward className="w-3 h-3 ml-1" />
                 </Button>
              </div>
            )}

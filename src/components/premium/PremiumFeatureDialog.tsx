@@ -1,7 +1,7 @@
 'use client'
 
 import { Lock } from 'lucide-react'
-import { Button } from '@/components/Button'
+import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,

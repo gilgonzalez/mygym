@@ -5,7 +5,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { useAuthStore } from '@/store/authStore'
 import { supabase } from '@/lib/supabase'
 import { Home, User, LogOut, PlusSquare } from 'lucide-react'
-import { Button } from '@/components/Button'
+import { Button } from '@/components/ui/button'
 
 import { ModeToggle } from '@/components/ModeSwitcher'
 
@@ -47,7 +47,7 @@ export default function AppLayoutClient({
                   <Link href="/editor/workout/create" className="contents">
                     <Button size="sm" className="hidden sm:flex shrink-0 gap-2 shadow-sm">
                       <PlusSquare className="h-4 w-4 shrink-0" />
-                      Create Workout
+                      Crear Workout
                     </Button>
                     <Button size="icon" variant="ghost" className="h-9 w-9 shrink-0 sm:hidden">
                       <PlusSquare className="h-5 w-5 shrink-0" />
@@ -69,7 +69,7 @@ export default function AppLayoutClient({
                   variant="ghost"
                   size="icon"
                   onClick={handleLogout}
-                  title="Sign out"
+                  title="Cerrar sesión"
                   className="h-9 w-9 shrink-0 text-muted-foreground hover:text-destructive"
                 >
                   <LogOut className="h-5 w-5 shrink-0" />
@@ -111,7 +111,7 @@ export default function AppLayoutClient({
           }`}
         >
           <User className="h-5 w-5 mb-1" />
-          Profile
+          Perfil
         </Link>
       </div>
     </div>

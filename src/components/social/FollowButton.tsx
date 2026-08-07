@@ -4,7 +4,7 @@ import { useEffect, useState, useTransition } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { Check, Loader2, UserPlus, UserRoundX, UserRoundCheck } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
-import { Button } from '@/components/Button'
+import { Button } from '@/components/ui/button'
 import {
   cancelFollowRequestAction,
   requestFollowAction,

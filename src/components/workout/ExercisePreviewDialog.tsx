@@ -14,7 +14,7 @@ import { formatDuration } from '@/lib/time'
 import { LocalExercise } from '@/types/workout/viewTypes'
 import { Clock3, Dumbbell, ImageOff, Layers3, Lock, PlayCircle, Target, Wrench } from 'lucide-react'
 import { PremiumFeatureDialog } from '@/components/premium/PremiumFeatureDialog'
-import { Button } from '@/components/Button'
+import { Button } from '@/components/ui/button'
 
 interface ExercisePreviewDialogProps {
   open: boolean

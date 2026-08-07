@@ -16,7 +16,7 @@ export async function completeWorkoutAction({ workoutId, durationMinutes, xpEarn
     const { data: { user } } = await supabase.auth.getUser()
 
     if (!user) {
-        return { success: false, error: 'Unauthorized' }
+        return { success: false, error: 'No autorizado' }
     }
 
     const { data: profile, error: profileError } = await supabase
@@ -30,7 +30,7 @@ export async function completeWorkoutAction({ workoutId, durationMinutes, xpEarn
     }
 
     if (!profile?.isPremium) {
-      return { success: false, error: 'Premium subscription required to save workout progress' }
+      return { success: false, error: 'Suscripción Premium requerida para guardar el progreso del workout' }
     }
 
     // Fallback Logic: Use workout defaults if calculated values are missing or zero

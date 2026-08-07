@@ -1,14 +1,19 @@
 'use client'
 
+import type { Metadata } from 'next'
 import { useState, useEffect, Suspense } from 'react'
 import { supabase } from '@/lib/supabase'
-import { Button } from '@/components/Button'
+import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Loader2, AlertCircle, ShieldCheck } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { GoogleAuthButton } from '@/components/auth/GoogleAuthButton'
+
+export const metadata: Metadata = {
+  title: 'Registrarse',
+}
 
 function RegisterContent() {
   const [isLoading, setIsLoading] = useState(false)
@@ -77,12 +82,12 @@ function RegisterContent() {
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
           <h2 className="mt-6 text-3xl font-extrabold text-gray-900 dark:text-white">
-            Create your account
+            Crea tu cuenta
           </h2>
           <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-            Or{' '}
+            O{' '}
             <Link href={`/auth/login${redirect ? `?next=${encodeURIComponent(redirect)}` : ''}` as any} className="font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400">
-              sign in to your existing account
+              inicia sesión en tu cuenta existente
             </Link>
           </p>
         </div>
@@ -104,7 +109,7 @@ function RegisterContent() {
         <div className="mt-8 space-y-6">
           <div className="space-y-4">
             <GoogleAuthButton 
-              text="Continue with Google"
+              text="Continuar con Google"
               className="w-full flex items-center justify-center gap-2 h-11"
               next={redirect}
             />
@@ -115,7 +120,7 @@ function RegisterContent() {
               </div>
               <div className="relative flex justify-center text-sm">
                 <span className="px-2 bg-gray-50 dark:bg-slate-950 text-gray-500">
-                  Or continue with email
+                  O continúa con email
                 </span>
               </div>
             </div>
@@ -135,7 +140,7 @@ function RegisterContent() {
               <div className="space-y-4">
                 <div>
                   <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Full Name
+                    Nombre completo
                   </label>
                   <Input
                     id="name"
@@ -143,7 +148,7 @@ function RegisterContent() {
                     type="text"
                     required
                     className="mt-1"
-                    placeholder="John Doe"
+                    placeholder="Tu Nombre"
                     value={formData.name}
                     onChange={handleChange}
                     disabled={isLoading}
@@ -152,7 +157,7 @@ function RegisterContent() {
 
                 <div>
                   <label htmlFor="username" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Username
+                    Nombre de usuario
                   </label>
                   <Input
                     id="username"
@@ -160,7 +165,7 @@ function RegisterContent() {
                     type="text"
                     required
                     className="mt-1"
-                    placeholder="johndoe"
+                    placeholder="tuusuario"
                     value={formData.username}
                     onChange={handleChange}
                     disabled={isLoading}
@@ -169,7 +174,7 @@ function RegisterContent() {
 
                 <div>
                   <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Email address
+                    Correo electrónico
                   </label>
                   <Input
                     id="email"
@@ -177,7 +182,7 @@ function RegisterContent() {
                     type="email"
                     required
                     className="mt-1"
-                    placeholder="john@example.com"
+                    placeholder="tu@correo.com"
                     value={formData.email}
                     onChange={handleChange}
                     disabled={isLoading}
@@ -186,7 +191,7 @@ function RegisterContent() {
 
                 <div>
                   <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Password
+                    Contraseña
                   </label>
                   <Input
                     id="password"
@@ -209,7 +214,7 @@ function RegisterContent() {
                 disabled={isLoading}
               >
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Create account
+                Crear cuenta
               </Button>
 
               <p className="text-center text-xs text-muted-foreground">

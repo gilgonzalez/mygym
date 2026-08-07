@@ -30,6 +30,13 @@ export interface WorkoutApiResponse extends DbWorkout {
   }>
 }
 
+export interface WorkoutLikerPreview {
+  id: string
+  username: string | null
+  name: string | null
+  avatar_url: string | null
+}
+
 // Type for the UI (Flattened)
 export interface Workout extends DbWorkout {
   user: Pick<DbUser, 'id' | 'username' | 'name' | 'avatar_url'> | null
@@ -62,6 +69,8 @@ export interface Workout extends DbWorkout {
   }>
   likes_count?: number
   is_liked?: boolean
+  likes_preview?: WorkoutLikerPreview[]
   viewer_follow_status?: FollowStatus
   rating: number | null
+  comments_count?: number
 }

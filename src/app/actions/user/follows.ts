@@ -75,7 +75,7 @@ export async function getFollowOverviewAction(userId?: string): Promise<ActionRe
     const targetUserId = userId ?? user.id
 
     if (targetUserId !== user.id) {
-      throw new Error('Unauthorized follow overview request')
+      throw new Error('Solicitud de visión general de seguimiento no autorizada')
     }
 
     const [followersResult, followingResult, requestsResult] = await Promise.all([

@@ -24,7 +24,7 @@ export async function uploadFile(fileUrl: string | undefined | null): Promise<{ 
     })
 
     if (!uploadRes.ok) {
-        throw new Error('Failed to get upload URL')
+        throw new Error('Error al obtener URL de subida')
     }
 
     const { url, publicUrl, key } = await uploadRes.json()
@@ -39,7 +39,7 @@ export async function uploadFile(fileUrl: string | undefined | null): Promise<{ 
     })
 
     if (!r2UploadRes.ok) {
-        throw new Error('Failed to upload file to R2')
+        throw new Error('Error al subir archivo a R2')
     }
 
     // 4. Save to Media Library (DB)

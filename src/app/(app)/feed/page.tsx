@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import WorkoutCard from '@/components/WorkoutCard'
-import { Button } from '@/components/Button'
+import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Loader2, RefreshCcw, Search, Sparkles, TrendingUp } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
@@ -62,14 +62,28 @@ export default function Page() {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-[50vh] items-center justify-center px-4">
-        <div className="flex w-full max-w-md flex-col items-center gap-3 rounded-3xl border border-border/60 bg-card/70 px-6 py-10 text-center shadow-sm backdrop-blur">
-          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
-            <Loader2 className="h-7 w-7 animate-spin text-primary" />
+      <div className="mx-auto flex w-full max-w-7xl justify-center px-4 py-6 sm:px-6">
+        <div className="w-full max-w-5xl space-y-6">
+          <div className="rounded-[28px] border border-border/60 bg-card/70 p-4 shadow-sm backdrop-blur sm:p-5 animate-pulse">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+              <div className="space-y-2">
+                <div className="h-6 w-28 rounded-full bg-muted/70" />
+                <div className="space-y-1.5">
+                  <div className="h-8 w-56 rounded-md bg-muted/70 sm:h-9 sm:w-64" />
+                  <div className="h-4 w-full max-w-lg rounded-md bg-muted/50" />
+                </div>
+              </div>
+              <div className="flex flex-col gap-3 sm:min-w-[320px] sm:max-w-[360px]">
+                <div className="h-10 w-full rounded-full bg-muted/60" />
+                <div className="h-10 w-48 rounded-full bg-muted/60" />
+              </div>
+            </div>
           </div>
-          <div className="space-y-1">
-            <p className="text-base font-semibold text-foreground">Cargando workouts</p>
-            <p className="text-sm text-muted-foreground">Estamos preparando tu feed con las rutinas publicas mas recientes.</p>
+
+          <div className="flex flex-col gap-6">
+            {[1, 2, 3].map((i) => (
+              <FeedWorkoutCardSkeleton key={i} />
+            ))}
           </div>
         </div>
       </div>
@@ -110,10 +124,10 @@ export default function Page() {
               </div>
               <div>
                 <h1 className="bg-gradient-to-r from-green-500 via-green-600 to-slate-900 bg-clip-text text-2xl font-bold tracking-tight text-transparent dark:from-emerald-400 dark:to-slate-300 sm:text-3xl">
-                  Discover Workouts
+                  Descubre Workouts
                 </h1>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Busca rapido y ordena por novedad o relevancia para encontrar una rutina que encaje contigo.
+                  Busca rapido y ordena por novedad o relevancia para encontrar un workout que encaje contigo.
                 </p>
               </div>
             </div>
@@ -166,7 +180,7 @@ export default function Page() {
               <p className="mt-1 text-sm text-muted-foreground">
                 {search
                   ? 'Prueba con otro titulo, creador o tag para seguir explorando.'
-                  : 'Cuando haya rutinas visibles aqui, apareceran en este feed.'}
+                  : 'Cuando haya workouts visibles aqui, apareceran en este feed.'}
               </p>
               {search && (
                 <Button variant="ghost" className="mt-4" onClick={() => setSearch('')}>
@@ -175,6 +189,115 @@ export default function Page() {
               )}
             </div>
           )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function FeedWorkoutCardSkeleton() {
+  return (
+    <div className="w-full rounded-[28px] border border-border/50 bg-card/80 backdrop-blur-sm overflow-hidden animate-pulse">
+      {/* Mobile skeleton */}
+      <div className="sm:hidden p-3 space-y-3">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-muted/70 shrink-0" />
+          <div className="flex-1 space-y-1.5">
+            <div className="h-3 w-28 rounded bg-muted/60" />
+            <div className="h-2 w-20 rounded bg-muted/50" />
+          </div>
+          <div className="w-16 h-7 rounded-full bg-muted/60 shrink-0" />
+        </div>
+
+        <div className="relative rounded-2xl overflow-hidden border border-border/60 min-h-[190px]">
+          <div className="absolute inset-0 bg-gradient-to-br from-emerald-950 via-slate-900 to-indigo-950 dark:from-emerald-950 dark:via-slate-950 dark:to-black opacity-70" />
+          <div className="relative z-10 p-4 min-h-[190px] flex flex-col justify-between">
+            <div className="space-y-2.5">
+              <div className="h-7 w-4/5 rounded-md bg-white/15" />
+              <div className="h-6 w-1/2 rounded-md bg-white/10" />
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="h-9 w-20 rounded-xl bg-black/25 border border-white/10" />
+              <div className="h-9 w-20 rounded-xl bg-black/25 border border-white/10" />
+              <div className="flex-1 h-9 rounded-xl bg-gradient-to-br from-amber-500/25 to-orange-500/20 border border-amber-400/25" />
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between px-0.5 pt-0.5">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-1.5">
+              <div className="w-5 h-5 rounded bg-muted/60" />
+              <div className="h-3 w-5 rounded bg-muted/60" />
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-5 h-5 rounded bg-muted/60" />
+              <div className="h-3 w-5 rounded bg-muted/60" />
+            </div>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div className="h-5 w-10 rounded-md bg-muted/50" />
+            <div className="h-5 w-10 rounded-md bg-muted/50" />
+          </div>
+        </div>
+
+        <div className="pt-1">
+          <div className="w-full h-11 rounded-xl bg-gradient-to-r from-emerald-500/70 to-emerald-400/70 shadow-[0_4px_20px_-6px_rgba(16,185,129,0.5)]" />
+        </div>
+      </div>
+
+      {/* Desktop skeleton */}
+      <div className="hidden sm:flex flex-col p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center space-x-3 min-w-0">
+            <div className="w-10 h-10 rounded-full bg-muted/70 shrink-0" />
+            <div className="flex flex-col min-w-0 space-y-1.5">
+              <div className="h-3.5 w-32 rounded bg-muted/60" />
+              <div className="h-2.5 w-24 rounded bg-muted/50" />
+            </div>
+          </div>
+          <div className="h-9 w-24 rounded-md bg-muted/60 shrink-0" />
+        </div>
+
+        <div className="space-y-3 mb-5">
+          <div className="h-4 w-3/4 rounded bg-muted/60" />
+          <div className="h-4 w-1/2 rounded bg-muted/50" />
+        </div>
+
+        <div className="relative overflow-hidden rounded-[28px] border border-border/60">
+          <div className="absolute inset-0 bg-gradient-to-br from-slate-900 to-slate-950 opacity-80" />
+          <div className="relative z-10 flex min-h-[260px] lg:min-h-[300px] flex-col gap-5 p-4 lg:gap-6 lg:p-5">
+            <div className="flex items-start justify-between gap-4">
+              <div className="h-10 w-60 rounded-md bg-white/15" />
+              <div className="h-7 w-28 rounded-full bg-black/25 shrink-0" />
+            </div>
+            <div className="h-6 w-28 rounded-md bg-muted/50" />
+            <div className="flex flex-row flex-wrap gap-3 pt-2">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="w-[calc(50%-0.375rem)] xl:w-[calc(25%-0.5625rem)] h-20 rounded-2xl border border-white/10 bg-black/20" />
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-6 grid gap-4 border-t border-border/50 pt-4 lg:grid-cols-[minmax(0,1fr)_220px] lg:items-start">
+          <div className="space-y-4">
+            <div className="flex flex-wrap gap-2">
+              <div className="h-7 w-24 rounded-md bg-muted/60" />
+              <div className="h-7 w-24 rounded-md bg-muted/50" />
+            </div>
+            <div className="h-6 w-64 rounded bg-muted/50" />
+            <div className="flex flex-wrap items-center gap-4">
+              <div className="h-4 w-20 rounded bg-muted/60" />
+              <div className="h-4 w-20 rounded bg-muted/60" />
+              <div className="h-4 w-20 rounded bg-muted/60" />
+              <div className="h-4 w-20 rounded bg-muted/50" />
+              <div className="ml-auto h-5 w-24 rounded bg-muted/60" />
+            </div>
+          </div>
+          <div className="lg:justify-self-end lg:w-full">
+            <div className="w-full h-11 rounded-lg bg-primary/60" />
+          </div>
         </div>
       </div>
     </div>

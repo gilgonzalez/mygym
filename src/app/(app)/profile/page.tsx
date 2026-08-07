@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useAuthStore } from '@/store/authStore'
-import { Button } from '@/components/Button'
+import { Button } from '@/components/ui/button'
 import { User, LogIn, UserPlus, LogOut, Settings, Flame, Trophy, Timer, Dumbbell, Medal, FileEdit, Crown, Sparkles, Users, ShieldCheck, Inbox } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
@@ -13,7 +13,7 @@ import { getUserWorkoutsAction } from '@/app/actions/workout/list'
 import { getFollowOverviewAction } from '@/app/actions/user/follows'
 import { getUserStatsAction } from '@/app/actions/user/getStats'
 import { ProfileSocialSheet } from '@/components/profile/ProfileSocialSheet'
-import SimplifiedWorkoutCard from '@/components/SimplifiedWorkoutCard'
+import WorkoutCard from '@/components/WorkoutCard'
 import { PremiumFeatureDialog } from '@/components/premium/PremiumFeatureDialog'
 import { PremiumLockedOverlay } from '@/components/premium/PremiumLockedOverlay'
 import { formatDurationFromMinutes } from '@/lib/time'
@@ -62,7 +62,7 @@ export default function ProfilePage() {
     enabled: !!user?.id
   })
 
-  const { data: stats } = useQuery({
+  const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ['userStats', user?.id],
     queryFn: async () => {
       if (!user?.id) return null
@@ -83,7 +83,7 @@ export default function ProfilePage() {
           streak_current: data.streak_current ?? 0,
           total_workouts: data.total_workouts ?? 0,
           total_minutes: data.total_minutes ?? 0,
-          rank_title: data.rank_title ?? 'Novice',
+          rank_title: data.rank_title ?? 'Novato',
           // @ts-ignore
           attributes: data.attributes || {
             strength: 0,
@@ -102,7 +102,7 @@ export default function ProfilePage() {
         streak_current: 0,
         total_workouts: 0,
         total_minutes: 0,
-        rank_title: 'Novice',
+        rank_title: 'Novato',
         attributes: {
           strength: 0,
           agility: 0,
@@ -143,22 +143,22 @@ export default function ProfilePage() {
           <User className="w-16 h-16 text-primary" />
         </div>
         <div className="space-y-2 max-w-md">
-          <h1 className="text-3xl font-bold tracking-tight">Welcome to MyGym</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Bienvenido a MyGym</h1>
           <p className="text-muted-foreground">
-            Join our community to create workouts, track your progress, and share with others.
+            Únete a nuestra comunidad para crear workouts, seguir tu progreso y compartir con otros.
           </p>
         </div>
         <div className="flex flex-col sm:flex-row gap-4 w-full max-w-sm">
           <Link href="/auth/login" className="w-full">
             <Button className="w-full gap-2" size="lg">
               <LogIn className="w-4 h-4" />
-              Sign In
+              Iniciar sesión
             </Button>
           </Link>
           <Link href="/auth/register" className="w-full">
             <Button variant="outline" className="w-full gap-2" size="lg">
               <UserPlus className="w-4 h-4" />
-              Create Account
+              Crear cuenta
             </Button>
           </Link>
         </div>
@@ -173,7 +173,7 @@ export default function ProfilePage() {
       streak_current: 0,
       total_workouts: 0,
       total_minutes: 0,
-      rank_title: 'Novice',
+      rank_title: 'Novato',
       attributes: {
           strength: 0,
           agility: 0,
@@ -185,7 +185,7 @@ export default function ProfilePage() {
   const xpPercentage = (currentStats.current_xp / currentStats.next_level_xp) * 100
   const totalTimeLabel = formatDurationFromMinutes(currentStats.total_minutes)
   const isPremiumUser = Boolean(user.isPremium)
-  const displayName = user.name || 'Gym Enthusiast'
+  const displayName = user.name || 'Entusiasta del Gym'
   const roleLabel = user.role.charAt(0) + user.role.slice(1).toLowerCase()
   const socialOverview: FollowOverview = followOverview || {
     followersCount: 0,
@@ -205,7 +205,7 @@ export default function ProfilePage() {
           </div>
           <div>
             <p className="text-2xl font-black tracking-tight text-foreground">{currentStats.streak_current}</p>
-            <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-muted-foreground">Day Streak</p>
+            <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-muted-foreground">Racha de días</p>
           </div>
         </div>
       </div>
@@ -231,7 +231,7 @@ export default function ProfilePage() {
           </div>
           <div>
             <p className="text-2xl font-black tracking-tight text-foreground">{totalTimeLabel}</p>
-            <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-muted-foreground">Total Time</p>
+            <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-muted-foreground">Tiempo total</p>
           </div>
         </div>
       </div>
@@ -242,6 +242,12 @@ export default function ProfilePage() {
     if (filter === 'all') return true
     return w.visibility === filter
   })
+
+  const isProfileLoading = statsLoading || (workoutsLoading && workouts.length === 0) || socialLoading
+
+  if (isProfileLoading) {
+    return <ProfilePageSkeleton />
+  }
 
   return (
     <div className="mx-auto max-w-6xl space-y-8 px-4 pb-12 pt-5">
@@ -272,7 +278,7 @@ export default function ProfilePage() {
           <div className="flex flex-col gap-2 sm:flex-row">
             <Button variant="outline" size="sm" className="gap-2 border-white/10 bg-white/[0.03] hover:bg-white/[0.06]">
               <Settings className="h-4 w-4" />
-              Edit Profile
+              Editar perfil
             </Button>
             <Button
               variant="ghost"
@@ -281,7 +287,7 @@ export default function ProfilePage() {
               onClick={handleLogout}
             >
               <LogOut className="h-4 w-4" />
-              Sign Out
+              Cerrar sesión
             </Button>
           </div>
         </div>
@@ -337,7 +343,7 @@ export default function ProfilePage() {
                   </div>
 
                   <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
-                    {user.bio || 'Crea rutinas, sigue tu progreso y construye tu identidad fitness dentro de MyGym.'}
+                    {user.bio || 'Crea workouts, sigue tu progreso y construye tu identidad fitness dentro de MyGym.'}
                   </p>
                 </div>
 
@@ -351,7 +357,7 @@ export default function ProfilePage() {
                   </div>
                   <div className="rounded-[26px] border border-white/10 bg-slate-950/30 px-4 py-2.5 sm:col-span-3">
                     <div className="flex items-center justify-between gap-3 text-[11px] font-bold uppercase tracking-[0.22em] text-white/45">
-                      <span>Progression</span>
+                      <span>Progresión</span>
                       <span className="text-foreground">{currentStats.current_xp} / {currentStats.next_level_xp} XP</span>
                     </div>
                     <Progress value={xpPercentage} className="mt-2 h-2.5 bg-white/10" />
@@ -478,7 +484,7 @@ export default function ProfilePage() {
             <Link href="/editor/workout/create">
               <Button size="sm" className="gap-2 rounded-xl px-4">
                 <FileEdit className="h-4 w-4" />
-                Create New
+                Crear nuevo
               </Button>
             </Link>
           </div>
@@ -487,24 +493,24 @@ export default function ProfilePage() {
         {workoutsLoading ? (
              <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                 {[1, 2, 3].map((i) => (
-                    <div key={i} className="h-48 rounded-[28px] border border-white/10 bg-white/[0.04] animate-pulse" />
+                    <SimplifiedWorkoutCardSkeleton key={i} />
                 ))}
              </div>
         ) : filteredWorkouts.length > 0 ? (
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
               {filteredWorkouts.map(workout => (
                 <div key={workout.id} className="relative group">
-                  <SimplifiedWorkoutCard workout={workout} />
+                  <WorkoutCard workout={workout} variant="simplified" />
                 </div>
               ))}
             </div>
         ) : (
             <div className="rounded-[28px] border border-dashed border-white/10 bg-white/[0.03] py-14 text-center">
                 <Dumbbell className="mx-auto mb-4 h-12 w-12 text-muted-foreground/50" />
-                <h3 className="text-lg font-semibold">No workouts found</h3>
-                <p className="mb-4 text-sm text-muted-foreground">You haven&apos;t created any workouts yet.</p>
+                <h3 className="text-lg font-semibold">No se encontraron workouts</h3>
+                <p className="mb-4 text-sm text-muted-foreground">Todavía no has creado ningún workout.</p>
                 <Link href="/editor/workout/create">
-                    <Button variant="outline" size="sm" className="rounded-xl">Create your first workout</Button>
+                    <Button variant="outline" size="sm" className="rounded-xl">Crea tu primer workout</Button>
                 </Link>
             </div>
         )}
@@ -522,6 +528,239 @@ export default function ProfilePage() {
         overview={socialOverview}
         isLoading={socialLoading}
       />
+    </div>
+  )
+}
+
+function ProfilePageSkeleton() {
+  return (
+    <div className="mx-auto max-w-6xl space-y-8 px-4 pb-12 pt-5 animate-pulse">
+      {/* Header banner */}
+      <div className="relative overflow-hidden rounded-[32px] border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(34,197,94,0.12),transparent_24%),radial-gradient(circle_at_top_right,rgba(59,130,246,0.12),transparent_28%),linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.01))] p-5 shadow-[0_30px_80px_rgba(0,0,0,0.24)] sm:p-6">
+        <div className="absolute inset-0 bg-[linear-gradient(120deg,transparent_0%,rgba(255,255,255,0.02)_35%,transparent_70%)]" />
+        <div className="relative mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <div className="h-6 w-16 rounded-full bg-white/10" />
+              <div className="h-6 w-24 rounded-full bg-white/10" />
+            </div>
+            <div className="h-8 w-64 sm:h-9 sm:w-80 rounded-md bg-white/20" />
+            <div className="h-4 w-full max-w-xl rounded bg-white/10" />
+          </div>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <div className="h-9 w-32 rounded-lg bg-white/10" />
+            <div className="h-9 w-28 rounded-lg bg-white/10" />
+          </div>
+        </div>
+
+        <div className="relative grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.7fr)_minmax(300px,0.9fr)]">
+          {/* Profile info card */}
+          <div className="relative overflow-hidden rounded-[30px] border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(34,197,94,0.16),transparent_24%),linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] p-5 shadow-[0_20px_50px_rgba(0,0,0,0.18)]">
+            <div className="absolute -right-12 top-0 h-40 w-40 rounded-full bg-primary/10 blur-3xl" />
+            <div className="relative flex flex-col gap-5 xl:flex-row xl:items-start">
+              <div className="flex flex-col items-center gap-4 text-center xl:items-start xl:text-left">
+                <div className="relative">
+                  <div className="h-28 w-28 rounded-[28px] border border-white/10 bg-muted shadow-[0_18px_34px_rgba(0,0,0,0.28)] ring-2 ring-primary/20 overflow-hidden">
+                    <div className="w-full h-full bg-white/20" />
+                  </div>
+                  <div className="absolute -bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-1 rounded-full border border-emerald-500/20 bg-emerald-500/70 px-3 py-1 shadow-lg xl:left-auto xl:right-0 xl:translate-x-0">
+                    <div className="h-3.5 w-14 rounded bg-emerald-950/40" />
+                  </div>
+                </div>
+
+                <div className="flex flex-col items-start justify-center gap-2 xl:justify-start mt-2">
+                  <div className="h-6 w-24 rounded-full bg-amber-500/20" />
+                  <div className="h-6 w-20 rounded-full bg-white/10" />
+                </div>
+              </div>
+
+              <div className="flex-1 space-y-5">
+                <div className="space-y-2">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="space-y-2">
+                      <div className="h-8 w-48 sm:h-9 sm:w-56 rounded-md bg-white/25" />
+                      <div className="h-4 w-32 rounded bg-white/15" />
+                    </div>
+                    <div className="h-8 w-32 rounded-2xl bg-indigo-500/20" />
+                  </div>
+                  <div className="h-4 w-full max-w-2xl rounded bg-white/10" />
+                </div>
+
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
+                  <div className="rounded-[24px] border border-white/10 bg-white/[0.03] px-4 py-2.5 space-y-1.5">
+                    <div className="h-2.5 w-16 rounded bg-white/20" />
+                    <div className="h-6 w-28 rounded bg-white/15" />
+                  </div>
+                  <div className="rounded-[26px] border border-white/10 bg-slate-950/30 px-4 py-2.5 sm:col-span-3 space-y-2">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="h-2.5 w-24 rounded bg-white/20" />
+                      <div className="h-2.5 w-40 rounded bg-white/15" />
+                    </div>
+                    <div className="h-2.5 w-full rounded-full bg-white/10" />
+                    <div className="flex flex-wrap items-center gap-2 pt-1">
+                      <div className="h-5 w-20 rounded-full bg-white/10" />
+                      <div className="h-5 w-44 rounded-full bg-white/10" />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="rounded-[24px] border border-white/10 bg-white/[0.03] px-4 py-2.5 space-y-1.5">
+                      <div className="h-2.5 w-20 rounded bg-white/20" />
+                      <div className="flex items-center gap-2">
+                        <div className="h-4 w-4 rounded bg-primary/40" />
+                        <div className="h-7 w-12 rounded bg-white/20" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Premium stats cards skeleton */}
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 lg:grid-cols-1">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="group relative overflow-hidden rounded-[26px] border border-white/10 bg-gradient-to-br from-card via-card to-white/[0.02] p-4 shadow-[0_14px_34px_rgba(0,0,0,0.16)]">
+                <div className="relative flex items-center gap-4">
+                  <div className="h-12 w-12 rounded-2xl bg-white/10" />
+                  <div className="space-y-2">
+                    <div className="h-7 w-12 rounded bg-white/20" />
+                    <div className="h-2.5 w-24 rounded bg-white/15" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Activity heatmap skeleton */}
+      <div className="rounded-[28px] border border-white/10 bg-white/[0.02] p-5 sm:p-6 shadow-[0_24px_60px_rgba(0,0,0,0.18)] overflow-hidden">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-5">
+          <div className="space-y-2">
+            <div className="h-6 w-20 rounded-full bg-white/10" />
+            <div className="h-7 w-44 rounded-md bg-white/20" />
+            <div className="h-4 w-72 rounded bg-white/10" />
+          </div>
+          <div className="h-10 w-28 rounded-lg bg-white/10" />
+        </div>
+
+        {/* Heatmap grid */}
+        <div className="w-full overflow-x-auto">
+          <div className="flex gap-1 min-w-[800px]">
+            {Array.from({ length: 52 }).map((_, week) => (
+              <div key={week} className="flex flex-col gap-1">
+                {Array.from({ length: 7 }).map((_, day) => (
+                  <div
+                    key={day}
+                    className="w-3 h-3 sm:w-3.5 sm:h-3.5 rounded-[3px] bg-white/5"
+                    style={{
+                      opacity: 0.1 + ((week + day) % 10) * 0.08,
+                    }}
+                  />
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* RPG attributes skeleton */}
+        <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="rounded-[24px] border border-white/10 bg-white/[0.03] p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="h-9 w-9 rounded-xl bg-white/10" />
+                  <div className="h-3.5 w-16 rounded bg-white/20" />
+                </div>
+                <div className="h-5 w-8 rounded bg-white/15" />
+              </div>
+              <div className="h-2 w-full rounded-full bg-white/10" />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Workouts section skeleton */}
+      <div className="space-y-6 rounded-[30px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.015))] p-5 shadow-[0_24px_60px_rgba(0,0,0,0.18)] sm:p-6">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="space-y-2">
+            <div className="h-6 w-20 rounded-full bg-white/10" />
+            <div className="h-8 w-40 rounded-md bg-white/20" />
+            <div className="h-4 w-80 rounded bg-white/10" />
+          </div>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="h-10 w-72 rounded-2xl bg-white/10" />
+            <div className="h-9 w-32 rounded-xl bg-white/10" />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          {[1, 2, 3, 4].map((i) => (
+            <SimplifiedWorkoutCardSkeleton key={i} />
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function SimplifiedWorkoutCardSkeleton() {
+  return (
+    <div className="w-full rounded-[28px] border border-border/50 bg-card/50 backdrop-blur-sm overflow-hidden flex flex-col animate-pulse">
+      <div className="p-5 flex flex-col h-full relative z-10">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center space-x-3">
+            <div className="w-8 h-8 rounded-full bg-muted/70 overflow-hidden ring-1 ring-primary/20" />
+            <div className="h-3.5 w-24 rounded bg-muted/60" />
+          </div>
+          <div className="h-7 w-7 rounded-full bg-muted/50" />
+        </div>
+
+        <div className="block flex-1 space-y-2 mb-4">
+          <div className="h-5 w-full max-w-xs rounded bg-muted/60" />
+          <div className="space-y-1.5">
+            <div className="h-3.5 w-full rounded bg-muted/50" />
+            <div className="h-3.5 w-3/4 rounded bg-muted/40" />
+          </div>
+          <div className="flex flex-wrap gap-1.5 pt-1">
+            <div className="h-5 w-20 rounded bg-muted/50" />
+            <div className="h-5 w-16 rounded bg-muted/40" />
+            <div className="h-5 w-12 rounded bg-muted/40" />
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 mb-3">
+          <div className="flex items-center -space-x-1.5">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="relative h-5 w-5 shrink-0 rounded-full ring-2 ring-background bg-muted overflow-hidden">
+                <div className="w-full h-full bg-white/20" />
+              </div>
+            ))}
+          </div>
+          <div className="h-3 w-32 rounded bg-muted/50" />
+        </div>
+
+        <div className="mt-auto pt-3 border-t border-border/50 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1">
+              <div className="w-3.5 h-3.5 rounded bg-muted/60" />
+              <div className="h-3.5 w-5 rounded bg-muted/60" />
+            </div>
+            <div className="w-3.5 h-3.5 rounded bg-muted/50" />
+            <div className="flex items-center gap-1">
+              <div className="w-3.5 h-3.5 rounded bg-muted/50" />
+              <div className="h-3 w-10 rounded bg-muted/50" />
+            </div>
+          </div>
+          <div className="flex items-center gap-1">
+            <div className="w-3.5 h-3.5 rounded bg-amber-500/30" />
+            <div className="h-3.5 w-14 rounded bg-amber-500/30" />
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

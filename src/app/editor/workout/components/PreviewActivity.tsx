@@ -1,6 +1,6 @@
 import React from 'react'
 import { X, ChevronLeft, ChevronRight, Clock, CheckCircle2, Info } from 'lucide-react'
-import { Button } from '@/components/Button'
+import { Button } from '@/components/ui/button'
 import { ExerciseTutorialDialog } from '@/components/workout/ExerciseTutorialDialog'
 import { formatDuration } from '@/lib/time'
 
@@ -42,7 +42,7 @@ export function PreviewActivity({
       <div className="flex items-center justify-between px-4 sm:px-6 py-3 pt-[calc(env(safe-area-inset-top)+0.75rem)] border-b border-white/10 shrink-0">
         <div className="flex flex-col">
           <span className="text-xs text-gray-400 uppercase tracking-wider">{sectionName}</span>
-          <span className="font-bold text-sm">Step {stepIndex + 1} of {totalSteps}</span>
+          <span className="font-bold text-sm">Paso {stepIndex + 1} de {totalSteps}</span>
         </div>
         <div className="flex items-center gap-2">
           {exercise?.tutorial && (
@@ -93,8 +93,8 @@ export function PreviewActivity({
               <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold leading-tight">{exercise.name}</h2>
               <p className="text-base sm:text-xl text-gray-400">
                 {exercise.type === 'time'
-                  ? `${exercise.sets} Sets × ${formatDuration(exercise.duration || 0)}`
-                  : `${exercise.sets} Sets × ${exercise.reps} Reps`}
+                  ? `${exercise.sets} Series × ${formatDuration(exercise.duration || 0)}`
+                  : `${exercise.sets} Series × ${exercise.reps} Repeticiones`}
               </p>
             </div>
 
@@ -105,20 +105,20 @@ export function PreviewActivity({
               </div>
               <div className="bg-white/5 rounded-2xl p-3 sm:p-4 flex flex-col items-center">
                 <span className="text-2xl sm:text-3xl font-bold text-green-400">{formatDuration(exercise.rest || 60)}</span>
-                <span className="text-xs text-gray-400 uppercase">Rest</span>
+                <span className="text-xs text-gray-400 uppercase">Descanso</span>
               </div>
             </div>
 
             {exercise.notes && (
               <div className="bg-yellow-500/10 text-yellow-500 px-4 py-2 rounded-lg text-sm max-w-[320px] sm:max-w-xs">
-                Note: {exercise.notes}
+                Nota: {exercise.notes}
               </div>
             )}
           </>
         ) : (
           <div className="text-center">
             <CheckCircle2 className="h-20 w-20 text-green-500 mx-auto mb-4" />
-            <h2 className="text-3xl font-bold">Workout Complete!</h2>
+            <h2 className="text-3xl font-bold">¡Workout completado!</h2>
           </div>
         )}
       </div>
@@ -136,7 +136,7 @@ export function PreviewActivity({
         </Button>
 
         <div className="text-center">
-          <span className="block text-xs text-gray-500 uppercase tracking-widest mb-1">Timer</span>
+          <span className="block text-xs text-gray-500 uppercase tracking-widest mb-1">Temporizador</span>
           <span className="font-timer text-xl tracking-[0.08em] sm:text-2xl">{formatDuration(0, { style: 'clock' })}</span>
         </div>
 

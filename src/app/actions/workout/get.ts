@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import type { FollowStatus } from '@/types/social'
-import { Workout } from '@/types/workout/composite'
+import { Workout, WorkoutLikerPreview } from '@/types/workout/composite'
 
 export async function getWorkoutById(id: string): Promise<{ success: boolean, data?: Workout, error?: string }> {
   try {
@@ -63,7 +63,7 @@ export async function getWorkoutById(id: string): Promise<{ success: boolean, da
       .single()
 
     if (error) throw error
-    if (!data) throw new Error('Workout not found')
+    if (!data) throw new Error('Workout no encontrado')
 
     let viewerFollowStatus: FollowStatus | undefined
 
@@ -84,6 +84,38 @@ export async function getWorkoutById(id: string): Promise<{ success: boolean, da
       }
     }
 
+    const { data: likesData, error: likesDataError } = await supabase
+      .from('workout_likes')
+      .select(`
+        user_id,
+        created_at,
+        user:users!workout_likes_user_id_fkey(id, username, name, avatar_url)
+      `)
+      .eq('workout_id', id)
+      .order('created_at', { ascending: false })
+
+    if (likesDataError) throw likesDataError
+
+    let likesCount = 0
+    let isLiked = false
+    const likesPreview: WorkoutLikerPreview[] = []
+
+    for (const row of likesData ?? []) {
+      likesCount += 1
+      if (user?.id && row.user_id === user.id) {
+        isLiked = true
+      }
+      const userRow = (row as any).user
+      if (userRow && likesPreview.length < 3) {
+        likesPreview.push({
+          id: userRow.id,
+          username: userRow.username ?? null,
+          name: userRow.name ?? null,
+          avatar_url: userRow.avatar_url ?? null,
+        })
+      }
+    }
+
     // Transform deeply nested response to flat UI structure
     const challengeData = Array.isArray((data as any).challenge)
       ? (data as any).challenge[0]
@@ -93,6 +125,9 @@ export async function getWorkoutById(id: string): Promise<{ success: boolean, da
       ...data,
       challenge: challengeData || null,
       user: data.user,
+      likes_count: likesCount,
+      is_liked: isLiked,
+      likes_preview: likesPreview,
       viewer_follow_status: viewerFollowStatus,
       sections: (data.workout_sections || [])
         .sort((a: any, b: any) => a.order_index - b.order_index)

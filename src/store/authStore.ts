@@ -30,7 +30,7 @@ export const useAuthStore = create<AuthState>()(
           return Promise.race([
             promise,
             new Promise<T>((_, reject) =>
-              setTimeout(() => reject(new Error(`${label} timed out`)), timeoutMs)
+              setTimeout(() => reject(new Error(`${label} tiempo agotado`)), timeoutMs)
             ),
           ])
         }

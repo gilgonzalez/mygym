@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Button } from '@/components/Button'
+import { Button } from '@/components/ui/button'
 import { useAuthStore } from '@/store/authStore'
 import {
   ArrowRight,
@@ -75,17 +75,17 @@ function ExerciseVaultMockup() {
   const exercises = useMemo(
     () => [
       { name: 'Hip Thrust con barra', muscle: 'Gluteos', equipment: 'Barra', img: 'https://images.unsplash.com/photo-1574680096145-d05b474e2155?q=80&w=400&auto=format&fit=crop' },
-      { name: 'Bulgarian Split Squat', muscle: 'Piernas', equipment: 'Banco', img: 'https://images.unsplash.com/photo-1574680096145-d05b474e2155?q=80&w=400&auto=format&fit=crop' },
-      { name: 'Romanian Deadlift', muscle: 'Isquios', equipment: 'Mancuernas', img: 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?q=80&w=400&auto=format&fit=crop' },
+      { name: 'Sentadilla Búlgara', muscle: 'Piernas', equipment: 'Banco', img: 'https://images.unsplash.com/photo-1574680096145-d05b474e2155?q=80&w=400&auto=format&fit=crop' },
+      { name: 'Peso Muerto Rumano', muscle: 'Isquios', equipment: 'Mancuernas', img: 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?q=80&w=400&auto=format&fit=crop' },
       { name: 'Leg Extension', muscle: 'Cuadriceps', equipment: 'Maquina', img: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=400&auto=format&fit=crop' },
-      { name: 'Push Ups', muscle: 'Pecho', equipment: 'Peso corporal', img: 'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?q=80&w=400&auto=format&fit=crop' },
+      { name: 'Flexiones', muscle: 'Pecho', equipment: 'Peso corporal', img: 'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?q=80&w=400&auto=format&fit=crop' },
       { name: 'Pull Ups', muscle: 'Espalda', equipment: 'Barra fija', img: 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?q=80&w=400&auto=format&fit=crop' },
-      { name: 'Shoulder Press', muscle: 'Hombros', equipment: 'Mancuernas', img: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=400&auto=format&fit=crop' },
-      { name: 'Plank', muscle: 'Core', equipment: 'Peso corporal', img: 'https://images.unsplash.com/photo-1566241440091-ec10de8db2e1?q=80&w=400&auto=format&fit=crop' },
-      { name: 'Incline Dumbbell Press', muscle: 'Pecho', equipment: 'Banco', img: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=400&auto=format&fit=crop' },
-      { name: 'Lat Pulldown', muscle: 'Espalda', equipment: 'Maquina', img: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?q=80&w=400&auto=format&fit=crop' },
-      { name: 'Lateral Raises', muscle: 'Hombros', equipment: 'Mancuernas', img: 'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?q=80&w=400&auto=format&fit=crop' },
-      { name: 'Barbell Bicep Curl', muscle: 'Brazos', equipment: 'Barra', img: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?q=80&w=400&auto=format&fit=crop' },
+      { name: 'Press Militar', muscle: 'Hombros', equipment: 'Mancuernas', img: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=400&auto=format&fit=crop' },
+      { name: 'Plancha', muscle: 'Core', equipment: 'Peso corporal', img: 'https://images.unsplash.com/photo-1566241440091-ec10de8db2e1?q=80&w=400&auto=format&fit=crop' },
+      { name: 'Press Inclinado con Mancuernas', muscle: 'Pecho', equipment: 'Banco', img: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=400&auto=format&fit=crop' },
+      { name: 'Jalón al Pecho', muscle: 'Espalda', equipment: 'Maquina', img: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?q=80&w=400&auto=format&fit=crop' },
+      { name: 'Elevaciones Laterales', muscle: 'Hombros', equipment: 'Mancuernas', img: 'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?q=80&w=400&auto=format&fit=crop' },
+      { name: 'Curl de Bíceps con Barra', muscle: 'Brazos', equipment: 'Barra', img: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?q=80&w=400&auto=format&fit=crop' },
     ],
     []
   )
@@ -353,9 +353,9 @@ function WorkoutCreatorMockup() {
       gradient: 'from-sky-500 to-blue-500',
       chip: 'bg-sky-500/10 text-sky-300 border-sky-500/20',
       exercises: [
-        { id: 'e1', name: 'Jumping Jacks', img: 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?q=80&w=300&auto=format&fit=crop', type: 'time', value: '45', sets: 2, rest: 20 },
-        { id: 'e2', name: 'High Knees', img: 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?q=80&w=300&auto=format&fit=crop', type: 'time', value: '30', sets: 2, rest: 15 },
-        { id: 'e0b', name: 'Bodyweight Squats', img: 'https://images.unsplash.com/photo-1574680096145-d05b474e2155?q=80&w=300&auto=format&fit=crop', type: 'reps', value: '15', sets: 2, rest: 20 },
+        { id: 'e1', name: 'Saltos de Tijera', img: 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?q=80&w=300&auto=format&fit=crop', type: 'time', value: '45', sets: 2, rest: 20 },
+        { id: 'e2', name: 'Rodillas Altas', img: 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?q=80&w=300&auto=format&fit=crop', type: 'time', value: '30', sets: 2, rest: 15 },
+        { id: 'e0b', name: 'Sentadillas Corporales', img: 'https://images.unsplash.com/photo-1574680096145-d05b474e2155?q=80&w=300&auto=format&fit=crop', type: 'reps', value: '15', sets: 2, rest: 20 },
       ],
     },
     {
@@ -371,7 +371,7 @@ function WorkoutCreatorMockup() {
         { id: 'e4', name: 'Bulgarian Split Squat', img: 'https://images.unsplash.com/photo-1574680096145-d05b474e2155?q=80&w=300&auto=format&fit=crop', type: 'reps', value: '10', sets: 3, rest: 75 },
         { id: 'e5', name: 'Romanian Deadlift', img: 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?q=80&w=300&auto=format&fit=crop', type: 'reps', value: '12', sets: 3, rest: 75 },
         { id: 'e6', name: 'Leg Extension', img: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=300&auto=format&fit=crop', type: 'reps', value: '15', sets: 3, rest: 60 },
-        { id: 'e6b', name: 'Walking Lunges', img: 'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?q=80&w=300&auto=format&fit=crop', type: 'reps', value: '12', sets: 3, rest: 60 },
+        { id: 'e6b', name: 'Zancadas Caminantes', img: 'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?q=80&w=300&auto=format&fit=crop', type: 'reps', value: '12', sets: 3, rest: 60 },
       ],
     },
     {
@@ -381,8 +381,8 @@ function WorkoutCreatorMockup() {
       chip: 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20',
       exercises: [
         { id: 'e7', name: 'Plank', img: 'https://images.unsplash.com/photo-1566241440091-ec10de8db2e1?q=80&w=300&auto=format&fit=crop', type: 'time', value: '60', sets: 3, rest: 30 },
-        { id: 'e8', name: 'Russian Twists', img: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?q=80&w=300&auto=format&fit=crop', type: 'reps', value: '20', sets: 3, rest: 20 },
-        { id: 'e8b', name: 'Mountain Climbers', img: 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?q=80&w=300&auto=format&fit=crop', type: 'time', value: '40', sets: 3, rest: 20 },
+        { id: 'e8', name: 'Giros Rusos', img: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?q=80&w=300&auto=format&fit=crop', type: 'reps', value: '20', sets: 3, rest: 20 },
+        { id: 'e8b', name: 'Escaladores', img: 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?q=80&w=300&auto=format&fit=crop', type: 'time', value: '40', sets: 3, rest: 20 },
       ],
     },
   ]
@@ -398,7 +398,7 @@ function WorkoutCreatorMockup() {
       <div className="relative h-[170px] overflow-hidden border-b border-white/10">
         <img
           src="https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?q=80&w=1400&auto=format&fit=crop"
-          alt="Cover"
+          alt="Portada"
           className="absolute inset-0 h-full w-full object-cover"
         />
         <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(12,12,14,0.25)_0%,rgba(12,12,14,0.92)_100%)]" />
@@ -416,7 +416,7 @@ function WorkoutCreatorMockup() {
             </button>
             <div>
               <p className="text-[11px] font-black uppercase tracking-[0.22em] text-violet-300/80 mb-1.5 inline-flex items-center gap-1.5">
-                <Settings2 className="h-3.5 w-3.5" /> Editor de rutina
+                <Settings2 className="h-3.5 w-3.5" /> Editor de workout
               </p>
               <input
                 value={workoutName}
@@ -609,7 +609,7 @@ function WorkoutCreatorMockup() {
                           defaultValue={ex.type}
                           className="h-9 rounded-xl border border-white/10 bg-white/5 px-2 text-[11px] font-bold text-white/80 outline-none"
                         >
-                          <option value="reps">Reps</option>
+                          <option value="reps">Repeticiones</option>
                           <option value="time">Tiempo</option>
                         </select>
                         <input
@@ -656,7 +656,7 @@ function WorkoutCreatorMockup() {
               Previsualizar
             </Button>
             <Button className="rounded-full h-11 px-6 text-xs font-black shadow-[0_18px_40px_-10px_rgba(16,185,129,0.55)] bg-emerald-500 text-emerald-950 hover:bg-emerald-400">
-              Guardar rutina
+              Guardar workout
             </Button>
           </div>
         </div>
@@ -864,9 +864,9 @@ function WorkoutChallengeExecutionMockup() {
   const currentIdx = 1
   const circuit = [
     { name: 'Hip Thrust con barra', reps: '12 reps', img: 'https://images.unsplash.com/photo-1574680096145-d05b474e2155?q=80&w=300&auto=format&fit=crop' },
-    { name: 'Bulgarian Split Squat', reps: '10 reps', img: 'https://images.unsplash.com/photo-1574680096145-d05b474e2155?q=80&w=300&auto=format&fit=crop' },
-    { name: 'Romanian Deadlift', reps: '12 reps', img: 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?q=80&w=300&auto=format&fit=crop' },
-    { name: 'Leg Extension', reps: '15 reps', img: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=300&auto=format&fit=crop' },
+    { name: 'Sentadilla Búlgara', reps: '10 reps', img: 'https://images.unsplash.com/photo-1574680096145-d05b474e2155?q=80&w=300&auto=format&fit=crop' },
+    { name: 'Peso Muerto Rumano', reps: '12 reps', img: 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?q=80&w=300&auto=format&fit=crop' },
+    { name: 'Extensión de Pierna', reps: '15 reps', img: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=300&auto=format&fit=crop' },
   ]
   const next = circuit[(currentIdx + 1) % circuit.length]
 
@@ -955,7 +955,7 @@ function WorkoutChallengeExecutionMockup() {
           <div className="rounded-[26px] border border-white/10 bg-white/[0.03] p-5">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.24em] text-white/45 mb-1">Score actual</p>
+                <p className="text-[10px] font-black uppercase tracking-[0.24em] text-white/45 mb-1">Puntuación actual</p>
                 <p className="text-4xl font-black tracking-tight text-emerald-300 tabular-nums">{score} <span className="text-white/50 text-xl">pts</span></p>
                 <p className="mt-1.5 text-xs font-bold text-white/55">{rounds} rondas completadas</p>
               </div>
@@ -1483,7 +1483,7 @@ function PricingMockup({ hasSession, onRegister }: { hasSession: boolean; onRegi
           </span>
         </h2>
         <p className="mt-4 text-base sm:text-lg text-white/55 font-semibold max-w-xl mx-auto">
-          Empieza gratis. Actualiza a Pro cuando necesites IA, estadisticas y generacion de rutinas.
+          Empieza gratis. Actualiza a Pro cuando necesites IA, estadisticas y generacion de workouts.
         </p>
         <div className="mt-6 inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 p-1.5">
           {([
@@ -1530,7 +1530,7 @@ function PricingMockup({ hasSession, onRegister }: { hasSession: boolean; onRegi
               </div>
             </div>
             <ul className="mt-7 space-y-3.5">
-              {['Crear y editar rutinas', 'Banco de 2,300+ ejercicios', 'Publicar y compartir', 'Seguir creadores', 'Modo ejecucion basico'].map((item) => (
+              {['Crear y editar workouts', 'Banco de 2,300+ ejercicios', 'Publicar y compartir', 'Seguir creadores', 'Modo ejecucion basico'].map((item) => (
                 <li key={item} className="flex items-start gap-3">
                   <div className="mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/10 text-white/85">
                     <Check className="h-4 w-4" />
@@ -1585,7 +1585,7 @@ function PricingMockup({ hasSession, onRegister }: { hasSession: boolean; onRegi
             </div>
             <ul className="mt-7 space-y-3.5">
               {[
-                { icon: Sparkles, text: 'Rutinas generadas con IA', highlight: true },
+                { icon: Sparkles, text: 'Workouts generados con IA', highlight: true },
                 { icon: Play, text: 'Tutoriales en la sesion (form + cues)', highlight: false },
                 { icon: BarChart2, text: 'Progreso, estadisticas y metricas 1RM', highlight: true },
                 { icon: Activity, text: 'Mapa de calor y atributos RPG', highlight: false },
@@ -1738,7 +1738,7 @@ export default function LandingExperience() {
             </span>
           </h1>
           <p className="mt-6 sm:mt-8 text-base sm:text-lg md:text-xl text-white/55 font-semibold max-w-xl sm:max-w-2xl mx-auto px-4 sm:px-0 leading-relaxed">
-            Crea rutinas profesionales, ejecuta entrenamientos con retos AMRAP, comparte tu progreso y gamifica cada repeticion. Todo en una sola app.
+            Crea workouts profesionales, ejecuta entrenamientos con retos AMRAP, comparte tu progreso y gamifica cada repeticion. Todo en una sola app.
           </p>
           <div className="mt-8 sm:mt-10 flex flex-wrap items-center justify-center gap-2.5 sm:gap-3">
             <Link href="#" onClick={handleFeedAction}>
@@ -1773,7 +1773,7 @@ export default function LandingExperience() {
           eyebrow="01 · Creacion"
           eyebrowIcon={Dumbbell}
           eyebrowColor="border-orange-500/25 bg-orange-500/10 text-orange-300"
-          title="Construye tu rutina de A a Z"
+          title="Construye tu workout de A a Z"
           hook="Navega un vault de 2,300+ ejercicios filtrados y arma cada bloque (calentamiento, principal, finisher) con el editor visual. Sin cambiar de pantalla, sin salir de tu flujo."
         />
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 sm:gap-7">
@@ -1802,7 +1802,7 @@ export default function LandingExperience() {
           eyebrowIcon={Users}
           eyebrowColor="border-sky-500/25 bg-sky-500/10 text-sky-300"
           title="Descubre, inspirate y conecta con la comunidad"
-          hook="Explora el feed publico de rutinas, sigue a creadores, da like y guarda tus plantillas favoritas. Un solo lugar para ver que entrena la gente y encontrar tu proxima sesion."
+          hook="Explora el feed publico de workouts, sigue a creadores, da like y guarda tus plantillas favoritas. Un solo lugar para ver que entrena la gente y encontrar tu proxima sesion."
         />
         <div className="grid grid-cols-1 gap-5 sm:gap-7 max-w-4xl xl:max-w-5xl mx-auto">
           <WorkoutFeedMockup />

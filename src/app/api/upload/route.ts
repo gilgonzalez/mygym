@@ -20,7 +20,7 @@ export async function POST(request: Request) {
     } = await supabase.auth.getUser()
 
     if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     }
 
     const safeFilename = String(filename).replace(/[^a-zA-Z0-9._-]/g, '-')
@@ -54,7 +54,7 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error('Error creating upload URL:', error)
     return NextResponse.json(
-      { error: 'Error creating upload URL' }, 
+      { error: 'Error creando URL de subida' }, 
       { status: 500 }
     )
   }

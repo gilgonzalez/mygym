@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { X, Image as ImageIcon, Music, Film, Loader2, Check, AlertCircle, Search } from 'lucide-react'
 import { listMediaAction, MediaItem } from '@/app/actions/media/list'
-import { Button } from '@/components/Button'
+import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
@@ -85,7 +85,7 @@ export function MediaSelectionDialog({ isOpen, onClose, onSelect, mediaType = 'i
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-4xl max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden outline-none" showCloseButton={false}>
         <VisuallyHidden>
-            <DialogTitle>Select Media</DialogTitle>
+            <DialogTitle>Seleccionar medio</DialogTitle>
         </VisuallyHidden>
         
         {/* Header */}
@@ -93,7 +93,7 @@ export function MediaSelectionDialog({ isOpen, onClose, onSelect, mediaType = 'i
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                     {mediaType === 'audio' ? <Music className="h-5 w-5 text-primary" /> : mediaType === 'video' ? <Film className="h-5 w-5 text-primary" /> : <ImageIcon className="h-5 w-5 text-primary" />}
-                    <h3 className="font-bold text-lg">Select {mediaType === 'audio' ? 'Audio' : mediaType === 'video' ? 'Video' : mediaType === 'all' ? 'Media' : 'Image'}</h3>
+                    <h3 className="font-bold text-lg">Seleccionar {mediaType === 'audio' ? 'Audio' : mediaType === 'video' ? 'Vídeo' : mediaType === 'all' ? 'Medio' : 'Imagen'}</h3>
                 </div>
                 <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full">
                     <X className="h-5 w-5" />
@@ -104,7 +104,7 @@ export function MediaSelectionDialog({ isOpen, onClose, onSelect, mediaType = 'i
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <input 
                     type="text" 
-                    placeholder="Search by name..." 
+                    placeholder="Buscar por nombre..." 
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     className="w-full bg-background border border-border rounded-lg pl-9 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
@@ -117,7 +117,7 @@ export function MediaSelectionDialog({ isOpen, onClose, onSelect, mediaType = 'i
             {isLoading || isFetching ? (
                 <div className="h-full flex flex-col items-center justify-center text-muted-foreground gap-2">
                     <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                    <p>Loading your library...</p>
+                    <p>Cargando tu biblioteca...</p>
                 </div>
             ) : mediaError ? (
                 <div className="h-full flex flex-col items-center justify-center text-center text-muted-foreground gap-3 px-6">
@@ -172,7 +172,7 @@ export function MediaSelectionDialog({ isOpen, onClose, onSelect, mediaType = 'i
                                 <>
                                     <img 
                                         src={item.url} 
-                                        alt={item.filename || 'Media'} 
+                                        alt={item.filename || 'Medio'} 
                                         className={cn(
                                             "w-full h-full object-cover transition-transform group-hover:scale-105",
                                             imgErrors[item.id] ? "hidden" : "block"
@@ -195,7 +195,7 @@ export function MediaSelectionDialog({ isOpen, onClose, onSelect, mediaType = 'i
                             ) : (
                                 <div className="w-full h-full bg-muted flex flex-col items-center justify-center p-4 text-center">
                                     <Music className="h-8 w-8 text-primary mb-2" />
-                                    <span className="text-xs text-muted-foreground truncate w-full">{item.filename || 'Audio Track'}</span>
+                                    <span className="text-xs text-muted-foreground truncate w-full">{item.filename || 'Pista de audio'}</span>
                                 </div>
                             )}
 
@@ -219,12 +219,12 @@ export function MediaSelectionDialog({ isOpen, onClose, onSelect, mediaType = 'i
         {/* Footer */}
         <div className="p-4 border-t border-border bg-muted/20 flex justify-between items-center shrink-0">
             <span className="text-xs text-muted-foreground">
-                {selectedId ? '1 item selected' : 'No item selected'}
+                {selectedId ? '1 elemento seleccionado' : 'Ningún elemento seleccionado'}
             </span>
             <div className="flex gap-2">
-                <Button variant="ghost" onClick={onClose}>Cancel</Button>
+                <Button variant="ghost" onClick={onClose}>Cancelar</Button>
                 <Button onClick={handleConfirm} disabled={!selectedId}>
-                    Use Selected
+                    Usar seleccionado
                 </Button>
             </div>
         </div>

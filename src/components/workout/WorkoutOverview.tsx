@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
-import { Button } from '@/components/Button'
+import { Button } from '@/components/ui/button'
 import { LocalExercise, LocalWorkout } from '@/types/workout/viewTypes'
 import {
   ChevronLeft,
@@ -395,7 +395,7 @@ export function WorkoutOverview({
       <div className="relative h-[180px] sm:h-[200px] overflow-hidden border-b border-white/10">
         <img
           src={coverImage}
-          alt="Cover"
+          alt="Portada"
           className="absolute inset-0 h-full w-full object-cover opacity-90"
           onError={() => setHasHeroImageError(true)}
         />
@@ -462,7 +462,7 @@ export function WorkoutOverview({
             </div>
             <div className="flex flex-wrap gap-2">
               {uniqueMuscleGroups.length === 0 ? (
-                <span className="text-[11px] font-bold text-white/40 italic">Sin datos — derivados de la rutina</span>
+                <span className="text-[11px] font-bold text-white/40 italic">Sin datos — derivados del workout</span>
               ) : (
                 uniqueMuscleGroups.map((muscle) => {
                   const label = muscle.replace(/_/g, ' ').trim()
@@ -604,7 +604,7 @@ export function WorkoutOverview({
                               </span>
                               <div className="hidden md:flex md:ml-auto items-center gap-1 rounded-2xl bg-white/[0.03] border border-white/10 px-2.5 py-1.5">
                                 <span className="text-[10px] font-black uppercase tracking-[0.18em] text-white/45">
-                                  {ex.type === 'reps' ? 'Reps' : 'Tiempo'}
+                                  {ex.type === 'reps' ? 'Repeticiones' : 'Tiempo'}
                                 </span>
                                 <X className="h-3 w-3 text-white/20" />
                                 <span className="text-[11px] font-black text-white/80 tabular-nums">
@@ -660,10 +660,8 @@ export function WorkoutOverview({
             </Button>
           ) : null}
           <Button
-            className={`flex-1 h-12 sm:h-14 shadow-xl transition-all rounded-2xl sm:rounded-[22px] relative overflow-hidden group ${
-              !isAuthenticated
-                ? 'shadow-emerald-500/20 hover:shadow-emerald-500/30'
-                : 'shadow-emerald-500/20 hover:scale-[1.01] active:scale-[0.99]'
+            className={`flex-1 h-12 sm:h-14 shadow-xl transition-all rounded-2xl sm:rounded-[22px] relative overflow-hidden group bg-gradient-to-r from-emerald-500 to-emerald-400 hover:from-emerald-400 hover:to-emerald-300 text-white shadow-[0_4px_20px_-6px_rgba(16,185,129,0.55)] hover:shadow-[0_8px_28px_-6px_rgba(16,185,129,0.75)] ${
+              isAuthenticated ? 'hover:scale-[1.01] active:scale-[0.99]' : ''
             }`}
             onClick={handleStart}
           >
@@ -673,8 +671,8 @@ export function WorkoutOverview({
                   <Lock className="h-4 w-4" />
                 </div>
                 <div className="flex flex-col items-start leading-none gap-0.5">
-                  <span className="text-base font-bold">Login to Start</span>
-                  <span className="text-[10px] font-medium opacity-90 uppercase tracking-wider">Track your progress</span>
+                  <span className="text-base font-bold">Inicia sesión para empezar</span>
+                  <span className="text-[10px] font-medium opacity-90 uppercase tracking-wider">Sigue tu progreso</span>
                 </div>
               </div>
             ) : (

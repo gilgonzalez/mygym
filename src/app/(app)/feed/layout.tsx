@@ -1,9 +1,9 @@
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Discover Workouts',
+  title: 'Descubre Workouts',
   description:
-    'Feed público de rutinas de gimnasio. Encuentra workouts por popularidad, novedad, tags y creadores de la comunidad MyGym.',
+    'Feed público de workouts de gimnasio. Encuentra workouts por popularidad, novedad, tags y creadores de la comunidad MyGym.',
   alternates: {
     canonical: '/feed',
   },

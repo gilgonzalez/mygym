@@ -90,7 +90,7 @@ export function ActivityHeatmap({ userId, attributes }: ActivityHeatmapProps) {
 
                 workouts = dayLogs.map(log => ({
                     // @ts-ignore
-                    title: log.workouts?.title || "Workout Session",
+                    title: log.workouts?.title || "Sesión de Workout",
                     xpEarned: log.xp_earned || 0,
                     duration: log.duration_seconds || 0,
                     completedAt: log.completed_at || ''
@@ -130,7 +130,7 @@ export function ActivityHeatmap({ userId, attributes }: ActivityHeatmapProps) {
   // Map real attributes to display format
   const USER_ATTRIBUTES = [
     { 
-      name: "Strength", 
+      name: "Fuerza", 
       level: attributes?.strength || 0, 
       currentPoints: (attributes?.strength || 0) * 10, // Visual filler
       maxPoints: ((attributes?.strength || 0) + 1) * 10, 
@@ -141,7 +141,7 @@ export function ActivityHeatmap({ userId, attributes }: ActivityHeatmapProps) {
       border: "border-red-200 dark:border-red-800" 
     },
     { 
-      name: "Agility", 
+      name: "Agilidad", 
       level: attributes?.agility || 0, 
       currentPoints: (attributes?.agility || 0) * 10, 
       maxPoints: ((attributes?.agility || 0) + 1) * 10, 
@@ -152,7 +152,7 @@ export function ActivityHeatmap({ userId, attributes }: ActivityHeatmapProps) {
       border: "border-blue-200 dark:border-blue-800" 
     },
     { 
-      name: "Endurance", 
+      name: "Resistencia", 
       level: attributes?.endurance || 0, 
       currentPoints: (attributes?.endurance || 0) * 10, 
       maxPoints: ((attributes?.endurance || 0) + 1) * 10, 
@@ -163,7 +163,7 @@ export function ActivityHeatmap({ userId, attributes }: ActivityHeatmapProps) {
       border: "border-green-200 dark:border-green-800" 
     },
     { 
-      name: "Wisdom", 
+      name: "Sabiduría", 
       level: attributes?.wisdom || 0, 
       currentPoints: (attributes?.wisdom || 0) * 10, 
       maxPoints: ((attributes?.wisdom || 0) + 1) * 10, 
@@ -184,7 +184,7 @@ export function ActivityHeatmap({ userId, attributes }: ActivityHeatmapProps) {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 sm:gap-0">
             <h2 className="text-lg font-bold flex items-center gap-2 text-foreground/90">
                 <Activity className="w-5 h-5 text-primary" />
-                Activity Log
+                Registro de Actividad
             </h2>
             <div className="flex items-center justify-between sm:justify-end gap-2 bg-secondary/30 p-1 rounded-lg">
                 <Button variant="ghost" size="icon" className="h-7 w-7 hover:bg-background shadow-sm" onClick={handlePrevMonth}>
@@ -244,7 +244,7 @@ export function ActivityHeatmap({ userId, attributes }: ActivityHeatmapProps) {
                                         </p>
                                     </div>
                                 ) : (
-                                    <p className="text-xs text-muted-foreground">Rest Day</p>
+                                    <p className="text-xs text-muted-foreground">Día de Descanso</p>
                                 )}
                             </TooltipContent>
                         </Tooltip>

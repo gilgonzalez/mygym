@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { Loader2, AlertCircle } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
-import { Button } from '@/components/Button'
+import { Button } from '@/components/ui/button'
 
 const PROFILE_RETRY_DELAY_MS = 1000
 const MAX_PROFILE_RETRIES = 5
@@ -25,7 +25,7 @@ function AuthCallbackContent() {
         if (sessionError) throw sessionError
         
         if (!session) {
-           setError("No session found. Please try logging in again.")
+           setError("No se encontró la sesión. Intenta iniciar sesión de nuevo.")
            return
         }
 
@@ -84,7 +84,7 @@ function AuthCallbackContent() {
 
       } catch (err: any) {
         console.error('Auth callback error:', err)
-        setError(err.message || "An error occurred during authentication")
+        setError(err.message || "Ocurrió un error durante la autenticación")
       }
     }
 
@@ -96,10 +96,10 @@ function AuthCallbackContent() {
       <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-slate-950 p-4">
         <div className="text-center space-y-4 bg-white dark:bg-slate-900 p-8 rounded-lg shadow-lg max-w-md w-full">
           <AlertCircle className="h-12 w-12 text-destructive mx-auto" />
-          <h1 className="text-xl font-bold">Authentication Failed</h1>
+          <h1 className="text-xl font-bold">Autenticación fallida</h1>
           <p className="text-gray-600 dark:text-gray-400">{error}</p>
           <Button onClick={() => router.push('/auth/login')} className="w-full">
-            Return to Login
+            Volver al inicio de sesión
           </Button>
         </div>
       </div>
@@ -110,7 +110,7 @@ function AuthCallbackContent() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-slate-950">
       <div className="text-center">
         <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary mb-4" />
-        <p className="text-gray-600 dark:text-gray-400">Setting up your profile...</p>
+        <p className="text-gray-600 dark:text-gray-400">Preparando tu perfil...</p>
       </div>
     </div>
   )

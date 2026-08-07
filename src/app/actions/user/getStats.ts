@@ -8,7 +8,7 @@ export async function getUserStatsAction(userId: string) {
     const { data: { user } } = await supabase.auth.getUser()
 
     if (!user) {
-        return { error: 'Unauthorized' }
+        return { error: 'No autorizado' }
     }
 
     const { data, error } = await supabase

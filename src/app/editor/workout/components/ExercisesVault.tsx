@@ -373,7 +373,7 @@ export function ExercisesVault({ onSelect, trigger }: ExercisesVaultProps) {
         ) : (
           <Button variant="outline" className="gap-2">
             <Dumbbell className="h-4 w-4" />
-            Open Exercise Library
+            Abrir biblioteca de ejercicios
           </Button>
         )}
       </DialogTrigger>

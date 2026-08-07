@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Button } from '@/components/Button'
+import { Button } from '@/components/ui/button'
 import { LocalWorkout, LocalWorkoutChallengeResult } from '@/types/workout/viewTypes'
 import { ChevronLeft, Dumbbell, Pause, Play, Trophy, Zap } from 'lucide-react'
 import { formatDuration } from '@/lib/time'
@@ -286,7 +286,7 @@ export function WorkoutChallengeExecutionView({
 
           <aside className="flex min-h-0 flex-1 flex-col gap-3 self-stretch sm:gap-5 lg:h-full lg:flex-none">
             <div className="hidden rounded-[30px] bg-white/[0.04] p-5 sm:block sm:p-6">
-              <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-white/35">Score actual</p>
+              <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-white/35">Puntuación actual</p>
               <p className="mt-3 text-3xl font-black leading-none tracking-[-0.04em] text-emerald-300 sm:text-4xl">
                 {scorePoints} pts
               </p>

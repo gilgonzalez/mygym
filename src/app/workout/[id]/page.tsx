@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Loader2 } from 'lucide-react'
 import { WorkoutOverview } from '@/components/workout/WorkoutOverview'
 import { ActiveSession } from '@/components/workout/ActiveSession'
 import { WorkoutChallengeExecutionView } from '@/components/workout/WorkoutChallengeExecutionView'
@@ -14,6 +13,7 @@ import { useQuery } from '@tanstack/react-query'
 import { getWorkoutById } from '@/app/actions/workout/get'
 import { useAuthStore } from '@/store/authStore'
 import { completeWorkoutAction } from '@/app/actions/user/completeWorkout'
+import { calcWorkoutXP } from '@/lib/workout-utils'
 
 function normalizeExerciseKey(value: string) {
   return value
@@ -175,7 +175,7 @@ export default function WorkoutSessionPage({ params }: { params: { id: string } 
         hasLoggedRef.current = true
         
         const durationMinutes = Math.max(1, Math.ceil(elapsedMs / 60000))
-        const xpEarned = Math.ceil(durationMinutes * 5) + 50 // Base 50 + 5 per minute
+        const xpEarned = calcWorkoutXP(durationMinutes, false) // Base 50 + 5 per minute
         setXpEarnedState(xpEarned)
 
         if (!canSaveProgress) {
@@ -252,7 +252,7 @@ export default function WorkoutSessionPage({ params }: { params: { id: string } 
     setChallengeDurationSeconds(elapsedSeconds)
 
     const durationMinutes = Math.max(1, Math.ceil(elapsedSeconds / 60))
-    const xpEarned = Math.ceil(durationMinutes * 5) + 50
+    const xpEarned = calcWorkoutXP(durationMinutes, false)
     setChallengeXpEarned(xpEarned)
 
     if (!user || !canSaveProgress) {
@@ -302,12 +302,7 @@ export default function WorkoutSessionPage({ params }: { params: { id: string } 
 
   // Render Logic
   if (isLoading || (workout && !isChallengeWorkout && !activeWorkout) || (activeWorkout && activeWorkout.id !== params.id)) {
-    return (
-      <div className="flex h-screen w-full flex-col items-center justify-center gap-4 bg-background">
-        <Loader2 className="h-10 w-10 animate-spin text-primary" />
-        <p className="text-muted-foreground">Cargando entrenamiento...</p>
-      </div>
-    )
+    return <WorkoutOverviewSkeleton />
   }
   
   if (isError || (!isLoading && !workout)) {
@@ -384,5 +379,139 @@ export default function WorkoutSessionPage({ params }: { params: { id: string } 
         onNextStep={nextStep}
       />
     </>
+  )
+}
+
+function WorkoutOverviewSkeleton() {
+  return (
+    <div className="min-h-screen w-full bg-[#050608] text-foreground pb-32 relative animate-pulse">
+      <div className="absolute top-4 left-4 z-50">
+        <div className="h-10 w-10 rounded-2xl bg-black/30 border border-white/10" />
+      </div>
+
+      <div className="absolute top-4 right-4 z-50 flex items-center gap-2">
+        <div className="h-10 w-10 rounded-2xl bg-black/30 border border-white/10" />
+      </div>
+
+      <div className="relative h-[180px] sm:h-[200px] overflow-hidden border-b border-white/10">
+        <div className="absolute inset-0 bg-slate-900/80" />
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(12,12,14,0.25)_0%,rgba(12,12,14,0.92)_100%)]" />
+        <div className="relative h-full px-4 sm:px-6 lg:px-8 pt-12 flex items-end justify-between gap-4 max-w-7xl mx-auto w-full pb-5 sm:pb-6">
+          <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+            <div className="min-w-0 space-y-2">
+              <div className="h-3.5 w-24 rounded bg-white/30" />
+              <div className="h-7 w-56 sm:h-8 sm:w-72 rounded-md bg-white/20" />
+            </div>
+          </div>
+          <div className="hidden sm:flex items-end gap-4 sm:gap-6 md:gap-8 text-right">
+            <div className="space-y-1.5">
+              <div className="h-2.5 w-16 rounded bg-white/20" />
+              <div className="h-6 w-20 rounded bg-white/20" />
+            </div>
+            <div className="space-y-1.5">
+              <div className="h-2.5 w-20 rounded bg-white/20" />
+              <div className="h-6 w-10 rounded bg-white/20" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 pt-6 sm:pt-8 space-y-6 sm:space-y-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <div className="space-y-2">
+            <div className="h-2.5 w-20 rounded bg-white/20 mb-2" />
+            <div className="h-9 w-28 rounded-full border border-emerald-500/20 bg-emerald-500/10" />
+          </div>
+          <div className="space-y-2">
+            <div className="h-2.5 w-12 rounded bg-white/20 mb-2" />
+            <div className="h-9 w-28 rounded-full border border-sky-500/20 bg-sky-500/10" />
+          </div>
+          <div className="space-y-2">
+            <div className="h-2.5 w-20 rounded bg-white/20 mb-2" />
+            <div className="h-9 w-28 rounded-full border border-violet-500/20 bg-violet-500/10" />
+          </div>
+          <div className="sm:col-span-2 lg:col-span-1 space-y-2">
+            <div className="h-2.5 w-28 rounded bg-white/20 mb-2" />
+            <div className="h-11 w-full rounded-2xl border border-white/10 bg-white/5" />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5">
+          <div className="rounded-[24px] border border-white/10 bg-white/[0.03] p-4 sm:p-5">
+            <div className="flex items-center gap-2 mb-3 sm:mb-4">
+              <div className="w-8 h-8 rounded-xl bg-orange-500/15" />
+              <div className="h-3.5 w-40 rounded bg-white/20" />
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="h-7 w-20 rounded-full border border-orange-500/20 bg-orange-500/10" />
+              ))}
+            </div>
+          </div>
+          <div className="rounded-[24px] border border-white/10 bg-white/[0.03] p-4 sm:p-5">
+            <div className="flex items-center gap-2 mb-3 sm:mb-4">
+              <div className="w-8 h-8 rounded-xl bg-sky-500/15" />
+              <div className="h-3.5 w-36 rounded bg-white/20" />
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="h-7 w-24 rounded-full border border-sky-500/20 bg-sky-500/10" />
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-[24px] border border-white/10 bg-white/[0.02] p-4 sm:p-5">
+          <div className="h-2.5 w-44 rounded bg-white/20 mb-3" />
+          <div className="space-y-2">
+            <div className="h-4 w-full rounded bg-white/15" />
+            <div className="h-4 w-5/6 rounded bg-white/10" />
+            <div className="h-4 w-4/5 rounded bg-white/5" />
+          </div>
+        </div>
+
+        <div className="space-y-3 sm:space-y-4">
+          {[1, 2].map((idx) => (
+            <div
+              key={idx}
+              className="rounded-[24px] sm:rounded-[26px] border border-white/10 bg-white/[0.02] overflow-hidden"
+            >
+              <div className="w-full flex items-center gap-3 sm:gap-4 px-4 sm:px-5 py-3.5 sm:py-4 bg-gradient-to-r from-sky-500/20 via-transparent to-transparent">
+                <div className="flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-full bg-black/40 backdrop-blur-md">
+                  <div className="h-4 w-4 rounded bg-white/30" />
+                </div>
+                <div className="flex-1 min-w-0 space-y-1.5">
+                  <div className="h-5 w-40 sm:h-6 sm:w-48 rounded bg-white/20" />
+                  <div className="h-3 w-24 rounded bg-white/15" />
+                </div>
+                <div className="h-5 w-5 rounded bg-white/20 shrink-0" />
+              </div>
+              <div className="p-3 sm:p-4 md:p-5 space-y-2.5 sm:space-y-3 border-t border-white/10">
+                {[1, 2].map((exIdx) => (
+                  <div
+                    key={exIdx}
+                    className="flex items-center gap-3 sm:gap-4 rounded-[20px] sm:rounded-[22px] border border-white/10 bg-white/[0.03] p-2.5 sm:p-3"
+                  >
+                    <div className="h-12 w-12 sm:h-14 sm:w-14 md:h-16 md:w-16 shrink-0 rounded-[18px] sm:rounded-2xl overflow-hidden border border-white/10 bg-black/30">
+                      <div className="w-full h-full bg-white/10" />
+                    </div>
+                    <div className="flex-1 min-w-0 space-y-2">
+                      <div className="h-4 w-40 sm:h-5 sm:w-48 rounded bg-white/20" />
+                      <div className="h-6 w-32 rounded-xl bg-white/[0.04] border border-white/10" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="fixed bottom-0 left-0 right-0 p-3 sm:p-4 sm:pb-5 bg-[linear-gradient(180deg,transparent_0%,rgba(5,6,8,0.85)_40%,rgba(5,6,8,0.98)_85%)] z-50 pb-safe">
+        <div className="max-w-md mx-auto w-full">
+          <div className="w-full h-12 sm:h-14 rounded-2xl sm:rounded-[22px] bg-emerald-500/60 shadow-xl shadow-emerald-500/20" />
+        </div>
+      </div>
+    </div>
   )
 }
