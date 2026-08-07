@@ -6,6 +6,7 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { cn } from "@/lib/utils";
 import { AuthInitializer } from "@/components/AuthInitializer";
+import { Toaster } from "sonner";
 
 import { QueryProvider } from "@/components/QueryProvider";
 
@@ -142,6 +143,16 @@ export default function RootLayout({
             <AuthInitializer />
             <QueryProvider>
               {children}
+              <Toaster
+                richColors
+                closeButton
+                position="top-right"
+                toastOptions={{
+                  classNames: {
+                    toast: 'group-[.toaster]:shadow-lg',
+                  },
+                }}
+              />
             </QueryProvider>
         </ThemeProvider>
       </body>

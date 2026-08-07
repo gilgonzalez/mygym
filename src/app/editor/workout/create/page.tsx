@@ -45,6 +45,7 @@ import { generateWorkoutAction } from '@/app/actions/workout/generate-by-ai'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { ActivityTutorialEditor } from '../components/ActivityTutorialEditor'
 import { PremiumFeatureDialog } from '@/components/premium/PremiumFeatureDialog'
+import { toast } from 'sonner'
 
 // --- Schema Definition ---
 const tutorialStepSchema = z.object({
@@ -115,21 +116,101 @@ type WorkoutFormValues = z.infer<typeof workoutSchema>
 type WorkoutFormSection = WorkoutFormValues['sections'][number]
 type WorkoutFormExercise = WorkoutFormSection['exercises'][number]
 
-function findFirstFormError(error: unknown): string | null {
-  if (!error) return null
+const FIELD_LABELS: Record<string, string> = {
+  'title': 'El título del workout',
+  'description': 'La descripción',
+  'cover': 'La portada',
+  'difficulty': 'La dificultad',
+  'visibility': 'La visibilidad',
+  'challenge.timeCapSeconds': 'El tiempo límite del reto',
+}
+
+function describeField(path: string): string {
+  if (FIELD_LABELS[path]) return FIELD_LABELS[path]
+
+  const sectionMatch = path.match(/^sections\.(\d+)\.name$/)
+  if (sectionMatch) {
+    const idx = Number(sectionMatch[1]) + 1
+    return `El nombre de la sección ${idx}`
+  }
+
+  const exMatch = path.match(/^sections\.(\d+)\.exercises\.(\d+)\.name$/)
+  if (exMatch) {
+    const sIdx = Number(exMatch[1]) + 1
+    const eIdx = Number(exMatch[2]) + 1
+    return `El nombre del ejercicio ${eIdx} de la sección ${sIdx}`
+  }
+
+  const stepMatch = path.match(/^sections\.(\d+)\.exercises\.(\d+)\.tutorial\.steps\.(\d+)\.title$/)
+  if (stepMatch) {
+    const sIdx = Number(stepMatch[1]) + 1
+    const eIdx = Number(stepMatch[2]) + 1
+    const stIdx = Number(stepMatch[3]) + 1
+    return `El título del paso ${stIdx} del tutorial del ejercicio ${eIdx} (sección ${sIdx})`
+  }
+
+  const stepDescMatch = path.match(/^sections\.(\d+)\.exercises\.(\d+)\.tutorial\.steps\.(\d+)\.description$/)
+  if (stepDescMatch) {
+    const sIdx = Number(stepDescMatch[1]) + 1
+    const eIdx = Number(stepDescMatch[2]) + 1
+    const stIdx = Number(stepDescMatch[3]) + 1
+    return `La descripción del paso ${stIdx} del tutorial del ejercicio ${eIdx} (sección ${sIdx})`
+  }
+
+  const exGeneric = path.match(/^sections\.(\d+)\.exercises\.(\d+)\.(.+)$/)
+  if (exGeneric) {
+    const sIdx = Number(exGeneric[1]) + 1
+    const eIdx = Number(exGeneric[2]) + 1
+    const field = exGeneric[3]
+    return `El campo "${field}" del ejercicio ${eIdx} de la sección ${sIdx}`
+  }
+
+  const sectionGeneric = path.match(/^sections\.(\d+)\.(.+)$/)
+  if (sectionGeneric) {
+    const sIdx = Number(sectionGeneric[1]) + 1
+    const field = sectionGeneric[2]
+    return `El campo "${field}" de la sección ${sIdx}`
+  }
+
+  return `El campo "${path}"`
+}
+
+type FormErrorEntry = { path: string; message: string }
+
+function flattenFormErrors(error: unknown, prefix = ''): FormErrorEntry[] {
+  if (!error) return []
 
   if (typeof error === 'object' && error !== null) {
     if ('message' in error && typeof (error as { message?: unknown }).message === 'string') {
-      return (error as { message: string }).message
+      return [{ path: prefix, message: (error as { message: string }).message }]
     }
 
-    for (const value of Object.values(error as Record<string, unknown>)) {
-      const nestedMessage = findFirstFormError(value)
-      if (nestedMessage) return nestedMessage
+    const results: FormErrorEntry[] = []
+    for (const [key, value] of Object.entries(error as Record<string, unknown>)) {
+      const nextPrefix = prefix ? `${prefix}.${key}` : key
+      results.push(...flattenFormErrors(value, nextPrefix))
     }
+    return results
   }
 
-  return null
+  return []
+}
+
+function summarizeFormErrors(error: unknown): { count: number; first: string } {
+  const list = flattenFormErrors(error)
+  if (list.length === 0) return { count: 0, first: 'Hay campos incompletos.' }
+  const first = list[0]
+  const fieldLabel = describeField(first.path)
+  const rawMessage = first.message?.trim() || ''
+  let human: string
+  if (/required|obligatorio|requerido/i.test(rawMessage)) {
+    human = `${fieldLabel} es obligatorio.`
+  } else if (rawMessage) {
+    human = `${fieldLabel}: ${rawMessage.charAt(0).toLowerCase() + rawMessage.slice(1)}`
+  } else {
+    human = `${fieldLabel} tiene un problema.`
+  }
+  return { count: list.length, first: human }
 }
 
 function inferMediaType(value?: string | null): 'image' | 'video' | 'audio' {
@@ -239,7 +320,7 @@ function CreateWorkoutContent() {
     }
 
     if (typeof window !== 'undefined' && !('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-        alert("Speech recognition is not supported in this browser. Please use Chrome or Edge.")
+        toast.warning('Tu navegador no soporta el dictado por voz. Prueba con Chrome o Edge.')
         return
     }
 
@@ -704,14 +785,28 @@ function CreateWorkoutContent() {
     },
     onSuccess: () => {
         setSubmitStatus('success')
-        setSubmitMessage(workoutId ? 'Workout actualizado correctamente. Redirigiendo al feed...' : 'Workout guardado correctamente. Redirigiendo al feed...')
+        const finalMsg = workoutId
+          ? 'Workout actualizado correctamente. Redirigiendo al feed...'
+          : 'Workout guardado correctamente. Redirigiendo al feed...'
+        setSubmitMessage(finalMsg)
+        toast.success(workoutId ? 'Workout actualizado' : 'Workout guardado', {
+          description: workoutId
+            ? 'Los cambios se guardaron y ya están sincronizados.'
+            : 'Tu rutina está lista en el feed. Ahora a entrenar 💪',
+        })
         reset()
-        router.push('/feed')
+        setTimeout(() => router.push('/feed'), 600)
     },
     onError: (error: Error) => {
         setSubmitStatus('error')
         console.error(error)
-        setSubmitMessage(error.message || 'No pudimos guardar el workout. Revisa tu contenido y vuelve a intentarlo.')
+        const message =
+          error?.message?.trim() ||
+          'No pudimos guardar el workout. Revisa tu contenido y vuelve a intentarlo.'
+        setSubmitMessage(message)
+        toast.error('No pudimos guardar el workout', {
+          description: message,
+        })
         setIsSubmitting(false)
         setIsRetry(true)
     }
@@ -837,11 +932,11 @@ function CreateWorkoutContent() {
             setIsAiOpen(false)
             setAiPrompt('')
         } else {
-            alert(res.error || "No se pudo generar el workout")
+            toast.error(res.error || "No se pudo generar el workout. Inténtalo de nuevo.")
         }
     } catch (err) {
         console.error(err)
-        alert("Ocurrio un error al comunicarse con el asistente")
+        toast.error("No pudimos conectar con el asistente IA. Revisa tu conexión e inténtalo otra vez.")
     } finally {
         setIsGenerating(false)
     }
@@ -849,8 +944,10 @@ function CreateWorkoutContent() {
 
   const onSubmit = async (data: WorkoutFormValues) => {
     if (!user) {
+        const msg = 'Debes iniciar sesión para guardar workouts.'
         setSubmitStatus('error')
-        setSubmitMessage('Debes iniciar sesion para guardar workouts.')
+        setSubmitMessage(msg)
+        toast.error('Sesión no detectada', { description: msg })
         return
     }
     
@@ -867,11 +964,21 @@ function CreateWorkoutContent() {
   }
 
   const onInvalidSubmit = (formErrors: typeof errors) => {
-    const firstErrorMessage = findFirstFormError(formErrors)
+    const summary = summarizeFormErrors(formErrors)
 
     console.error('Workout submit blocked by validation', formErrors)
     setSubmitStatus('error')
-    setSubmitMessage(firstErrorMessage || 'Hay campos incompletos o invalidos en el workout. Revisa los bloques del editor y vuelve a intentarlo.')
+    setSubmitMessage(summary.first)
+
+    if (summary.count === 1) {
+      toast.error('Revisa el formulario', {
+        description: summary.first,
+      })
+    } else {
+      toast.error(`${summary.count} campos necesitan tu atención`, {
+        description: `${summary.first} Revisa el editor y completa lo que falte antes de guardar.`,
+      })
+    }
   }
 
   const handleOpenAiAssistant = () => {
@@ -981,32 +1088,6 @@ function CreateWorkoutContent() {
                 )}
               </Button>
             </div>
-
-            {(submitStatus !== 'idle' || isSubmitting) && (
-              <div
-                className={cn(
-                  'rounded-2xl border px-2.5 py-1.5 text-[10px] sm:px-3 sm:text-xs lg:min-w-[260px] lg:max-w-[340px]',
-                  submitStatus === 'error'
-                    ? 'border-destructive/20 bg-destructive/10 text-destructive'
-                    : submitStatus === 'success'
-                      ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-                      : 'border-primary/15 bg-primary/[0.04] text-muted-foreground'
-                )}
-              >
-                <div className="flex items-center justify-between gap-2.5">
-                  <span className="min-w-0 truncate">{isSubmitting ? uploadStatus || 'Guardando...' : submitMessage}</span>
-                  {isSubmitting ? <span className="shrink-0 font-semibold">{uploadProgress}%</span> : null}
-                </div>
-                {isSubmitting ? (
-                  <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-secondary">
-                    <div
-                      className="h-full bg-primary transition-all duration-300 ease-out"
-                      style={{ width: `${uploadProgress}%` }}
-                    />
-                  </div>
-                ) : null}
-              </div>
-            )}
           </div>
         </div>
       </header>
@@ -1055,48 +1136,6 @@ function CreateWorkoutContent() {
               </div>
             </section>
 
-            {(isSubmitting || submitStatus === 'error') && (
-              <div
-                className={cn(
-                  'sticky top-3 z-20 rounded-2xl border px-3 py-2.5 shadow-sm backdrop-blur',
-                  submitStatus === 'error'
-                    ? 'border-destructive/20 bg-destructive/10'
-                    : 'border-primary/15 bg-background/90'
-                )}
-              >
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-foreground">
-                      {isSubmitting ? uploadStatus || 'Guardando workout...' : 'No pudimos completar el guardado'}
-                    </p>
-                    <p className="text-[11px] text-muted-foreground sm:text-xs">
-                      {isSubmitting
-                        ? submitMessage || 'No cierres esta pantalla mientras terminamos uploads y persistencia.'
-                        : submitMessage || 'Revisa los datos y vuelve a intentarlo.'}
-                    </p>
-                  </div>
-                  {isSubmitting ? (
-                    <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
-                      <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                      {uploadProgress}%
-                    </div>
-                  ) : (
-                    <Button variant="outline" size="sm" onClick={() => setSubmitStatus('idle')}>
-                      Cerrar
-                    </Button>
-                  )}
-                </div>
-                {isSubmitting && (
-                  <div className="mt-3 h-2 overflow-hidden rounded-full bg-secondary">
-                    <div
-                      className="h-full bg-primary transition-all duration-300 ease-out"
-                      style={{ width: `${uploadProgress}%` }}
-                    />
-                  </div>
-                )}
-              </div>
-            )}
-            
             {/* Sections (Step 1) */}
             <DragDropContext onDragEnd={onDragEnd}>
               <Droppable droppableId="sections" type="SECTION">
@@ -1126,11 +1165,6 @@ function CreateWorkoutContent() {
                                         className="h-auto w-full bg-transparent px-0 text-lg font-black tracking-tight shadow-none focus-visible:ring-0 placeholder:text-muted-foreground/25 sm:text-2xl"
                                     />
                                     <input type="hidden" {...register(`sections.${index}.id` as const)} />
-                                    {errors.sections?.[index]?.name && (
-                                      <p className="text-red-500 text-xs font-medium mt-1">
-                                        {errors.sections[index]?.name?.message}
-                                      </p>
-                                    )}
                                 </div>
                                 <Controller
                                     control={control}
@@ -1311,13 +1345,11 @@ function CreateWorkoutContent() {
                 placeholder="Titulo del workout" 
                 className="h-auto border-none bg-transparent px-0 text-xl font-black tracking-tighter text-foreground focus-visible:ring-0 placeholder:text-muted-foreground/40 md:text-3xl"
               />
-              {errors.title && <p className="text-red-500 text-xs font-medium">{errors.title.message}</p>}
               <Textarea 
                 {...register('description')} 
                 placeholder="Descripcion breve" 
                 className="min-h-[76px] resize-none rounded-[20px] border-border/60 bg-background text-sm font-medium text-foreground shadow-none focus-visible:ring-0"
               />
-              {errors.description && <p className="text-red-500 text-xs font-medium">{errors.description.message}</p>}
             </div>
             </div>
 
@@ -1823,11 +1855,6 @@ function ExercisesFieldArray({ nestIndex, control, register, setValue, watch, er
                                     <input type="hidden" {...register(`sections.${nestIndex}.exercises.${k}.id`)} />
                                     <input type="hidden" {...register(`sections.${nestIndex}.exercises.${k}.db_id`)} />
                                     <input type="hidden" {...register(`sections.${nestIndex}.exercises.${k}.link_id`)} />
-                                    {errors.sections?.[nestIndex]?.exercises?.[k]?.name && (
-                                      <p className="mt-2 text-xs font-medium text-red-500">
-                                        {errors.sections[nestIndex].exercises[k].name.message}
-                                      </p>
-                                    )}
 
                                     <Textarea
                                       {...register(`sections.${nestIndex}.exercises.${k}.description`)}
@@ -2323,7 +2350,9 @@ function MediaInput({ value, onChange, placeholder, type = 'media', variant = 'd
             }, 1000)
         } catch (err) {
             console.error("Error accessing microphone:", err)
-            alert("Could not access microphone. Please check permissions.")
+            toast.error('No pudimos acceder al micrófono', {
+              description: 'Revisa los permisos del navegador y vuelve a intentarlo.',
+            })
         }
     }
 
@@ -2343,7 +2372,9 @@ function MediaInput({ value, onChange, placeholder, type = 'media', variant = 'd
             setIsRecordingVideo(true)
         } catch (err) {
             console.error("Error accessing camera:", err)
-            alert("Could not access camera. Please check permissions.")
+            toast.error('No pudimos acceder a la cámara', {
+              description: 'Revisa los permisos del navegador y vuelve a intentarlo.',
+            })
         }
     }
 
