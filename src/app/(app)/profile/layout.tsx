@@ -11,6 +11,22 @@ export const metadata: Metadata = {
     index: false,
     follow: false,
   },
+  openGraph: {
+    title: 'Mi Perfil · MyGym',
+    description:
+      'Progreso, estadísticas, nivel RPG, streak y workouts creados en tu perfil MyGym.',
+    type: 'profile',
+    locale: 'es_ES',
+    countryName: 'España',
+    siteName: 'MyGym',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Mi Perfil · MyGym',
+    description: 'Tu perfil, estadísticas y progreso en MyGym.',
+    creator: '@mygym',
+    site: '@mygym',
+  },
 }
 
 export default function ProfileLayout({

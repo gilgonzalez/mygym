@@ -21,11 +21,15 @@ export const metadata: Metadata = {
     url: '/feed',
     type: 'website',
     locale: 'es_ES',
+    countryName: 'España',
+    siteName: 'MyGym',
   },
   twitter: {
-    card: 'summary',
+    card: 'summary_large_image',
     title: 'Feed · MyGym',
-    description: 'Explora rutinas de gimnasio compartidas por la comunidad.',
+    description: 'Explora rutinas de gimnasio compartidas por la comunidad MyGym.',
+    creator: '@mygym',
+    site: '@mygym',
   },
 }
 

@@ -11,6 +11,22 @@ export const metadata: Metadata = {
     index: false,
     follow: false,
   },
+  openGraph: {
+    title: 'Iniciar sesión · MyGym',
+    description:
+      'Accede o regístrate gratis en MyGym. Crea rutinas profesionales, ejecuta entrenamientos y sigue tu progreso.',
+    type: 'website',
+    locale: 'es_ES',
+    countryName: 'España',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Iniciar sesión · MyGym',
+    description:
+      'Accede o regístrate gratis en la plataforma fitness social.',
+    creator: '@mygym',
+    site: '@mygym',
+  },
 }
 
 export default function AuthLayout({

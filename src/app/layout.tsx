@@ -73,15 +73,10 @@ export const metadata: Metadata = {
     description:
       "Crea rutinas profesionales, ejecuta entrenamientos con retos AMRAP, comparte tu progreso y gamifica cada repetición. Todo en una sola app.",
     locale: "es_ES",
-    images: [
-      {
-        url: "/og-image.png",
-        width: 1200,
-        height: 630,
-        alt: "MyGym - Plataforma fitness para crear y compartir rutinas de gimnasio",
-        type: "image/png",
-      },
-    ],
+    countryName: "España",
+    determiner: "",
+    emails: ["hola@mygym.app"],
+    ttl: 60 * 60 * 24 * 7,
   },
   twitter: {
     card: "summary_large_image",
@@ -89,14 +84,7 @@ export const metadata: Metadata = {
     description:
       "Crea rutinas profesionales, ejecuta entrenamientos con retos AMRAP, comparte tu progreso y gamifica cada repetición.",
     creator: "@mygym",
-    images: [
-      {
-        url: "/og-image.png",
-        width: 1200,
-        height: 630,
-        alt: "MyGym",
-      },
-    ],
+    site: "@mygym",
   },
   robots: {
     index: true,

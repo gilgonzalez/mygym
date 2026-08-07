@@ -13,11 +13,15 @@ export const metadata: Metadata = {
     description: 'Ejecuta entrenamientos con retos AMRAP, seguimiento y estadísticas.',
     type: 'article',
     locale: 'es_ES',
+    countryName: 'España',
+    siteName: 'MyGym',
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Workout · MyGym',
     description: 'Ejecuta entrenamientos con retos AMRAP y seguimiento en tiempo real.',
+    creator: '@mygym',
+    site: '@mygym',
   },
 }
 
