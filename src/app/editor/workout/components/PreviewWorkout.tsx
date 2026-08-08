@@ -16,6 +16,53 @@ export function PreviewWorkout({ data, onClose }: PreviewWorkoutProps) {
 
   // Map form data to LocalWorkout structure
   const workout: LocalWorkout = useMemo(() => {
+    const sections = (data.sections || []).map((s: any) => ({
+      id: s.id,
+      name: s.name || 'Sección sin título',
+      orderType: s.orderType || 'single',
+      amrap: s.amrap,
+      exercises: (s.exercises || []).map((e: any) => ({
+        id: e.id,
+        name: e.name || 'Ejercicio sin título',
+        type: e.type || 'reps',
+        reps: e.reps,
+        sets: e.sets,
+        rest: e.rest || 60,
+        description: e.description,
+        thumbnail_url: e.thumbnail_url,
+        tutorial: e.tutorial?.media_url ? {
+          media: {
+            type: e.tutorial.media_type || 'image',
+            url: e.tutorial.media_url,
+          },
+          steps: e.tutorial.steps || [],
+        } : undefined,
+        muscle_groups: e.muscle_groups,
+        equipment: e.equipment
+      }))
+    }))
+
+    // Detect AMRAP from section-level flag (new structure)
+    const amrapSection = sections.find((s: any) => s.amrap?.enabled)
+    // Also support legacy structure for backward compat
+    const legacyChallenge = data.challenge?.enabled
+
+    const challenge = amrapSection
+      ? {
+          mode: 'amrap_section' as const,
+          challengeSectionId: amrapSection.id,
+          timeCapSeconds: amrapSection.amrap?.timeCapSeconds || 600,
+          scoreType: 'rounds_plus_reps' as const,
+        }
+      : legacyChallenge
+        ? {
+            mode: 'amrap_section' as const,
+            challengeSectionId: data.challenge.challengeSectionId || sections[0]?.id,
+            timeCapSeconds: data.challenge.timeCapSeconds || 600,
+            scoreType: 'rounds_plus_reps' as const,
+          }
+        : null
+
     return {
       id: 'preview',
       title: data.title || 'Workout sin título',
@@ -24,36 +71,8 @@ export function PreviewWorkout({ data, onClose }: PreviewWorkoutProps) {
       tags: data.tags,
       difficulty: data.difficulty,
       audio: Array.isArray(data.audio) ? data.audio : (data.audio ? [data.audio] : []),
-      challenge: data.challenge?.enabled ? {
-        mode: 'amrap_section',
-        challengeSectionId: data.challenge.challengeSectionId || data.sections?.[0]?.id,
-        timeCapSeconds: data.challenge.timeCapSeconds || 600,
-        scoreType: 'rounds_plus_reps',
-      } : null,
-      sections: (data.sections || []).map((s: any) => ({
-        id: s.id,
-        name: s.name || 'Sección sin título',
-        orderType: s.orderType || 'single',
-        exercises: (s.exercises || []).map((e: any) => ({
-          id: e.id,
-          name: e.name || 'Ejercicio sin título',
-          type: e.type || 'reps',
-          reps: e.reps,
-          sets: e.sets,
-          rest: e.rest || 60,
-          description: e.description,
-          thumbnail_url: e.thumbnail_url,
-          tutorial: e.tutorial?.media_url ? {
-            media: {
-              type: e.tutorial.media_type || 'image',
-              url: e.tutorial.media_url,
-            },
-            steps: e.tutorial.steps || [],
-          } : undefined,
-          muscle_groups: e.muscle_groups,
-          equipment: e.equipment
-        }))
-      }))
+      challenge,
+      sections,
     }
   }, [data])
 
