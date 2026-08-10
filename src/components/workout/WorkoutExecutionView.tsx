@@ -431,7 +431,7 @@ export function WorkoutExecutionView({
   }
 
   return (
-    <div className="relative flex h-[100dvh] flex-col overflow-hidden bg-[#050816] text-white">
+    <div className="relative flex h-[100dvh] flex-col overflow-hidden bg-[#050816] text-white animate-reveal-vertical">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.18),_transparent_35%),radial-gradient(circle_at_bottom,_rgba(168,85,247,0.18),_transparent_30%)]" />
       <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.03),transparent_20%,transparent_80%,rgba(255,255,255,0.02))]" />
 

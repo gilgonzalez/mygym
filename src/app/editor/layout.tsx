@@ -9,6 +9,33 @@ export const metadata: Metadata = {
     index: false,
     follow: false,
   },
+  openGraph: {
+    title: 'Creador de Workouts · MyGym',
+    description:
+      'Editor drag & drop para crear rutinas de gimnasio profesionales. Añade ejercicios, descansos y retos AMRAP.',
+    type: 'website',
+    locale: 'es_ES',
+    countryName: 'España',
+    siteName: 'MyGym',
+    images: [
+      {
+        url: '/og-image.png',
+        width: 1200,
+        height: 630,
+        alt: 'MyGym · Creador de Workouts',
+        type: 'image/png',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Creador de Workouts · MyGym',
+    description:
+      'Crea rutinas profesionales con el editor drag & drop de MyGym.',
+    creator: '@mygym',
+    site: '@mygym',
+    images: ['/og-image.png'],
+  },
 }
 
 export default function EditorLayout({

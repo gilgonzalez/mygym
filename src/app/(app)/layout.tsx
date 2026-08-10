@@ -17,15 +17,29 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: 'Feed · MyGym',
-    description: 'Explora workouts de gimnasio compartidas por la comunidad.',
+    description: 'Explora rutinas de gimnasio compartidas por la comunidad.',
     url: '/feed',
     type: 'website',
     locale: 'es_ES',
+    countryName: 'España',
+    siteName: 'MyGym',
+    images: [
+      {
+        url: '/og-image.png',
+        width: 1200,
+        height: 630,
+        alt: 'MyGym · Feed',
+        type: 'image/png',
+      },
+    ],
   },
   twitter: {
-    card: 'summary',
+    card: 'summary_large_image',
     title: 'Feed · MyGym',
-    description: 'Explora workouts de gimnasio compartidas por la comunidad.',
+    description: 'Explora rutinas de gimnasio compartidas por la comunidad MyGym.',
+    creator: '@mygym',
+    site: '@mygym',
+    images: ['/og-image.png'],
   },
 }
 

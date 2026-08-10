@@ -1,6 +1,5 @@
 'use client'
 
-import type { Metadata } from 'next'
 import { useState, useEffect, Suspense } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
@@ -10,10 +9,6 @@ import Link from 'next/link'
 import { Loader2, AlertCircle, ShieldCheck } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { GoogleAuthButton } from '@/components/auth/GoogleAuthButton'
-
-export const metadata: Metadata = {
-  title: 'Registrarse',
-}
 
 function RegisterContent() {
   const [isLoading, setIsLoading] = useState(false)

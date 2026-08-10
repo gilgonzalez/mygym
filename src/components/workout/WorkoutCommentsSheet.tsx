@@ -306,7 +306,7 @@ function CommentCard({ comment, index, compact = false }: { comment: any; index:
                     <span className={cn(
                       "font-black uppercase tracking-widest text-muted-foreground hidden sm:inline",
                       "text-[9px]"
-                    )}>Valoración</span>
+                    )}>Rating</span>
                   </div>
                   <div className={cn(
                     "flex gap-1 flex-1 h-1.5 max-w-[140px]"

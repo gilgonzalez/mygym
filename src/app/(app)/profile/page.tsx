@@ -84,7 +84,6 @@ export default function ProfilePage() {
           total_workouts: data.total_workouts ?? 0,
           total_minutes: data.total_minutes ?? 0,
           rank_title: data.rank_title ?? 'Novato',
-          // @ts-ignore
           attributes: data.attributes || {
             strength: 0,
             agility: 0,

@@ -118,7 +118,7 @@ export function ExerciseView({
                 <div className="relative z-10 w-full max-w-md px-6 -mt-20">
                   <div className="relative aspect-square w-full rounded-2xl overflow-hidden shadow-2xl ring-1 ring-white/10 bg-zinc-900/50 backdrop-blur-sm">
                     <img 
-                        src={currentExercise.thumbnail_url} 
+                      src={currentExercise.thumbnail_url} 
                       alt={currentExercise.name} 
                       className="w-full h-full object-contain p-2" 
                     />

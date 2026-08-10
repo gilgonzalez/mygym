@@ -1,6 +1,5 @@
 'use client'
 
-import type { Metadata } from 'next'
 import { useState, useEffect, Suspense } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
@@ -10,12 +9,6 @@ import { useSearchParams } from 'next/navigation'
 import { Loader2, AlertCircle, CheckCircle2, ArrowRight, ShieldCheck } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { GoogleAuthButton } from '@/components/auth/GoogleAuthButton'
-
-export const metadata: Metadata = {
-  title: 'Iniciar sesión',
-}
-
-
 
 function LoginForm() {
   const [isLoading, setIsLoading] = useState(false)
