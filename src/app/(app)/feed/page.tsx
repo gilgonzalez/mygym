@@ -145,10 +145,9 @@ export default function Page() {
           table: 'workouts',
         },
         (payload: any) => {
-          const row = payload.new as (DbWorkoutRow & { is_draft?: boolean | null; duration_minutes?: number | null }) | null | undefined
+          const row = payload.new as (DbWorkoutRow & { cover?: string | null; estimated_time?: number | null }) | null | undefined
           if (!row) return
 
-          if (row.is_draft === true) return
           if (row.visibility !== 'public' && row.visibility !== 'followers') return
           if (!row.created_at) return
           if (newestCreatedAt && new Date(row.created_at).getTime() <= new Date(newestCreatedAt).getTime()) return
@@ -210,58 +209,6 @@ export default function Page() {
 
   const newWorkoutsCount = realtimeNewCount
 
-  if (isLoading) {
-    return (
-      <div className="mx-auto flex w-full max-w-7xl justify-center px-4 py-6 sm:px-6">
-        <div className="w-full max-w-5xl space-y-6">
-          <div className="rounded-[28px] border border-border/60 bg-card/70 p-4 shadow-sm backdrop-blur sm:p-5 animate-pulse">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-              <div className="space-y-2">
-                <div className="h-6 w-28 rounded-full bg-muted/70" />
-                <div className="space-y-1.5">
-                  <div className="h-8 w-56 rounded-md bg-muted/70 sm:h-9 sm:w-64" />
-                  <div className="h-4 w-full max-w-lg rounded-md bg-muted/50" />
-                </div>
-              </div>
-              <div className="flex flex-col gap-3 sm:min-w-[320px] sm:max-w-[360px]">
-                <div className="h-10 w-full rounded-full bg-muted/60" />
-                <div className="h-10 w-48 rounded-full bg-muted/60" />
-              </div>
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-6">
-            {[1, 2, 3].map((i) => (
-              <FeedWorkoutCardSkeleton key={i} />
-            ))}
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="flex min-h-[50vh] items-center justify-center px-4">
-        <div className="flex w-full max-w-lg flex-col items-center gap-4 rounded-[28px] border border-destructive/20 bg-destructive/5 px-6 py-8 text-center">
-          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-destructive/10">
-            <RefreshCcw className="h-6 w-6 text-destructive" />
-          </div>
-          <div className="space-y-1">
-            <p className="text-lg font-semibold text-foreground">No pudimos cargar el feed</p>
-            <p className="text-sm text-muted-foreground">
-              {error instanceof Error ? error.message : 'Ocurrio un error inesperado al cargar los workouts.'}
-            </p>
-          </div>
-          <Button onClick={() => refetch()} disabled={isRefetching} className="gap-2">
-            {isRefetching ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCcw className="h-4 w-4" />}
-            Reintentar
-          </Button>
-        </div>
-      </div>
-    )
-  }
-
   return (
     <div className="mx-auto flex w-full max-w-7xl justify-center px-4 py-6 sm:px-6">
       <div className="w-full max-w-5xl space-y-6">
@@ -292,34 +239,32 @@ export default function Page() {
                   className="h-10 rounded-full border-border/70 bg-background/80 pl-9"
                 />
               </div>
-              <div className="flex flex-wrap gap-2">
-                <div className="flex gap-1 self-start rounded-full bg-muted/60 p-1">
-                  <Button
-                    variant={sortBy === 'newest' && filter === 'all' ? 'default' : 'ghost'}
-                    size="sm"
-                    className="h-8 rounded-full px-3 text-xs sm:text-sm"
-                    onClick={() => {
-                      setSortBy('newest')
-                      setFilter('all')
-                    }}
-                  >
-                    Nuevo
-                  </Button>
-                  <Button
-                    variant={sortBy === 'popular' && filter === 'all' ? 'default' : 'ghost'}
-                    size="sm"
-                    className="h-8 rounded-full px-3 text-xs sm:text-sm"
-                    onClick={() => {
-                      setSortBy('popular')
-                      setFilter('all')
-                    }}
-                  >
-                    <TrendingUp className="mr-1 h-3.5 w-3.5" />
-                    Popular
-                  </Button>
-                </div>
+              <div className="flex self-start rounded-full bg-muted/60 p-1">
                 <Button
-                  variant={filter === 'following' ? 'default' : 'outline'}
+                  variant={sortBy === 'newest' && filter === 'all' ? 'default' : 'ghost'}
+                  size="sm"
+                  className="h-8 rounded-full px-3 text-xs sm:text-sm"
+                  onClick={() => {
+                    setSortBy('newest')
+                    setFilter('all')
+                  }}
+                >
+                  Nuevo
+                </Button>
+                <Button
+                  variant={sortBy === 'popular' && filter === 'all' ? 'default' : 'ghost'}
+                  size="sm"
+                  className="h-8 rounded-full px-3 text-xs sm:text-sm"
+                  onClick={() => {
+                    setSortBy('popular')
+                    setFilter('all')
+                  }}
+                >
+                  <TrendingUp className="mr-1 h-3.5 w-3.5" />
+                  Popular
+                </Button>
+                <Button
+                  variant={filter === 'following' ? 'default' : 'ghost'}
                   size="sm"
                   className="h-8 rounded-full px-3 text-xs sm:text-sm"
                   onClick={() => {
@@ -328,7 +273,7 @@ export default function Page() {
                   }}
                 >
                   <Users className="mr-1 h-3.5 w-3.5" />
-                  Los que sigo
+                  Mi circulo
                 </Button>
               </div>
             </div>
@@ -349,62 +294,92 @@ export default function Page() {
           </div>
         )}
 
-        <div className="flex flex-col gap-6">
-          {allWorkouts.map((workout) => (
-            <WorkoutCard key={workout.id} workout={workout} />
-          ))}
+        {isLoading && (
+          <div className="flex flex-col gap-6">
+            {[1, 2, 3].map((i) => (
+              <FeedWorkoutCardSkeleton key={i} />
+            ))}
+          </div>
+        )}
 
-          <div ref={sentinelRef} />
-
-          {isFetchingNextPage && (
-            <div className="flex flex-col items-center justify-center gap-4 py-6">
-              <Loader2 className="h-6 w-6 animate-spin text-emerald-500" />
-              <p className="text-sm text-muted-foreground">Cargando mas workouts...</p>
-            </div>
-          )}
-
-          {!hasNextPage && !isFetchingNextPage && allWorkouts.length > 0 && (
-            <div className="flex items-center justify-center py-6">
-              <p className="text-xs text-muted-foreground">
-                Has visto todos los workouts disponibles
-              </p>
-            </div>
-          )}
-
-          {allWorkouts.length === 0 && !isFetchingNextPage && (
-            <div className="rounded-[28px] border border-dashed border-border/70 bg-card/50 px-6 py-12 text-center">
-              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-muted/70">
-                <Search className="h-6 w-6 text-muted-foreground" />
+        {!isLoading && error && (
+          <div className="flex items-center justify-center px-2 py-4">
+            <div className="flex w-full max-w-lg flex-col items-center gap-4 rounded-[28px] border border-destructive/20 bg-destructive/5 px-6 py-8 text-center">
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-destructive/10">
+                <RefreshCcw className="h-6 w-6 text-destructive" />
               </div>
-              <h2 className="mt-4 text-lg font-semibold text-foreground">
-                {debouncedSearch
-                  ? 'No encontramos resultados para tu busqueda'
-                  : filter === 'following'
-                  ? 'Aun no hay workouts de tu circulo'
-                  : 'Todavia no hay workouts publicos'}
-              </h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {debouncedSearch
-                  ? 'Prueba con otro titulo, creador o tag para seguir explorando.'
-                  : filter === 'following'
-                  ? 'Empieza a seguir a gente o crea tu propio workout para verlo aqui.'
-                  : 'Cuando haya workouts visibles aqui, apareceran en este feed.'}
-              </p>
-              {(debouncedSearch || filter === 'following') && (
-                <Button
-                  variant="ghost"
-                  className="mt-4"
-                  onClick={() => {
-                    setSearch('')
-                    setFilter('all')
-                  }}
-                >
-                  {debouncedSearch ? 'Limpiar busqueda' : 'Ver feed publico'}
-                </Button>
-              )}
+              <div className="space-y-1">
+                <p className="text-lg font-semibold text-foreground">No pudimos cargar el feed</p>
+                <p className="text-sm text-muted-foreground">
+                  {error instanceof Error ? error.message : 'Ocurrio un error inesperado al cargar los workouts.'}
+                </p>
+              </div>
+              <Button onClick={() => refetch()} disabled={isRefetching} className="gap-2">
+                {isRefetching ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCcw className="h-4 w-4" />}
+                Reintentar
+              </Button>
             </div>
-          )}
-        </div>
+          </div>
+        )}
+
+        {!isLoading && !error && (
+          <div className="flex flex-col gap-6">
+            {allWorkouts.map((workout) => (
+              <WorkoutCard key={workout.id} workout={workout} />
+            ))}
+
+            <div ref={sentinelRef} />
+
+            {isFetchingNextPage && (
+              <div className="flex flex-col items-center justify-center gap-4 py-6">
+                <Loader2 className="h-6 w-6 animate-spin text-emerald-500" />
+                <p className="text-sm text-muted-foreground">Cargando mas workouts...</p>
+              </div>
+            )}
+
+            {!hasNextPage && !isFetchingNextPage && allWorkouts.length > 0 && (
+              <div className="flex items-center justify-center py-6">
+                <p className="text-xs text-muted-foreground">
+                  Has visto todos los workouts disponibles
+                </p>
+              </div>
+            )}
+
+            {allWorkouts.length === 0 && !isFetchingNextPage && (
+              <div className="rounded-[28px] border border-dashed border-border/70 bg-card/50 px-6 py-12 text-center">
+                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-muted/70">
+                  <Search className="h-6 w-6 text-muted-foreground" />
+                </div>
+                <h2 className="mt-4 text-lg font-semibold text-foreground">
+                  {debouncedSearch
+                    ? 'No encontramos resultados para tu busqueda'
+                    : filter === 'following'
+                    ? 'Aun no hay workouts de tu circulo'
+                    : 'Todavia no hay workouts publicos'}
+                </h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {debouncedSearch
+                    ? 'Prueba con otro titulo, creador o tag para seguir explorando.'
+                    : filter === 'following'
+                    ? 'Empieza a seguir a gente o crea tu propio workout para verlo aqui.'
+                    : 'Cuando haya workouts visibles aqui, apareceran en este feed.'}
+                </p>
+                {(debouncedSearch || filter === 'following') && (
+                  <Button
+                    variant="ghost"
+                    className="mt-4"
+                    onClick={() => {
+                      setSearch('')
+                      setFilter('all')
+                    }}
+                  >
+                    {debouncedSearch ? 'Limpiar busqueda' : 'Ver feed publico'}
+                  </Button>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )

@@ -222,7 +222,7 @@ async function fetchWorkoutWindow(
   const { from, to, filter, sortBy } = opts
   const SELECT_FIELDS = `
     id, user_id, title, description, visibility, created_at, updated_at,
-    rating, difficulty, duration_minutes, thumbnail_url, tags, is_draft,
+    rating, difficulty, estimated_time, exp_earned, cover, audio, stats, tags,
     user:users!user_id(id, username, name, avatar_url),
     workout_sections(
       order_index,
@@ -244,7 +244,6 @@ async function fetchWorkoutWindow(
     visibilities.push('public')
   }
   query = query.in('visibility', visibilities)
-  query = query.not('is_draft', 'is', true)
 
   if (filter === 'following' && user) {
     const followedIds = await getFollowedUserIds(supabase, user.id)
@@ -376,7 +375,6 @@ export async function countNewWorkoutsAction(
       visibilities.push('public')
     }
     query = query.in('visibility', visibilities)
-    query = query.not('is_draft', 'is', true)
 
     if (filter === 'following' && user) {
       const followedIds = await getFollowedUserIds(supabase, user.id)
