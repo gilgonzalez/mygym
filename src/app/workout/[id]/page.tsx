@@ -168,11 +168,6 @@ export default function WorkoutSessionPage({ params }: { params: { id: string } 
     }
   }, [workoutData])
 
-  const exerciseDescriptionMap = useMemo(
-    () => buildExerciseDescriptionMap(workout?.description),
-    [workout?.description]
-  )
-
   const isChallengeWorkout = Boolean(workout?.challenge?.mode === 'amrap_section')
 
   // Initialize store with workout data
