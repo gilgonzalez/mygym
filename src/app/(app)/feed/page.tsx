@@ -11,7 +11,6 @@ import {
   Sparkles,
   TrendingUp,
   Users,
-  ArrowUpCircle,
 } from 'lucide-react'
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
@@ -281,16 +280,28 @@ export default function Page() {
         </div>
 
         {(newWorkoutsCount ?? 0) > 0 && !isLoading && (
-          <div className="sticky top-4 z-20 flex justify-center">
-            <Button
+          <div className="sticky top-4 z-20">
+            <button
+              type="button"
               onClick={handleLoadNew}
-              className="group gap-2 rounded-full bg-gradient-to-r from-emerald-500 to-emerald-400 text-white shadow-[0_4px_20px_-6px_rgba(16,185,129,0.5)] hover:shadow-[0_6px_24px_-8px_rgba(16,185,129,0.7)] transition-all duration-300"
+              className="group flex w-full items-center gap-3 rounded-full border border-border/70 bg-background/80 px-3.5 py-2.5 text-foreground shadow-[0_1px_2px_rgba(0,0,0,0.04)] backdrop-blur-md transition-all duration-200 hover:bg-muted/40 hover:border-border active:scale-[0.998] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:gap-4 sm:px-4 sm:py-2.5"
             >
-              <ArrowUpCircle className="h-4 w-4 transition-transform group-hover:-translate-y-0.5" />
-              <span className="text-sm font-semibold">
-                +{newWorkoutsCount} workout{newWorkoutsCount === 1 ? '' : 's'} nuevo{newWorkoutsCount === 1 ? '' : 's'}
+              <span className="relative flex shrink-0">
+                <span className="flex h-2.5 w-2.5 rounded-full bg-emerald-500" />
+                <span className="absolute inset-0 flex h-2.5 w-2.5 rounded-full bg-emerald-500 animate-ping opacity-60" />
               </span>
-            </Button>
+
+              <span className="min-w-0 flex-1 truncate text-left text-sm font-semibold text-foreground sm:text-[15px]">
+                {newWorkoutsCount === 1 ? '1 workout nuevo' : `${newWorkoutsCount} workouts nuevos`}
+              </span>
+
+              <span className="flex shrink-0 items-center justify-center rounded-full text-foreground/70 transition-all duration-200 group-hover:text-foreground group-hover:translate-x-0.5 group-hover:-translate-y-0.5">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 5v14" />
+                  <path d="m5 12 7-7 7 7" />
+                </svg>
+              </span>
+            </button>
           </div>
         )}
 
