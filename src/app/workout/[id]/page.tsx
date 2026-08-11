@@ -85,43 +85,62 @@ export default function WorkoutSessionPage({ params }: { params: { id: string } 
   } = useWorkoutStore()
   
   // Fetch Workout Data
-  const { data: workoutData, isLoading, isError, refetch } = useQuery({
+  const { data: workoutData, isLoading, error: queryError, refetch } = useQuery({
     queryKey: ['workout', params.id],
     queryFn: async () => {
       const result = await getWorkoutById(params.id)
       if (!result.success || !result.data) {
-        throw new Error(result.error || 'Failed to fetch workout')
+        return {
+          workout: null as null,
+          errorCode: result.errorCode || 'unknown',
+          errorMessage: result.error || 'No se pudo cargar el workout',
+        }
       }
-      return result.data
+      return {
+        workout: result.data,
+        errorCode: null as null | 'notFound' | 'forbidden' | 'unknown',
+        errorMessage: null as null | string,
+      }
     }
   })
 
-  const exerciseDescriptionMap = useMemo(
-    () => buildExerciseDescriptionMap(workoutData?.description),
-    [workoutData?.description]
-  )
+  const fetchErrorInfo = (() => {
+    if (!queryError) return workoutData ?? null
+    return {
+      workout: null,
+      errorCode: 'unknown' as const,
+      errorMessage: (queryError as Error)?.message || 'Error desconocido',
+    }
+  })()
+
+  const errorCode = fetchErrorInfo?.errorCode ?? null
+  const errorMessage = fetchErrorInfo?.errorMessage ?? null
+  const isError = Boolean(errorCode)
 
   // Map DB data to View Type
   const workout: LocalWorkout | null = useMemo(() => {
-    if (!workoutData) return null
+    if (!workoutData?.workout) return null
+    const raw = workoutData.workout
+
+    const descMap = buildExerciseDescriptionMap(raw.description)
 
     return {
-      id: workoutData.id,
-      title: workoutData.title,
-      cover: workoutData.cover || undefined,
-      description: workoutData.description || '',
-      tags: workoutData.tags || [],
-      difficulty: workoutData.difficulty || undefined,
-      audio: workoutData.audio || [],
-      challenge: workoutData.challenge
+      id: raw.id,
+      title: raw.title,
+      cover: raw.cover || undefined,
+      description: raw.description || '',
+      tags: raw.tags || [],
+      difficulty: raw.difficulty || undefined,
+      audio: raw.audio || [],
+      challenge: raw.challenge
         ? {
             mode: 'amrap_section',
-            challengeSectionId: workoutData.challenge.challenge_section_id,
-            timeCapSeconds: workoutData.challenge.time_cap_seconds,
+            challengeSectionId: raw.challenge.challenge_section_id,
+            timeCapSeconds: raw.challenge.time_cap_seconds,
             scoreType: 'rounds_plus_reps',
           }
         : null,
-      sections: workoutData.sections.map(s => ({
+      sections: raw.sections.map(s => ({
         id: s.id,
         name: s.name,
         orderType: (s.type as 'linear' | 'single') || 'single',
@@ -141,13 +160,13 @@ export default function WorkoutSessionPage({ params }: { params: { id: string } 
             },
             steps: e.tutorial.steps || [],
           } : undefined,
-          description: e.description || exerciseDescriptionMap.get(normalizeExerciseKey(e.name)) || '',
+          description: e.description || descMap.get(normalizeExerciseKey(e.name)) || '',
           muscle_groups: e.muscle_group || [],
           equipment: e.equipment || []
         }))
       }))
     }
-  }, [exerciseDescriptionMap, workoutData])
+  }, [workoutData])
 
   const isChallengeWorkout = Boolean(workout?.challenge?.mode === 'amrap_section')
 
@@ -305,7 +324,7 @@ export default function WorkoutSessionPage({ params }: { params: { id: string } 
   }
   
   if (isError || (!isLoading && !workout)) {
-    return <WorkoutError onRetry={() => refetch()} />
+    return <WorkoutError onRetry={() => refetch()} errorCode={errorCode || undefined} error={errorMessage || undefined} />
   }
 
   // 1. Completion View

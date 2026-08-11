@@ -433,7 +433,7 @@ function CreateWorkoutContent() {
                 challengeSectionId: w.challenge?.challenge_section_id || w.sections[0]?.id,
                 timeCapSeconds: w.challenge?.time_cap_seconds || 600,
             },
-            sections: w.sections.map((s: any, sIdx: number) => ({
+            sections: w.sections.map((s: any) => ({
                 id: s.id,
                 name: s.name,
                 orderType: (s.type as any) || 'single',
@@ -1146,6 +1146,13 @@ function CreateWorkoutContent() {
 
           <div className="flex w-full flex-col items-end gap-1.5 sm:w-auto sm:gap-2 sm:lg:flex-row sm:lg:items-center sm:lg:justify-end sm:lg:gap-2">
             <div className="flex w-full flex-nowrap items-center justify-between gap-1.5 overflow-x-auto scrollbar-hide sm:w-auto sm:flex-wrap sm:justify-end sm:gap-2">
+              <Link
+                href="/feed"
+                className="sm:hidden shrink-0 rounded-full border border-border/60 p-1.5 text-muted-foreground transition-colors hover:text-foreground"
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </Link>
+
               <Button
                 variant="outline"
                 size="sm"
@@ -1274,7 +1281,6 @@ function CreateWorkoutContent() {
                     {sectionFields.map((section, index) => {
                       const sectionAmrapEnabled = watch(`sections.${index}.amrap.enabled`)
                       const sectionTimeCap = watch(`sections.${index}.amrap.timeCapSeconds`) || 600
-                      const sectionTimeCapMinutes = sectionTimeCap / 60
                       const exerciseCount = (section.exercises || []).length
 
                       return (

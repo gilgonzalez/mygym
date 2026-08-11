@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import type { FollowStatus } from '@/types/social'
 import { Workout, WorkoutLikerPreview } from '@/types/workout/composite'
 
-export async function getWorkoutById(id: string): Promise<{ success: boolean, data?: Workout, error?: string }> {
+export async function getWorkoutById(id: string): Promise<{ success: boolean, data?: Workout, error?: string, errorCode?: 'notFound' | 'forbidden' | 'unknown' }> {
   try {
     const supabase = await createClient()
     const {
@@ -62,8 +62,31 @@ export async function getWorkoutById(id: string): Promise<{ success: boolean, da
       .eq('id', id)
       .single()
 
-    if (error) throw error
-    if (!data) throw new Error('Workout no encontrado')
+    if (error) {
+      const code = error.code || ''
+      if (code === 'PGRST116' || /no rows?/i.test(error.message || '')) {
+        return {
+          success: false,
+          error: 'Workout no encontrado',
+          errorCode: 'notFound',
+        }
+      }
+      if (code === '42501' || /policy.*violation/i.test(error.message || '')) {
+        return {
+          success: false,
+          error: 'No tienes permiso para ver este workout',
+          errorCode: 'forbidden',
+        }
+      }
+      throw error
+    }
+    if (!data) {
+      return {
+        success: false,
+        error: 'Workout no encontrado',
+        errorCode: 'notFound',
+      }
+    }
 
     let viewerFollowStatus: FollowStatus | undefined
 
@@ -177,6 +200,10 @@ export async function getWorkoutById(id: string): Promise<{ success: boolean, da
     return { success: true, data: workout }
   } catch (error: any) {
     console.error('Error fetching workout:', error)
-    return { success: false, error: error.message }
+    return {
+      success: false,
+      error: error?.message || 'Error desconocido al cargar el workout',
+      errorCode: 'unknown',
+    }
   }
 }

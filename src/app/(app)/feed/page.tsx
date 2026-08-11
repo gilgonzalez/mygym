@@ -1,116 +1,212 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import WorkoutCard from '@/components/WorkoutCard'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Loader2, RefreshCcw, Search, Sparkles, TrendingUp } from 'lucide-react'
-import { useQuery } from '@tanstack/react-query'
-import { getWorkoutsAction } from '@/app/actions/workout/list'
+import {
+  Loader2,
+  RefreshCcw,
+  Search,
+  Sparkles,
+  TrendingUp,
+  Users,
+} from 'lucide-react'
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
+import { supabase } from '@/lib/supabase'
+import {
+  getWorkoutsAction,
+  type FeedSort,
+  type FeedFilter,
+} from '@/app/actions/workout/list'
+import type { Database } from '@/types/database'
 
-type FeedSort = 'newest' | 'popular'
+type DbWorkoutRow = Database['public']['Tables']['workouts']['Row']
+
+const PAGE_SIZE = 8
 
 export default function Page() {
   const [sortBy, setSortBy] = useState<FeedSort>('newest')
+  const [filter, setFilter] = useState<FeedFilter>('all')
   const [search, setSearch] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+  const [newestCreatedAt, setNewestCreatedAt] = useState<string | null>(null)
+  const [realtimeNewCount, setRealtimeNewCount] = useState<number>(0)
+  const [viewerId, setViewerId] = useState<string | null>(null)
+  const [followingIds, setFollowingIds] = useState<string[]>([])
+  const sentinelRef = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search)
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [search])
+
+  useEffect(() => {
+    let active = true
+    ;(async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (!active) return
+      setViewerId(user?.id ?? null)
+    })()
+    return () => {
+      active = false
+    }
+  }, [])
+
+  useQuery({
+    queryKey: ['feed-following-ids', { viewerId, filter }],
+    queryFn: async () => {
+      if (filter !== 'following' || !viewerId) {
+        setFollowingIds([])
+        return [] as string[]
+      }
+
+      const { data, error } = await supabase
+        .from('user_follows')
+        .select('followed_id')
+        .eq('follower_id', viewerId)
+        .eq('status', 'accepted')
+
+      if (error) return [] as string[]
+      const ids = (data ?? []).map((r) => r.followed_id)
+      setFollowingIds(ids)
+      return ids
+    },
+    enabled: filter === 'following' && !!viewerId,
+  })
 
   const {
-    data: workouts = [],
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
     isLoading,
     error,
     refetch,
     isRefetching,
-  } = useQuery({
-    queryKey: ['workouts'],
-    queryFn: async () => {
-      const res = await getWorkoutsAction()
+  } = useInfiniteQuery({
+    queryKey: ['workouts', { sortBy, filter, search: debouncedSearch }],
+    queryFn: async ({ pageParam = 1 }) => {
+      const res = await getWorkoutsAction({
+        page: pageParam as number,
+        pageSize: PAGE_SIZE,
+        sortBy,
+        filter,
+        search: debouncedSearch,
+      })
       if (!res.success) throw new Error(res.error)
-      return res.data || []
-    }
+      return res.data!
+    },
+    initialPageParam: 1,
+    getNextPageParam: (lastPage, allPages) => {
+      if (!lastPage?.hasMore) return undefined
+      return allPages.length + 1
+    },
   })
 
-  const filteredWorkouts = useMemo(() => {
-    const normalizedSearch = search.trim().toLowerCase()
+  const allWorkouts = useMemo(() => {
+    if (!data?.pages) return []
+    return data.pages.flatMap((p) => p.workouts ?? [])
+  }, [data])
 
-    const matching = workouts.filter((workout) => {
-      if (!normalizedSearch) return true
-
-      const haystack = [
-        workout.title,
-        workout.description,
-        workout.user?.name,
-        workout.user?.username,
-        ...(workout.tags || []),
-      ]
-        .filter(Boolean)
-        .join(' ')
-        .toLowerCase()
-
-      return haystack.includes(normalizedSearch)
-    })
-
-    return [...matching].sort((a, b) => {
-      if (sortBy === 'popular') {
-        const popularityA = (a.likes_count || 0) + (a.rating || 0) * 10
-        const popularityB = (b.likes_count || 0) + (b.rating || 0) * 10
-        return popularityB - popularityA
+  useEffect(() => {
+    if (allWorkouts.length > 0) {
+      const dates = allWorkouts
+        .map((w) => w.created_at)
+        .filter(Boolean) as string[]
+      if (dates.length > 0) {
+        dates.sort((a, b) => new Date(b).getTime() - new Date(a).getTime())
+        setNewestCreatedAt(dates[0])
       }
+    }
+  }, [allWorkouts])
 
-      return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
+  useEffect(() => {
+    setRealtimeNewCount(0)
+  }, [debouncedSearch, filter, sortBy])
+
+  useEffect(() => {
+    const channelName = 'feed-workouts-inserts'
+    const channel = supabase.channel(channelName, {
+      config: { broadcast: { self: false } },
     })
-  }, [search, sortBy, workouts])
 
-  if (isLoading) {
-    return (
-      <div className="mx-auto flex w-full max-w-7xl justify-center px-4 py-6 sm:px-6">
-        <div className="w-full max-w-5xl space-y-6">
-          <div className="rounded-[28px] border border-border/60 bg-card/70 p-4 shadow-sm backdrop-blur sm:p-5 animate-pulse">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-              <div className="space-y-2">
-                <div className="h-6 w-28 rounded-full bg-muted/70" />
-                <div className="space-y-1.5">
-                  <div className="h-8 w-56 rounded-md bg-muted/70 sm:h-9 sm:w-64" />
-                  <div className="h-4 w-full max-w-lg rounded-md bg-muted/50" />
-                </div>
-              </div>
-              <div className="flex flex-col gap-3 sm:min-w-[320px] sm:max-w-[360px]">
-                <div className="h-10 w-full rounded-full bg-muted/60" />
-                <div className="h-10 w-48 rounded-full bg-muted/60" />
-              </div>
-            </div>
-          </div>
+    channel
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'workouts',
+        },
+        (payload: any) => {
+          const row = payload.new as (DbWorkoutRow & { cover?: string | null; estimated_time?: number | null }) | null | undefined
+          if (!row) return
 
-          <div className="flex flex-col gap-6">
-            {[1, 2, 3].map((i) => (
-              <FeedWorkoutCardSkeleton key={i} />
-            ))}
-          </div>
-        </div>
-      </div>
+          if (row.visibility !== 'public' && row.visibility !== 'followers') return
+          if (!row.created_at) return
+          if (newestCreatedAt && new Date(row.created_at).getTime() <= new Date(newestCreatedAt).getTime()) return
+
+          if (filter === 'following') {
+            const allowed = viewerId ? [...followingIds, viewerId] : [...followingIds]
+            if (!row.user_id || !allowed.includes(row.user_id)) return
+          }
+
+          const needle = debouncedSearch.trim().toLowerCase()
+          if (needle) {
+            const haystack = [
+              row.title ?? '',
+              row.description ?? '',
+              ...(Array.isArray(row.tags) ? (row.tags as string[]) : []),
+            ]
+              .filter(Boolean)
+              .join(' ')
+              .toLowerCase()
+            if (!haystack.includes(needle)) return
+          }
+
+          setRealtimeNewCount((prev) => prev + 1)
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [newestCreatedAt, filter, viewerId, followingIds, debouncedSearch])
+
+  useEffect(() => {
+    const element = sentinelRef.current
+    if (!element) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0]
+        if (entry.isIntersecting && hasNextPage && !isFetchingNextPage) {
+          fetchNextPage()
+        }
+      },
+      {
+        rootMargin: '200px',
+        threshold: 0,
+      }
     )
+
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [fetchNextPage, hasNextPage, isFetchingNextPage])
+
+  const handleLoadNew = async () => {
+    setRealtimeNewCount(0)
+    await refetch()
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  if (error) {
-    return (
-      <div className="flex min-h-[50vh] items-center justify-center px-4">
-        <div className="flex w-full max-w-lg flex-col items-center gap-4 rounded-[28px] border border-destructive/20 bg-destructive/5 px-6 py-8 text-center">
-          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-destructive/10">
-            <RefreshCcw className="h-6 w-6 text-destructive" />
-          </div>
-          <div className="space-y-1">
-            <p className="text-lg font-semibold text-foreground">No pudimos cargar el feed</p>
-            <p className="text-sm text-muted-foreground">
-              {error instanceof Error ? error.message : 'Ocurrio un error inesperado al cargar los workouts.'}
-            </p>
-          </div>
-          <Button onClick={() => refetch()} disabled={isRefetching} className="gap-2">
-            {isRefetching ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCcw className="h-4 w-4" />}
-            Reintentar
-          </Button>
-        </div>
-      </div>
-    )
-  }
+  const newWorkoutsCount = realtimeNewCount
 
   return (
     <div className="mx-auto flex w-full max-w-7xl justify-center px-4 py-6 sm:px-6">
@@ -120,7 +216,7 @@ export default function Page() {
             <div className="space-y-2">
               <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-600 dark:text-emerald-400">
                 <Sparkles className="h-3.5 w-3.5" />
-                Feed publico
+                {filter === 'following' ? 'Mi circulo' : 'Feed publico'}
               </div>
               <div>
                 <h1 className="bg-gradient-to-r from-green-500 via-green-600 to-slate-900 bg-clip-text text-2xl font-bold tracking-tight text-transparent dark:from-emerald-400 dark:to-slate-300 sm:text-3xl">
@@ -142,54 +238,159 @@ export default function Page() {
                   className="h-10 rounded-full border-border/70 bg-background/80 pl-9"
                 />
               </div>
-              <div className="flex gap-1 self-start rounded-full bg-muted/60 p-1">
+              <div className="flex self-start rounded-full bg-muted/60 p-1">
                 <Button
-                  variant={sortBy === 'newest' ? 'default' : 'ghost'}
+                  variant={sortBy === 'newest' && filter === 'all' ? 'default' : 'ghost'}
                   size="sm"
                   className="h-8 rounded-full px-3 text-xs sm:text-sm"
-                  onClick={() => setSortBy('newest')}
+                  onClick={() => {
+                    setSortBy('newest')
+                    setFilter('all')
+                  }}
                 >
                   Nuevo
                 </Button>
                 <Button
-                  variant={sortBy === 'popular' ? 'default' : 'ghost'}
+                  variant={sortBy === 'popular' && filter === 'all' ? 'default' : 'ghost'}
                   size="sm"
                   className="h-8 rounded-full px-3 text-xs sm:text-sm"
-                  onClick={() => setSortBy('popular')}
+                  onClick={() => {
+                    setSortBy('popular')
+                    setFilter('all')
+                  }}
                 >
                   <TrendingUp className="mr-1 h-3.5 w-3.5" />
                   Popular
+                </Button>
+                <Button
+                  variant={filter === 'following' ? 'default' : 'ghost'}
+                  size="sm"
+                  className="h-8 rounded-full px-3 text-xs sm:text-sm"
+                  onClick={() => {
+                    setFilter('following')
+                    setSortBy('newest')
+                  }}
+                >
+                  <Users className="mr-1 h-3.5 w-3.5" />
+                  Mi circulo
                 </Button>
               </div>
             </div>
           </div>
         </div>
-        
-        <div className="flex flex-col gap-6">
-          {filteredWorkouts.map((workout) => (
-            <WorkoutCard key={workout.id} workout={workout} />
-          ))}
-          {filteredWorkouts.length === 0 && (
-            <div className="rounded-[28px] border border-dashed border-border/70 bg-card/50 px-6 py-12 text-center">
-              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-muted/70">
-                <Search className="h-6 w-6 text-muted-foreground" />
+
+        {(newWorkoutsCount ?? 0) > 0 && !isLoading && (
+          <div className="sticky top-4 z-20">
+            <button
+              type="button"
+              onClick={handleLoadNew}
+              className="group flex w-full items-center gap-3 rounded-full border border-border/70 bg-background/80 px-3.5 py-2.5 text-foreground shadow-[0_1px_2px_rgba(0,0,0,0.04)] backdrop-blur-md transition-all duration-200 hover:bg-muted/40 hover:border-border active:scale-[0.998] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:gap-4 sm:px-4 sm:py-2.5"
+            >
+              <span className="relative flex shrink-0">
+                <span className="flex h-2.5 w-2.5 rounded-full bg-emerald-500" />
+                <span className="absolute inset-0 flex h-2.5 w-2.5 rounded-full bg-emerald-500 animate-ping opacity-60" />
+              </span>
+
+              <span className="min-w-0 flex-1 truncate text-left text-sm font-semibold text-foreground sm:text-[15px]">
+                {newWorkoutsCount === 1 ? '1 workout nuevo' : `${newWorkoutsCount} workouts nuevos`}
+              </span>
+
+              <span className="flex shrink-0 items-center justify-center rounded-full text-foreground/70 transition-all duration-200 group-hover:text-foreground group-hover:translate-x-0.5 group-hover:-translate-y-0.5">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 5v14" />
+                  <path d="m5 12 7-7 7 7" />
+                </svg>
+              </span>
+            </button>
+          </div>
+        )}
+
+        {isLoading && (
+          <div className="flex flex-col gap-6">
+            {[1, 2, 3].map((i) => (
+              <FeedWorkoutCardSkeleton key={i} />
+            ))}
+          </div>
+        )}
+
+        {!isLoading && error && (
+          <div className="flex items-center justify-center px-2 py-4">
+            <div className="flex w-full max-w-lg flex-col items-center gap-4 rounded-[28px] border border-destructive/20 bg-destructive/5 px-6 py-8 text-center">
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-destructive/10">
+                <RefreshCcw className="h-6 w-6 text-destructive" />
               </div>
-              <h2 className="mt-4 text-lg font-semibold text-foreground">
-                {search ? 'No encontramos resultados para tu busqueda' : 'Todavia no hay workouts publicos'}
-              </h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {search
-                  ? 'Prueba con otro titulo, creador o tag para seguir explorando.'
-                  : 'Cuando haya workouts visibles aqui, apareceran en este feed.'}
-              </p>
-              {search && (
-                <Button variant="ghost" className="mt-4" onClick={() => setSearch('')}>
-                  Limpiar busqueda
-                </Button>
-              )}
+              <div className="space-y-1">
+                <p className="text-lg font-semibold text-foreground">No pudimos cargar el feed</p>
+                <p className="text-sm text-muted-foreground">
+                  {error instanceof Error ? error.message : 'Ocurrio un error inesperado al cargar los workouts.'}
+                </p>
+              </div>
+              <Button onClick={() => refetch()} disabled={isRefetching} className="gap-2">
+                {isRefetching ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCcw className="h-4 w-4" />}
+                Reintentar
+              </Button>
             </div>
-          )}
-        </div>
+          </div>
+        )}
+
+        {!isLoading && !error && (
+          <div className="flex flex-col gap-6">
+            {allWorkouts.map((workout) => (
+              <WorkoutCard key={workout.id} workout={workout} />
+            ))}
+
+            <div ref={sentinelRef} />
+
+            {isFetchingNextPage && (
+              <div className="flex flex-col items-center justify-center gap-4 py-6">
+                <Loader2 className="h-6 w-6 animate-spin text-emerald-500" />
+                <p className="text-sm text-muted-foreground">Cargando mas workouts...</p>
+              </div>
+            )}
+
+            {!hasNextPage && !isFetchingNextPage && allWorkouts.length > 0 && (
+              <div className="flex items-center justify-center py-6">
+                <p className="text-xs text-muted-foreground">
+                  Has visto todos los workouts disponibles
+                </p>
+              </div>
+            )}
+
+            {allWorkouts.length === 0 && !isFetchingNextPage && (
+              <div className="rounded-[28px] border border-dashed border-border/70 bg-card/50 px-6 py-12 text-center">
+                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-muted/70">
+                  <Search className="h-6 w-6 text-muted-foreground" />
+                </div>
+                <h2 className="mt-4 text-lg font-semibold text-foreground">
+                  {debouncedSearch
+                    ? 'No encontramos resultados para tu busqueda'
+                    : filter === 'following'
+                    ? 'Aun no hay workouts de tu circulo'
+                    : 'Todavia no hay workouts publicos'}
+                </h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {debouncedSearch
+                    ? 'Prueba con otro titulo, creador o tag para seguir explorando.'
+                    : filter === 'following'
+                    ? 'Empieza a seguir a gente o crea tu propio workout para verlo aqui.'
+                    : 'Cuando haya workouts visibles aqui, apareceran en este feed.'}
+                </p>
+                {(debouncedSearch || filter === 'following') && (
+                  <Button
+                    variant="ghost"
+                    className="mt-4"
+                    onClick={() => {
+                      setSearch('')
+                      setFilter('all')
+                    }}
+                  >
+                    {debouncedSearch ? 'Limpiar busqueda' : 'Ver feed publico'}
+                  </Button>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )
