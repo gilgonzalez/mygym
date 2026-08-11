@@ -133,6 +133,7 @@ export async function getWorkoutsAction(): Promise<{ success: boolean, data?: Wo
       .from('workouts')
       .select(`
         *,
+        challenge:workout_challenges(*),
         user:users!user_id(id, username, name, avatar_url),
         workout_sections(
           order_index,
@@ -161,25 +162,32 @@ export async function getWorkoutsAction(): Promise<{ success: boolean, data?: Wo
     )
     const commentsCounts = await buildWorkoutCommentsCount(supabase, workoutIds)
 
-    const workouts: Workout[] = (data as any).map((workout: any) => ({
-      ...workout,
-      user: workout.user,
-      likes_count: likesCounts[workout.id] || 0,
-      is_liked: likedByUser[workout.id] || false,
-      likes_preview: likesPreviews[workout.id] || [],
-      comments_count: commentsCounts[workout.id] || 0,
-      viewer_follow_status:
-        workout.user_id && workout.user_id !== user?.id
-          ? followStatusByOwner[workout.user_id] || 'none'
-          : undefined,
-      sections: (workout.workout_sections || [])
-        .sort((a: any, b: any) => a.order_index - b.order_index)
-        .map((ws: any) => ({
-          ...ws.sections,
-          total_exercises: ws.sections.section_exercises?.[0]?.count || 0,
-          exercises: []
-        }))
-    }))
+    const workouts: Workout[] = (data as any).map((workout: any) => {
+      const challengeData = Array.isArray(workout.challenge)
+        ? workout.challenge[0]
+        : workout.challenge
+
+      return {
+        ...workout,
+        challenge: challengeData || null,
+        user: workout.user,
+        likes_count: likesCounts[workout.id] || 0,
+        is_liked: likedByUser[workout.id] || false,
+        likes_preview: likesPreviews[workout.id] || [],
+        comments_count: commentsCounts[workout.id] || 0,
+        viewer_follow_status:
+          workout.user_id && workout.user_id !== user?.id
+            ? followStatusByOwner[workout.user_id] || 'none'
+            : undefined,
+        sections: (workout.workout_sections || [])
+          .sort((a: any, b: any) => a.order_index - b.order_index)
+          .map((ws: any) => ({
+            ...ws.sections,
+            total_exercises: ws.sections.section_exercises?.[0]?.count || 0,
+            exercises: []
+          }))
+      }
+    })
 
     return { success: true, data: workouts }
   } catch (error: any) {
@@ -199,6 +207,7 @@ export async function getUserWorkoutsAction(userId: string): Promise<{ success: 
       .from('workouts')
       .select(`
         *,
+        challenge:workout_challenges(*),
         user:users!user_id(id, username, name, avatar_url),
         workout_sections(
           order_index,
@@ -223,21 +232,28 @@ export async function getUserWorkoutsAction(userId: string): Promise<{ success: 
     )
     const commentsCounts = await buildWorkoutCommentsCount(supabase, workoutIdsUser)
 
-    const workouts: Workout[] = (data as any).map((workout: any) => ({
-      ...workout,
-      user: workout.user,
-      likes_count: likesCounts[workout.id] || 0,
-      is_liked: likedByUser[workout.id] || false,
-      likes_preview: likesPreviews[workout.id] || [],
-      comments_count: commentsCounts[workout.id] || 0,
-      sections: (workout.workout_sections || [])
-        .sort((a: any, b: any) => a.order_index - b.order_index)
-        .map((ws: any) => ({
-          ...ws.sections,
-          total_exercises: ws.sections.section_exercises?.[0]?.count || 0,
-          exercises: []
-        }))
-    }))
+    const workouts: Workout[] = (data as any).map((workout: any) => {
+      const challengeData = Array.isArray(workout.challenge)
+        ? workout.challenge[0]
+        : workout.challenge
+
+      return {
+        ...workout,
+        challenge: challengeData || null,
+        user: workout.user,
+        likes_count: likesCounts[workout.id] || 0,
+        is_liked: likedByUser[workout.id] || false,
+        likes_preview: likesPreviews[workout.id] || [],
+        comments_count: commentsCounts[workout.id] || 0,
+        sections: (workout.workout_sections || [])
+          .sort((a: any, b: any) => a.order_index - b.order_index)
+          .map((ws: any) => ({
+            ...ws.sections,
+            total_exercises: ws.sections.section_exercises?.[0]?.count || 0,
+            exercises: []
+          }))
+      }
+    })
 
     return { success: true, data: workouts }
   } catch (error: any) {

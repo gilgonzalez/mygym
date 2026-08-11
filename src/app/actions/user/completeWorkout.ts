@@ -90,7 +90,6 @@ export async function completeWorkoutAction({ workoutId, durationMinutes, xpEarn
                 user_id: user.id,
                 mode: challengeResult.mode,
                 rounds_completed: challengeResult.roundsCompleted,
-                extra_reps: challengeResult.extraReps,
                 score: challengeResult.score,
                 time_cap_seconds: challengeResult.timeCapSeconds,
                 is_pr: isPr,

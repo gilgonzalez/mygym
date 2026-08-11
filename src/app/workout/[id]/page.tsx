@@ -266,7 +266,6 @@ export default function WorkoutSessionPage({ params }: { params: { id: string } 
       challengeResult: {
         mode: result.mode,
         roundsCompleted: result.roundsCompleted,
-        extraReps: result.extraReps,
         score: result.score,
         timeCapSeconds: result.timeCapSeconds,
       }
