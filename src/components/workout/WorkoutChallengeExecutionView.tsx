@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { LocalWorkout, LocalWorkoutChallengeResult } from '@/types/workout/viewTypes'
 import { ChevronLeft, Dumbbell, Pause, Play, Trophy, Zap } from 'lucide-react'
 import { formatDuration } from '@/lib/time'
+import { useWorkoutStore } from '@/store/workOutStore'
 
 interface WorkoutChallengeExecutionViewProps {
   workout: LocalWorkout
@@ -22,6 +23,9 @@ export function WorkoutChallengeExecutionView({
   onExit,
   onComplete,
 }: WorkoutChallengeExecutionViewProps) {
+  const pauseSessionClock = useWorkoutStore((state) => state.pauseSessionClock)
+  const resumeSessionClock = useWorkoutStore((state) => state.resumeSessionClock)
+
   const challenge = workout.challenge
   const challengeSection = useMemo(
     () => workout.sections.find((section) => section.id === challenge?.challengeSectionId) || workout.sections[0],
@@ -272,7 +276,20 @@ export function WorkoutChallengeExecutionView({
                           ? 'bg-emerald-500 hover:bg-emerald-400'
                           : 'bg-orange-500 hover:bg-orange-400'
                       }`}
-                      onClick={() => setIsPaused((previous) => !previous)}
+                      onClick={() => {
+                        // Tied to the overall session clock explicitly (rather than reactively
+                        // via an effect on isPaused) so it never races with the isPaused(true)
+                        // set inside finalizeChallenge when the time cap runs out.
+                        setIsPaused((previous) => {
+                          const next = !previous
+                          if (next) {
+                            pauseSessionClock()
+                          } else {
+                            resumeSessionClock()
+                          }
+                          return next
+                        })
+                      }}
                       aria-label={isPaused ? 'Reanudar reto' : 'Pausar reto'}
                     >
                       {isPaused ? <Play className="h-4 w-4 sm:mr-2" /> : <Pause className="h-4 w-4 sm:mr-2" />}

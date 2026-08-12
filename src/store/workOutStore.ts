@@ -33,6 +33,7 @@ interface WorkoutState {
   prevStep: () => void
   restartWorkout: () => void
   jumpToStep: (sectionIndex: number, exerciseIndex: number) => void
+  completeWorkout: () => void
 }
 
 function getCommittedElapsedMs(elapsedMs: number, lastActiveAt: number | null, now = Date.now()) {
@@ -149,6 +150,22 @@ export const useWorkoutStore = create<WorkoutState>((set, get) => ({
     })
   },
 
+  // Marks the whole session as finished. Used both when the normal exercise-by-exercise
+  // cursor runs out of steps, and when an AMRAP section (handled entirely outside this
+  // cursor, by WorkoutChallengeExecutionView) turns out to be the last section in the workout.
+  completeWorkout: () => {
+    const state = get()
+    const now = Date.now()
+
+    set({
+      isCompleted: true,
+      hasStarted: false,
+      endTime: now,
+      elapsedMs: getCommittedElapsedMs(state.elapsedMs, state.lastActiveAt, now),
+      lastActiveAt: null,
+    })
+  },
+
   prevStep: () => {
     const state = get()
     const { activeWorkout, currentSectionIndex, currentExerciseIndex, currentSet, isResting } = state
@@ -202,27 +219,13 @@ export const useWorkoutStore = create<WorkoutState>((set, get) => ({
           isResting: false,
         })
       } else {
-        const now = Date.now()
-        set({
-          isCompleted: true,
-          hasStarted: false,
-          endTime: now,
-          elapsedMs: getCommittedElapsedMs(state.elapsedMs, state.lastActiveAt, now),
-          lastActiveAt: null,
-        })
+        get().completeWorkout()
       }
     } else {
       if (nextCursor) {
         set({ isResting: true })
       } else {
-        const now = Date.now()
-        set({
-          isCompleted: true,
-          hasStarted: false,
-          endTime: now,
-          elapsedMs: getCommittedElapsedMs(state.elapsedMs, state.lastActiveAt, now),
-          lastActiveAt: null,
-        })
+        get().completeWorkout()
       }
     }
   }

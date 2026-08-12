@@ -35,7 +35,7 @@ export function getStepInfo(workout: LocalWorkout, cursor: WorkoutCursor): Worko
   }
 }
 
-function getFirstCursorFromSection(workout: LocalWorkout, fromSectionIndex: number): WorkoutCursor | null {
+export function getFirstCursorFromSection(workout: LocalWorkout, fromSectionIndex: number): WorkoutCursor | null {
   for (let sectionIndex = fromSectionIndex; sectionIndex < workout.sections.length; sectionIndex += 1) {
     const section = workout.sections[sectionIndex]
     if (section.exercises.length > 0) {

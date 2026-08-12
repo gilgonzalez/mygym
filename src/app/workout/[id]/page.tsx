@@ -5,10 +5,13 @@ import { useRouter } from 'next/navigation'
 import { WorkoutOverview } from '@/components/workout/WorkoutOverview'
 import { ActiveSession } from '@/components/workout/ActiveSession'
 import { WorkoutChallengeExecutionView } from '@/components/workout/WorkoutChallengeExecutionView'
+import { WorkoutChangeTypeView } from '@/components/workout/WorkoutChangeTypeView'
 import { WorkoutCompleted } from '@/components/workout/WorkoutCompleted'
 import { WorkoutError } from '@/components/workout/WorkoutError'
 import { LocalWorkout, LocalWorkoutChallengeResult } from '@/types/workout/viewTypes'
 import { useWorkoutStore } from '@/store/workOutStore'
+import { getFirstCursorFromSection } from '@/lib/workout/sessionNavigation'
+import { getWorkoutSegmentKind } from '@/lib/workout/segmentKind'
 import { useQuery } from '@tanstack/react-query'
 import { getWorkoutById } from '@/app/actions/workout/get'
 import { useAuthStore } from '@/store/authStore'
@@ -58,20 +61,23 @@ export default function WorkoutSessionPage({ params }: { params: { id: string } 
   const hasLoggedRef = useRef(false)
   const [currentLogId, setCurrentLogId] = useState<string | null>(null)
   const [xpEarnedState, setXpEarnedState] = useState<number>(0)
-  const [challengeHasStarted, setChallengeHasStarted] = useState(false)
-  const [challengeIsCompleted, setChallengeIsCompleted] = useState(false)
-  const [challengeResult, setChallengeResult] = useState<LocalWorkoutChallengeResult | null>(null)
-  const [challengeDurationSeconds, setChallengeDurationSeconds] = useState(0)
-  const [challengeLogId, setChallengeLogId] = useState<string | null>(null)
-  const [challengeXpEarned, setChallengeXpEarned] = useState(0)
-  
+  // Holds the result of the workout's AMRAP section (if it has one), captured whenever
+  // that section finishes so it can be attached to the final completion log regardless
+  // of whether the AMRAP section sits at the start, middle or end of the workout.
+  const [sectionChallengeResult, setSectionChallengeResult] = useState<LocalWorkoutChallengeResult | null>(null)
+  // Section indexes for which the mode-change transition screen (WorkoutChangeTypeView) has
+  // already been acknowledged. A section triggers it once, the first time it's reached with
+  // a different mode than the section before it; reset whenever the session (re)starts so
+  // it's shown again on a fresh attempt.
+  const [acknowledgedTransitionSections, setAcknowledgedTransitionSections] = useState<Set<number>>(new Set())
+
   // Zustand Store
-  const { 
-    activeWorkout, 
-    hasStarted, 
-    isCompleted, 
-    currentSectionIndex, 
-    currentExerciseIndex, 
+  const {
+    activeWorkout,
+    hasStarted,
+    isCompleted,
+    currentSectionIndex,
+    currentExerciseIndex,
     currentSet,
     isResting,
     startTime,
@@ -81,7 +87,8 @@ export default function WorkoutSessionPage({ params }: { params: { id: string } 
     endSession,
     nextStep,
     restartWorkout,
-    jumpToStep
+    jumpToStep,
+    completeWorkout
   } = useWorkoutStore()
   
   // Fetch Workout Data
@@ -168,31 +175,27 @@ export default function WorkoutSessionPage({ params }: { params: { id: string } 
     }
   }, [workoutData])
 
-  const isChallengeWorkout = Boolean(workout?.challenge?.mode === 'amrap_section')
+  // The whole session — every section, whatever its mode — is driven by the same store
+  // cursor; only the section *currently* under that cursor decides which execution view
+  // renders (see currentSectionKind further down, near the render logic).
 
   // Initialize store with workout data
   useEffect(() => {
-    if (workout && !isChallengeWorkout && (!activeWorkout || activeWorkout.id !== workout.id)) {
+    if (workout && (!activeWorkout || activeWorkout.id !== workout.id)) {
       initializeWorkout(workout)
     }
-  }, [workout, activeWorkout, initializeWorkout, isChallengeWorkout])
+  }, [workout, activeWorkout, initializeWorkout])
 
   useEffect(() => {
-    setChallengeHasStarted(false)
-    setChallengeIsCompleted(false)
-    setChallengeResult(null)
-    setChallengeDurationSeconds(0)
-    setChallengeLogId(null)
-    setChallengeXpEarned(0)
+    setSectionChallengeResult(null)
+    setAcknowledgedTransitionSections(new Set())
   }, [workout?.id])
 
   // Handle Workout Completion (Log Stats)
   useEffect(() => {
-    if (isChallengeWorkout) return
-
     if (isCompleted && activeWorkout && user && !hasLoggedRef.current) {
         hasLoggedRef.current = true
-        
+
         const durationMinutes = Math.max(1, Math.ceil(elapsedMs / 60000))
         const xpEarned = calcWorkoutXP(durationMinutes, false) // Base 50 + 5 per minute
         setXpEarnedState(xpEarned)
@@ -205,14 +208,26 @@ export default function WorkoutSessionPage({ params }: { params: { id: string } 
         completeWorkoutAction({
             workoutId: activeWorkout.id,
             durationMinutes: durationMinutes,
-            xpEarned: xpEarned
+            xpEarned: xpEarned,
+            ...(sectionChallengeResult ? {
+              challengeResult: {
+                mode: sectionChallengeResult.mode,
+                roundsCompleted: sectionChallengeResult.roundsCompleted,
+                extraReps: sectionChallengeResult.extraReps,
+                score: sectionChallengeResult.score,
+                timeCapSeconds: sectionChallengeResult.timeCapSeconds,
+              }
+            } : {})
         }).then((result) => {
             if (!result.success) {
                 console.error('Error logging workout stats:', result.error)
             } else {
-                const logData = result.data as { log_id?: string } | null | undefined
+                const logData = result.data as { log_id?: string; challenge_result?: { is_pr?: boolean } } | null | undefined
                 if (typeof logData?.log_id === 'string') {
                     setCurrentLogId(logData.log_id)
+                }
+                if (logData?.challenge_result?.is_pr) {
+                    setSectionChallengeResult((previous) => previous ? { ...previous, isPr: true } : previous)
                 }
             }
         })
@@ -224,13 +239,11 @@ export default function WorkoutSessionPage({ params }: { params: { id: string } 
         setCurrentLogId(null)
         setXpEarnedState(0)
     }
-  }, [isCompleted, activeWorkout, user, canSaveProgress, elapsedMs, isChallengeWorkout])
+  }, [isCompleted, activeWorkout, user, canSaveProgress, elapsedMs, sectionChallengeResult])
 
 
   // Helper to determine if we have a session in progress
-  const hasActiveSession = isChallengeWorkout
-    ? false
-    : activeWorkout?.id === workout?.id && !isCompleted && Boolean(
+  const hasActiveSession = activeWorkout?.id === workout?.id && !isCompleted && Boolean(
         startTime ||
         elapsedMs > 0 ||
         currentSectionIndex > 0 ||
@@ -242,126 +255,66 @@ export default function WorkoutSessionPage({ params }: { params: { id: string } 
   const handleStartFromOverview = () => {
     if (!workout) return
 
-    if (isChallengeWorkout) {
-      setChallengeResult(null)
-      setChallengeDurationSeconds(0)
-      setChallengeLogId(null)
-      setChallengeXpEarned(0)
-      setChallengeIsCompleted(false)
-      setChallengeHasStarted(true)
-      return
-    }
-
     initializeWorkout(workout)
     restartWorkout()
+    setAcknowledgedTransitionSections(new Set())
   }
 
   const handleJumpToExerciseFromOverview = (sectionIndex: number, exerciseIndex: number) => {
     if (!workout) return
     initializeWorkout(workout)
     jumpToStep(sectionIndex, exerciseIndex)
+    setAcknowledgedTransitionSections(new Set())
   }
 
-  const handleChallengeComplete = (result: LocalWorkoutChallengeResult, elapsedSeconds: number) => {
-    if (!workout) return
+  // Fires when the AMRAP section's time cap runs out or the user ends it early. Stores the
+  // score for the final completion screen/log, then either continues into the next section
+  // (if the AMRAP section wasn't the last one) or finishes the whole workout.
+  const handleAmrapSectionComplete = (result: LocalWorkoutChallengeResult) => {
+    if (!activeWorkout) return
 
-    setChallengeHasStarted(false)
-    setChallengeIsCompleted(true)
-    setChallengeResult(result)
-    setChallengeDurationSeconds(elapsedSeconds)
+    setSectionChallengeResult(result)
 
-    const durationMinutes = Math.max(1, Math.ceil(elapsedSeconds / 60))
-    const xpEarned = calcWorkoutXP(durationMinutes, false)
-    setChallengeXpEarned(xpEarned)
-
-    if (!user || !canSaveProgress) {
-      return
+    // Mirrors how normal exercise-by-exercise navigation advances between sections: skips
+    // past any section left with no exercises instead of assuming the very next one is valid.
+    const nextCursor = getFirstCursorFromSection(activeWorkout, currentSectionIndex + 1)
+    if (nextCursor) {
+      jumpToStep(nextCursor.sectionIndex, nextCursor.exerciseIndex)
+    } else {
+      completeWorkout()
     }
-
-    completeWorkoutAction({
-      workoutId: workout.id,
-      durationMinutes,
-      xpEarned,
-      challengeResult: {
-        mode: result.mode,
-        roundsCompleted: result.roundsCompleted,
-        extraReps: result.extraReps,
-        score: result.score,
-        timeCapSeconds: result.timeCapSeconds,
-      }
-    }).then((completionResult) => {
-      if (!completionResult.success) {
-        console.error('Error logging workout challenge stats:', completionResult.error)
-        return
-      }
-
-      const completionData = completionResult.data as
-        | { log_id?: string; challenge_result?: { is_pr?: boolean } }
-        | null
-        | undefined
-
-      if (typeof completionData?.log_id === 'string') {
-        setChallengeLogId(completionData.log_id)
-      }
-
-      if (completionData?.challenge_result?.is_pr) {
-        setChallengeResult((previous) => previous ? { ...previous, isPr: true } : previous)
-      }
-    })
-  }
-
-  const handleRestartChallenge = () => {
-    setChallengeResult(null)
-    setChallengeDurationSeconds(0)
-    setChallengeLogId(null)
-    setChallengeXpEarned(0)
-    setChallengeIsCompleted(false)
-    setChallengeHasStarted(true)
   }
 
   // Render Logic
-  if (isLoading || (workout && !isChallengeWorkout && !activeWorkout) || (activeWorkout && activeWorkout.id !== params.id)) {
+  if (isLoading || (workout && !activeWorkout) || (activeWorkout && activeWorkout.id !== params.id)) {
     return <WorkoutOverviewSkeleton />
   }
-  
+
   if (isError || (!isLoading && !workout)) {
     return <WorkoutError onRetry={() => refetch()} errorCode={errorCode || undefined} error={errorMessage || undefined} />
   }
 
   // 1. Completion View
-  if (isChallengeWorkout && challengeIsCompleted && workout && challengeResult) {
-    return (
-      <WorkoutCompleted
-        workout={workout}
-        onRestart={handleRestartChallenge}
-        initialLogId={challengeLogId}
-        xpEarned={challengeXpEarned}
-        canSaveProgress={canSaveProgress}
-        challengeResult={challengeResult}
-        durationOverrideSeconds={challengeDurationSeconds}
-      />
-    )
-  }
-
   if (isCompleted && activeWorkout) {
     return (
-      <WorkoutCompleted 
-        workout={activeWorkout} 
-        onRestart={restartWorkout} 
+      <WorkoutCompleted
+        workout={activeWorkout}
+        onRestart={restartWorkout}
         initialLogId={currentLogId}
         xpEarned={xpEarnedState}
         canSaveProgress={canSaveProgress}
+        challengeResult={sectionChallengeResult}
       />
     )
   }
 
   // 2. Intro View
-  if ((!hasStarted && !challengeHasStarted) && workout) {
+  if (!hasStarted && workout) {
     return (
-      <WorkoutOverview 
+      <WorkoutOverview
         workout={workout}
         onStart={handleStartFromOverview}
-        onResume={isChallengeWorkout ? undefined : startSession}
+        onResume={startSession}
         onBack={() => router.push('/feed')}
         hasActiveSession={hasActiveSession}
         onExerciseClick={handleJumpToExerciseFromOverview}
@@ -371,23 +324,56 @@ export default function WorkoutSessionPage({ params }: { params: { id: string } 
     )
   }
 
-  // 3. Active Session View
-  if (isChallengeWorkout && workout) {
+  if (!activeWorkout) return null
+
+  // 3. Active Session View — which execution UI renders depends on the *current* section's
+  // mode, not the workout as a whole, so normal and AMRAP sections can alternate freely.
+  const currentSection = activeWorkout.sections[currentSectionIndex]
+  const currentSectionKind = getWorkoutSegmentKind(activeWorkout, currentSectionIndex)
+  const previousSectionKind = currentSectionIndex > 0 ? getWorkoutSegmentKind(activeWorkout, currentSectionIndex - 1) : null
+
+  // Skip the transition screen when this is the very first section — there's no preceding
+  // mode to contrast against — or when its mode is unchanged from the section before it.
+  const needsModeTransition =
+    Boolean(currentSection) &&
+    previousSectionKind !== null &&
+    previousSectionKind !== currentSectionKind &&
+    !acknowledgedTransitionSections.has(currentSectionIndex)
+
+  if (needsModeTransition && currentSection) {
     return (
-      <WorkoutChallengeExecutionView
-        workout={workout}
-        canAccessTutorial={canSaveProgress}
-        onExit={() => setChallengeHasStarted(false)}
-        onComplete={handleChallengeComplete}
+      <WorkoutChangeTypeView
+        workout={activeWorkout}
+        section={currentSection}
+        toKind={currentSectionKind}
+        fromKind={previousSectionKind}
+        timeCapSeconds={currentSectionKind === 'amrap' ? activeWorkout.challenge?.timeCapSeconds : undefined}
+        onExit={endSession}
+        onContinue={() =>
+          setAcknowledgedTransitionSections((previous) => {
+            const next = new Set(previous)
+            next.add(currentSectionIndex)
+            return next
+          })
+        }
       />
     )
   }
 
-  if (!activeWorkout) return null
+  if (currentSectionKind === 'amrap') {
+    return (
+      <WorkoutChallengeExecutionView
+        workout={activeWorkout}
+        canAccessTutorial={canSaveProgress}
+        onExit={endSession}
+        onComplete={handleAmrapSectionComplete}
+      />
+    )
+  }
 
   return (
     <>
-      <ActiveSession 
+      <ActiveSession
         workout={activeWorkout}
         currentSectionIndex={currentSectionIndex}
         currentExerciseIndex={currentExerciseIndex}
