@@ -178,8 +178,20 @@ DECLARE
   v_existing_exercise public.exercises%ROWTYPE;
   v_incoming_muscle_groups text[];
   v_incoming_equipment text[];
+  v_raw_id text;
 BEGIN
-  v_existing_exercise_id := NULLIF(p_exercise_data->>'id', '')::uuid;
+  v_raw_id := NULLIF(p_exercise_data->>'id', '');
+
+  IF v_raw_id IS NOT NULL AND length(v_raw_id) > 30 THEN
+    BEGIN
+      v_existing_exercise_id := v_raw_id::uuid;
+    EXCEPTION WHEN OTHERS THEN
+      v_existing_exercise_id := NULL;
+    END;
+  ELSE
+    v_existing_exercise_id := NULL;
+  END IF;
+
   v_thumbnail_media_id := NULLIF(p_exercise_data->>'thumbnail_media_id', '')::uuid;
 
   SELECT ARRAY(

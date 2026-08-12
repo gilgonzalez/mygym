@@ -54,6 +54,8 @@ type GeneratedWorkoutExercise = {
   muscle_groups?: string[]
   equipment?: string[]
   description?: string
+  difficulty?: 'beginner' | 'intermediate' | 'advanced'
+  is_new_exercise?: boolean
 }
 
 type GeneratedWorkoutSection = {
@@ -502,9 +504,34 @@ function findAlternativeExercise(
   })
 }
 
+function isNewExerciseMarker(generatedExercise: GeneratedWorkoutExercise) {
+  const rawId = (generatedExercise.id || '').trim()
+  if (generatedExercise.is_new_exercise === true) return true
+  if (rawId.startsWith('new-')) return true
+  if (rawId.length > 0 && rawId.length <= 30) return true
+  return false
+}
+
+function validateNewExerciseStructure(generatedExercise: GeneratedWorkoutExercise) {
+  const name = (generatedExercise.name || '').trim()
+  if (!name) return 'El ejercicio nuevo debe tener nombre.'
+
+  const muscles = generatedExercise.muscle_groups || []
+  if (!Array.isArray(muscles) || muscles.length === 0) {
+    return `El ejercicio "${name}" debe incluir al menos un grupo muscular.`
+  }
+
+  const equipment = generatedExercise.equipment || []
+  if (!Array.isArray(equipment)) {
+    return `El ejercicio "${name}" debe tener equipamiento como array.`
+  }
+
+  return null
+}
+
 function resolveCandidateExercise(generatedExercise: GeneratedWorkoutExercise, candidates: Exercise[]) {
   const rawId = generatedExercise.id?.trim()
-  if (rawId) {
+  if (rawId && rawId.length > 30) {
     const exactById = candidates.find((exercise) => exercise.id === rawId)
     if (exactById) {
       return exactById
@@ -535,6 +562,7 @@ function resolveCandidateExercise(generatedExercise: GeneratedWorkoutExercise, c
 function enrichGeneratedWorkout(workout: GeneratedWorkout, candidates: Exercise[], prompt: string) {
   const usedSectionNames = new Set<string>()
   const usedExerciseIds = new Set<string>()
+  const usedExerciseSlugs = new Set<string>()
 
   return {
     title: workout.title,
@@ -543,43 +571,84 @@ function enrichGeneratedWorkout(workout: GeneratedWorkout, candidates: Exercise[
     sections: (workout.sections || []).map((section, sectionIndex) => ({
       name: sanitizeSectionName(section.name, sectionIndex, prompt, usedSectionNames),
       exercises: (section.exercises || []).map((generatedExercise) => {
-        let matchedExercise = resolveCandidateExercise(generatedExercise, candidates)
+        const matchedExercise = resolveCandidateExercise(generatedExercise, candidates)
+        const treatAsNew = !matchedExercise && isNewExerciseMarker(generatedExercise)
 
-        if (!matchedExercise) {
+        if (!matchedExercise && !treatAsNew) {
           throw new Error(
             `No se pudo mapear el ejercicio generado al catalogo. id="${generatedExercise.id || ''}" name="${generatedExercise.name || ''}"`
           )
         }
 
-        if (usedExerciseIds.has(matchedExercise.id)) {
-          const alternativeExercise = findAlternativeExercise(matchedExercise, usedExerciseIds, candidates)
-          if (alternativeExercise) {
-            matchedExercise = alternativeExercise
+        if (treatAsNew) {
+          const validationError = validateNewExerciseStructure(generatedExercise)
+          if (validationError) {
+            throw new Error(validationError)
+          }
+
+          const rawId = (generatedExercise.id || '').trim()
+          const newExerciseSlug = rawId.startsWith('new-')
+            ? rawId
+            : `new-${normalizeLookupValue(generatedExercise.name || '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40)}`
+
+          if (usedExerciseSlugs.has(newExerciseSlug)) {
+            throw new Error(`Ejercicio duplicado (nuevo): "${generatedExercise.name || newExerciseSlug}"`)
+          }
+          usedExerciseSlugs.add(newExerciseSlug)
+
+          const normalizedType = normalizeExerciseType(generatedExercise.type, 'reps')
+
+          return {
+            id: newExerciseSlug,
+            name: (generatedExercise.name || '').trim(),
+            sets: clampPositiveNumber(generatedExercise.sets, 3),
+            reps: normalizedType === 'reps' ? clampPositiveNumber(generatedExercise.reps, 10) : 0,
+            rest: clampPositiveNumber(generatedExercise.rest, 60),
+            type: normalizedType,
+            duration: normalizedType === 'time' ? clampPositiveNumber(generatedExercise.duration, 30) : 0,
+            muscle_groups: generatedExercise.muscle_groups || [],
+            equipment: generatedExercise.equipment || [],
+            description: (generatedExercise.description || '').trim(),
+            difficulty: generatedExercise.difficulty || 'intermediate',
+            thumbnail_url: '',
+            thumbnail_media_id: undefined as string | undefined,
+            tutorial: null,
+            is_new_exercise: true as const,
           }
         }
 
-        usedExerciseIds.add(matchedExercise.id)
+        let finalMatched = matchedExercise as Exercise
 
-        const normalizedType = normalizeExerciseType(generatedExercise.type, matchedExercise.type)
+        if (usedExerciseIds.has(finalMatched.id)) {
+          const alternativeExercise = findAlternativeExercise(finalMatched, usedExerciseIds, candidates)
+          if (alternativeExercise) {
+            finalMatched = alternativeExercise
+          }
+        }
+
+        usedExerciseIds.add(finalMatched.id)
+
+        const normalizedType = normalizeExerciseType(generatedExercise.type, finalMatched.type)
 
         return {
-          id: matchedExercise.id,
-          name: matchedExercise.name,
+          id: finalMatched.id,
+          name: finalMatched.name,
           sets: clampPositiveNumber(generatedExercise.sets, 3),
-          reps: normalizedType === 'reps' ? clampPositiveNumber(generatedExercise.reps, matchedExercise.reps || 10) : 0,
-          rest: clampPositiveNumber(generatedExercise.rest, matchedExercise.rest || 60),
+          reps: normalizedType === 'reps' ? clampPositiveNumber(generatedExercise.reps, finalMatched.reps || 10) : 0,
+          rest: clampPositiveNumber(generatedExercise.rest, finalMatched.rest || 60),
           type: normalizedType,
           duration:
             normalizedType === 'time'
-              ? clampPositiveNumber(generatedExercise.duration, matchedExercise.duration || 30)
+              ? clampPositiveNumber(generatedExercise.duration, finalMatched.duration || 30)
               : 0,
-          muscle_groups: matchedExercise.muscle_group || [],
-          equipment: matchedExercise.equipment || [],
-          description: (generatedExercise.description || matchedExercise.description || '').trim(),
-          difficulty: matchedExercise.difficulty || 'intermediate',
-          thumbnail_url: matchedExercise.thumbnail?.url || '',
-          thumbnail_media_id: matchedExercise.thumbnail_media_id,
-          tutorial: normalizeTutorial(matchedExercise),
+          muscle_groups: finalMatched.muscle_group || [],
+          equipment: finalMatched.equipment || [],
+          description: (generatedExercise.description || finalMatched.description || '').trim(),
+          difficulty: finalMatched.difficulty || 'intermediate',
+          thumbnail_url: finalMatched.thumbnail?.url || '',
+          thumbnail_media_id: finalMatched.thumbnail_media_id,
+          tutorial: normalizeTutorial(finalMatched),
+          is_new_exercise: false as const,
         }
       }),
     })),
@@ -639,26 +708,26 @@ export async function generateWorkoutAction(prompt: string, language: string = '
     console.log('[AI Workout] Candidate exercise count:', candidates.length)
     console.log('[AI Workout] Candidate exercise names:', candidates.map((exercise: Exercise) => exercise.name))
 
-    if (candidates.length === 0) {
-      return { success: false, error: 'No hay ejercicios disponibles en el catalogo para construir este workout.' }
-    }
-
     const candidateCatalog = buildCandidateCatalog(candidates)
+    const catalogCount = candidates.length
     const completion = await openai.chat.completions.create({
       messages: [
         {
           role: "system",
           content: `You are an elite Personal Trainer and Fitness Architect known for creating highly original, bespoke, and signature workout experiences.
-Your scope is strictly limited to constructing workouts from the provided exercise catalog.
 
-## HARD CONSTRAINTS
-- You MUST use only exercises from the catalog provided below.
-- You MUST identify each exercise by its exact "id" from the catalog.
-- Do NOT invent exercises.
-- Do NOT use any exercise that is not present in the catalog.
-- Respect the user's intent, requested duration, difficulty, equipment, and target muscles as much as possible using the catalog only.
+## EXERCISE SELECTION STRATEGY (CRITICAL)
+1. **PRIORITY 1 — Use the catalog first**: Prefer exercises from the provided catalog whenever they match the user's intent (muscles, equipment, difficulty, movement patterns). Catalog exercises have "id" as a UUID-like string.
+2. **PRIORITY 2 — Create new exercises when needed**: If the catalog does not contain enough appropriate exercises for the user's request (e.g., the catalog is small, lacks specific movements, or the user wants something very specific), you MAY invent new exercises.
+   - For new exercises, set "id" to a short kebab-case slug prefixed with "new-", for example "new-push-up-lento-con-pausa".
+   - Set "is_new_exercise": true for every invented exercise.
+   - New exercises MUST include valid "muscle_groups", "equipment", "type", "difficulty" and a clear "description".
+   - Do NOT set "is_new_exercise" on catalog exercises.
+
+## ADDITIONAL CONSTRAINTS
+- Respect the user's intent, requested duration, difficulty, equipment, and target muscles.
 - Avoid obvious or cookie-cutter exercise pairings when a similarly valid alternative exists in the catalog.
-- Do not repeat the same exercise in multiple sections unless the user explicitly asks for that repetition.
+- Do not repeat the same exercise (by name or slug) in multiple sections unless the user explicitly asks for that repetition.
 - Vary the workout flow so adjacent sections feel different in stimulus and pacing.
 - Do not use generic section names such as "Primer", "Tabata central", "Warm Up", "Cool Down", "Finisher", "Block A", or "Block B".
 
@@ -666,6 +735,7 @@ Your scope is strictly limited to constructing workouts from the provided exerci
 - Generate the response in language code "${language}".
 - Use natural, modern fitness terminology appropriate for that language.
 - Keep the tone energetic, encouraging, and personal.
+- Write exercise names, muscle groups and equipment in "${language}".
 
 ## WORKOUT DESIGN PHILOSOPHY
 1. Avoid generic templates unless they are the best fit for the request.
@@ -675,7 +745,7 @@ Your scope is strictly limited to constructing workouts from the provided exerci
 5. Create sections with distinct identities instead of repeating the same structure with different names.
 6. Prioritize variety in movement patterns and perceived effort across the session.
 
-## AVAILABLE EXERCISE CATALOG
+## AVAILABLE EXERCISE CATALOG (${catalogCount} exercises)
 ${JSON.stringify(candidateCatalog)}
 
 ## OUTPUT FORMAT (JSON ONLY)
@@ -689,8 +759,8 @@ Return a single valid JSON object. Do not include markdown formatting.
       "name": "Section name",
       "exercises": [
         {
-          "id": "catalog exercise id",
-          "name": "Catalog exercise name",
+          "id": "catalog exercise id or new-xxx slug",
+          "name": "Exercise name",
           "sets": number,
           "reps": number,
           "rest": number,
@@ -698,7 +768,9 @@ Return a single valid JSON object. Do not include markdown formatting.
           "duration": number,
           "muscle_groups": ["Primary Muscle", "Secondary Muscle"],
           "equipment": ["Required Equipment"],
-          "description": "A precise, actionable coaching cue (max 20 words)."
+          "difficulty": "beginner" | "intermediate" | "advanced",
+          "description": "A precise, actionable coaching cue (max 20 words).",
+          "is_new_exercise": true | false
         }
       ]
     }

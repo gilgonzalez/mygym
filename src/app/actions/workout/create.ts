@@ -27,6 +27,13 @@ type ExerciseInput = Omit<DbExercise, 'id' | 'created_at' | 'thumbnail_media_id'
     filename?: string | null
     bucket_path?: string | null
     tutorial?: ExerciseTutorialInput | null
+    is_new_exercise?: boolean
+    link_id?: string
+    sets?: number | null
+    reps?: number | null
+    rest?: number | null
+    duration?: number | null
+    weight_kg?: number | null
 }
 
 type SectionInput = Omit<DbSection, 'id' | 'created_at'> & {
