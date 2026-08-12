@@ -553,7 +553,9 @@ export function WorkoutOverview({
                     {section.exercises.map((ex, exIdx) => {
                       const loadValue = ex.type === 'reps'
                         ? `${ex.reps || 0} reps`
-                        : formatDuration(ex.duration || 0)
+                        : ex.type === 'emom'
+                          ? `${ex.reps || 0} reps · ${formatDuration(ex.duration || 0)}`
+                          : formatDuration(ex.duration || 0)
                       return (
                         <div
                           key={String(ex.id || exIdx)}
@@ -604,11 +606,19 @@ export function WorkoutOverview({
                               </span>
                               <div className="hidden md:flex md:ml-auto items-center gap-1 rounded-2xl bg-white/[0.03] border border-white/10 px-2.5 py-1.5">
                                 <span className="text-[10px] font-black uppercase tracking-[0.18em] text-white/45">
-                                  {ex.type === 'reps' ? 'Repeticiones' : 'Tiempo'}
+                                  {ex.type === 'emom'
+                                    ? 'EMOM'
+                                    : ex.type === 'reps'
+                                      ? 'Repeticiones'
+                                      : 'Tiempo'}
                                 </span>
                                 <X className="h-3 w-3 text-white/20" />
                                 <span className="text-[11px] font-black text-white/80 tabular-nums">
-                                  {ex.type === 'reps' ? ex.reps || 0 : formatDuration(ex.duration || 0)}
+                                  {ex.type === 'reps'
+                                    ? ex.reps || 0
+                                    : ex.type === 'emom'
+                                      ? `${ex.reps || 0}r · ${formatDuration(ex.duration || 0)}`
+                                      : formatDuration(ex.duration || 0)}
                                 </span>
                                 <X className="h-3 w-3 text-white/20" />
                                 <span className="text-[10px] font-black uppercase tracking-[0.18em] text-white/45">Series</span>
@@ -616,7 +626,7 @@ export function WorkoutOverview({
                                 <X className="h-3 w-3 text-white/20" />
                                 <Clock className="h-3.5 w-3.5 text-white/45 shrink-0" />
                                 <span className="text-[11px] font-black text-white/80 tabular-nums">
-                                  {`${ex.rest || 0}s`}
+                                  {ex.type === 'emom' ? '0s' : `${ex.rest || 0}s`}
                                 </span>
                               </div>
                             </div>

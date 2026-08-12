@@ -67,7 +67,7 @@ const exerciseSchema = z.object({
   id: z.string(),
   db_id: z.string().optional(),
   name: z.string().min(1, "Requerido"),
-  type: z.enum(['reps', 'time']).default('reps'),
+  type: z.enum(['reps', 'time', 'emom']).default('reps'),
   reps: z.coerce.number().optional(),
   sets: z.coerce.number().optional(),
   duration: z.coerce.number().optional(),
@@ -454,7 +454,7 @@ function CreateWorkoutContent() {
                     id: e.id,
                     db_id: e.id,
                     name: e.name,
-                    type: (e.type as any) || 'reps',
+                    type: (e.type === 'time' || e.type === 'emom') ? e.type : 'reps',
                     reps: e.reps || 0,
                     sets: e.sets || 0,
                     duration: e.duration || 0,
@@ -713,13 +713,16 @@ function CreateWorkoutContent() {
                     let executionTime = 0
                     if (ex.type === 'time') {
                         executionTime = duration * sets
+                    } else if (ex.type === 'emom') {
+                        // EMOM: duration is the interval window (typically 60s), so we use it directly per set
+                        executionTime = duration * sets
                     } else {
                         // Estimate 3 seconds per rep
                         executionTime = reps * 3 * sets
                     }
                     
-                    // Time for rest (between sets)
-                    const restTime = rest * sets
+                    // Time for rest (between sets) — EMOM has 0 rest
+                    const restTime = (ex.type === 'emom' ? 0 : rest) * sets
                     
                     return secTotal + executionTime + restTime
                 }, 0)
@@ -985,7 +988,7 @@ function CreateWorkoutContent() {
                     id: `ex-${Date.now()}-${idx}-${eIdx}`,
                     db_id: e.id || e.db_id,
                     name: e.name,
-                    type: e.type === 'time' ? 'time' : 'reps',
+                    type: (e.type === 'time' || e.type === 'emom') ? e.type : 'reps',
                     reps: e.reps || 0,
                     sets: e.sets || 3,
                     duration: e.duration || 0,
@@ -2176,7 +2179,9 @@ function ExercisesFieldArray({ nestIndex, control, register, setValue, watch, is
           <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-3 sm:space-y-4">
             {fields.map((item, k) => {
               const exercisePath = `sections.${nestIndex}.exercises.${k}` as const
-              const selectedType = watch(`${exercisePath}.type`) === 'time' ? 'time' : 'reps'
+              const selectedType = (watch(`${exercisePath}.type`) === 'time' || watch(`${exercisePath}.type`) === 'emom') 
+                ? watch(`${exercisePath}.type`) as 'time' | 'emom'
+                : 'reps'
               const hasTutorial = Boolean(watch(`${exercisePath}.tutorial`))
               const exerciseSets = watch(`${exercisePath}.sets`) ?? 1
 
@@ -2240,12 +2245,13 @@ function ExercisesFieldArray({ nestIndex, control, register, setValue, watch, is
                                     </span>
                                   ) : (
                                     <span className="rounded-full border border-border/70 bg-background/80 px-2 py-1 text-[8px] font-bold uppercase tracking-[0.18em] text-muted-foreground sm:px-3 sm:text-[10px]">
-                                      {selectedType === 'time' ? 'Por tiempo' : 'Por repeticiones'}
+                                      {selectedType === 'time' ? 'Por tiempo' : selectedType === 'emom' ? 'EMOM' : 'Por repeticiones'}
                                     </span>
                                   )}
-                                  {!isAmrapSection && selectedType === 'time' && (
-                                    <span className="rounded-full border border-border/70 bg-background/80 px-2 py-1 text-[8px] font-bold uppercase tracking-[0.18em] text-muted-foreground sm:px-3 sm:text-[10px]">
-                                      Por tiempo
+                                  {!isAmrapSection && selectedType === 'emom' && (
+                                    <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/25 bg-gradient-to-r from-amber-500/15 to-orange-500/10 px-2 py-1 text-[8px] font-black uppercase tracking-[0.18em] text-amber-700 dark:text-amber-300 sm:px-3 sm:text-[10px]">
+                                      <Zap className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                                      Cada minuto en punto
                                     </span>
                                   )}
                                   {isAmrapSection && exerciseSets > 1 && (
@@ -2394,29 +2400,29 @@ function ExercisesFieldArray({ nestIndex, control, register, setValue, watch, is
                                       </div>
                                     </div>
 
-                                    <div className="mt-2 space-y-2 sm:mt-2.5 sm:space-y-2.5 lg:grid lg:grid-cols-[0.68fr_repeat(3,minmax(0,1fr))] lg:items-stretch lg:gap-1.5 lg:space-y-0">
+                                    <div className="mt-1.5 space-y-1.5 sm:mt-2 sm:space-y-2 lg:grid lg:grid-cols-[0.68fr_repeat(3,minmax(0,1fr))] lg:items-stretch lg:gap-1 lg:space-y-0">
                                       <Controller
                                         control={control}
                                         name={`sections.${nestIndex}.exercises.${k}.type`}
                                         render={({ field }) => (
-                                          <div className="grid grid-cols-2 gap-2 lg:grid-cols-1 lg:grid-rows-2 lg:gap-1.5 lg:self-start">
+                                          <div className="grid grid-cols-3 gap-1.5 lg:grid-cols-1 lg:grid-rows-3 lg:gap-1 lg:self-start">
                                             <button
                                               type="button"
                                               onClick={() => field.onChange('reps')}
                                               className={cn(
-                                                'relative rounded-[18px] border p-3 text-left transition-all sm:rounded-[20px] sm:p-3 lg:p-1.5',
+                                                'relative rounded-[14px] border p-2 text-left transition-all sm:rounded-[16px] sm:p-2 lg:p-1.5',
                                                 field.value === 'reps'
                                                   ? 'border-primary/40 bg-primary/[0.08] shadow-sm'
                                                   : 'border-border/60 bg-muted/20 hover:border-primary/20 hover:bg-background'
                                               )}
                                             >
                                               {renderHint('Mide el ejercicio por número de repeticiones en cada serie.', 'absolute right-1 top-1 sm:right-1.5 sm:top-1.5')}
-                                              <div className={cn('flex items-start gap-3 lg:gap-2', isCompactMobile && 'justify-center')}>
-                                                <div className={cn('rounded-2xl bg-background/90 p-2 text-primary shadow-sm lg:p-1.5', isCompactMobile && 'p-3')}>
-                                                  <Repeat className={cn('h-3.5 w-3.5', isCompactMobile && 'h-4 w-4')} />
+                                              <div className={cn('flex items-start gap-2 lg:gap-1.5', isCompactMobile && 'justify-center')}>
+                                                <div className={cn('rounded-xl bg-background/90 p-1.5 text-primary shadow-sm lg:p-1.25', isCompactMobile && 'p-2')}>
+                                                  <Repeat className={cn('h-3 w-3', isCompactMobile && 'h-3.5 w-3.5')} />
                                                 </div>
                                                 <div className={cn('min-w-0 flex-1 pr-6 sm:pr-7', isCompactMobile && 'sr-only')}>
-                                                  <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground sm:text-[10px]">
+                                                  <span className="text-[9px] font-bold uppercase tracking-[0.16em] text-muted-foreground sm:text-[9px]">
                                                     Rep
                                                   </span>
                                                 </div>
@@ -2427,20 +2433,49 @@ function ExercisesFieldArray({ nestIndex, control, register, setValue, watch, is
                                               type="button"
                                               onClick={() => field.onChange('time')}
                                               className={cn(
-                                                'relative rounded-[18px] border p-3 text-left transition-all sm:rounded-[20px] sm:p-3 lg:p-1.5',
+                                                'relative rounded-[14px] border p-2 text-left transition-all sm:rounded-[16px] sm:p-2 lg:p-1.5',
                                                 field.value === 'time'
                                                   ? 'border-primary/40 bg-primary/[0.08] shadow-sm'
                                                   : 'border-border/60 bg-muted/20 hover:border-primary/20 hover:bg-background'
                                               )}
                                             >
                                               {renderHint('Mide el ejercicio por duración en segundos para cada serie.', 'absolute right-1 top-1 sm:right-1.5 sm:top-1.5')}
-                                              <div className={cn('flex items-start gap-3 lg:gap-2', isCompactMobile && 'justify-center')}>
-                                                <div className={cn('rounded-2xl bg-background/90 p-2 text-primary shadow-sm lg:p-1.5', isCompactMobile && 'p-3')}>
-                                                  <Timer className={cn('h-3.5 w-3.5', isCompactMobile && 'h-4 w-4')} />
+                                              <div className={cn('flex items-start gap-2 lg:gap-1.5', isCompactMobile && 'justify-center')}>
+                                                <div className={cn('rounded-xl bg-background/90 p-1.5 text-primary shadow-sm lg:p-1.25', isCompactMobile && 'p-2')}>
+                                                  <Timer className={cn('h-3 w-3', isCompactMobile && 'h-3.5 w-3.5')} />
                                                 </div>
                                                 <div className={cn('min-w-0 flex-1 pr-6 sm:pr-7', isCompactMobile && 'sr-only')}>
-                                                  <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground sm:text-[10px]">
+                                                  <span className="text-[9px] font-bold uppercase tracking-[0.16em] text-muted-foreground sm:text-[9px]">
                                                     Tiempo
+                                                  </span>
+                                                </div>
+                                              </div>
+                                            </button>
+
+                                            <button
+                                              type="button"
+                                              onClick={() => {
+                                                field.onChange('emom')
+                                                setValue(`sections.${nestIndex}.exercises.${k}.rest`, 0, { shouldDirty: true })
+                                              }}
+                                              className={cn(
+                                                'relative rounded-[14px] border p-2 text-left transition-all sm:rounded-[16px] sm:p-2 lg:p-1.5',
+                                                field.value === 'emom'
+                                                  ? 'border-amber-500/40 bg-gradient-to-br from-amber-500/[0.12] to-orange-500/[0.08] shadow-sm'
+                                                  : 'border-border/60 bg-muted/20 hover:border-amber-500/30 hover:bg-background'
+                                              )}
+                                            >
+                                              {renderHint(
+                                                'EMOM (Every Minute On the Minute): Completa las repeticiones indicadas cada minuto y descansa el tiempo restante hasta el siguiente minuto. El descanso entre series se fuerza a 0s.',
+                                                'absolute right-1 top-1 sm:right-1.5 sm:top-1.5'
+                                              )}
+                                              <div className={cn('flex items-start gap-2 lg:gap-1.5', isCompactMobile && 'justify-center')}>
+                                                <div className={cn('rounded-xl bg-background/90 p-1.5 text-amber-600 shadow-sm lg:p-1.25 dark:text-amber-400', isCompactMobile && 'p-2')}>
+                                                  <Zap className={cn('h-3 w-3', isCompactMobile && 'h-3.5 w-3.5')} />
+                                                </div>
+                                                <div className={cn('min-w-0 flex-1 pr-6 sm:pr-7', isCompactMobile && 'sr-only')}>
+                                                  <span className="text-[9px] font-bold uppercase tracking-[0.16em] text-amber-700 dark:text-amber-300 sm:text-[9px]">
+                                                    EMOM
                                                   </span>
                                                 </div>
                                               </div>
@@ -2450,14 +2485,23 @@ function ExercisesFieldArray({ nestIndex, control, register, setValue, watch, is
                                       />
 
                                       <div className="grid grid-cols-[minmax(0,0.9fr)_minmax(0,0.8fr)_minmax(0,1.15fr)] gap-2 sm:grid-cols-3 lg:contents">
-                                        <div className="relative min-w-0 rounded-[18px] border border-border/60 bg-muted/20 p-2.5 sm:rounded-[20px] sm:p-1.5 lg:flex lg:h-full lg:flex-col lg:justify-between lg:p-2">
-                                          {renderHint(selectedType === 'time' ? 'Indica los segundos que dura cada serie del ejercicio.' : 'Indica cuántas repeticiones debe completar el usuario en cada serie.', 'absolute right-2 top-2 sm:right-1.5 sm:top-1.5')}
-                                          <div className="flex items-center gap-2">
-                                            <div className="rounded-2xl bg-background/90 p-2 text-primary shadow-sm sm:p-1">
-                                              {selectedType === 'time' ? <Timer className="h-3.5 w-3.5 sm:h-3 sm:w-3" /> : <Repeat className="h-3.5 w-3.5 sm:h-3 sm:w-3" />}
+                                        <div className="relative min-w-0 rounded-[18px] border border-border/60 bg-muted/20 p-2 sm:rounded-[20px] sm:p-1.5 lg:flex lg:h-full lg:flex-col lg:justify-between">
+                                          {renderHint(
+                                            selectedType === 'time'
+                                              ? 'Indica los segundos que dura cada serie del ejercicio.'
+                                              : selectedType === 'emom'
+                                                ? 'Indica cuántas repeticiones debe completar el usuario dentro de cada ventana de tiempo.'
+                                                : 'Indica cuántas repeticiones debe completar el usuario en cada serie.',
+                                            'absolute right-2 top-1.5 sm:right-1.5 sm:top-1.5'
+                                          )}
+                                          <div className="flex items-center gap-1.5">
+                                            <div className="rounded-xl bg-background/90 p-1.5 text-primary shadow-sm sm:p-1">
+                                              {(selectedType === 'time')
+                                                ? <Timer className="h-3 w-3 sm:h-2.5 sm:w-2.5" />
+                                                : <Repeat className="h-3 w-3 sm:h-2.5 sm:w-2.5" />}
                                             </div>
                                             <div className={cn('flex items-center gap-1 pr-7 sm:pr-6', isCompactMobile && 'sr-only')}>
-                                              <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground sm:text-[10px]">
+                                              <span className="text-[9px] font-bold uppercase tracking-[0.16em] text-muted-foreground sm:text-[9px]">
                                                 {selectedType === 'time' ? 'Segundos' : 'Repeticiones'}
                                               </span>
                                             </div>
@@ -2468,30 +2512,35 @@ function ExercisesFieldArray({ nestIndex, control, register, setValue, watch, is
                                             render={({ field: typeField }) => (
                                               <Input
                                                 {...register(
-                                                  typeField.value === 'reps'
-                                                    ? `sections.${nestIndex}.exercises.${k}.reps`
-                                                    : `sections.${nestIndex}.exercises.${k}.duration`
+                                                  typeField.value === 'time'
+                                                    ? `sections.${nestIndex}.exercises.${k}.duration`
+                                                    : `sections.${nestIndex}.exercises.${k}.reps`
                                                 )}
                                                 type="number"
                                                 inputMode="numeric"
                                                 pattern="[0-9]*"
                                                 min={0}
                                                 placeholder="0"
-                                                className="mt-2 h-10 rounded-2xl border-border/60 bg-background px-2.5 text-sm font-bold shadow-none sm:mt-1.5 sm:h-8 sm:px-2.5 sm:text-sm lg:mt-1"
+                                                className="mt-1.5 h-9 rounded-xl border-border/60 bg-background px-2 text-sm font-bold shadow-none sm:mt-1 sm:h-7 sm:px-2"
                                               />
                                             )}
                                           />
                                         </div>
 
-                                        <div className="relative min-w-0 rounded-[18px] border border-border/60 bg-muted/20 p-2.5 sm:rounded-[20px] sm:p-1.5 lg:flex lg:h-full lg:flex-col lg:justify-between lg:p-2">
-                                          {renderHint('Número total de series o vueltas que se deben completar en este ejercicio.', 'absolute right-2 top-2 sm:right-1.5 sm:top-1.5')}
-                                          <div className="flex items-center gap-2">
-                                            <div className="rounded-2xl bg-background/90 p-2 text-primary shadow-sm sm:p-1">
-                                              <List className="h-3.5 w-3.5 sm:h-3 sm:w-3" />
+                                        <div className="relative min-w-0 rounded-[18px] border border-border/60 bg-muted/20 p-2 sm:rounded-[20px] sm:p-1.5 lg:flex lg:h-full lg:flex-col lg:justify-between">
+                                          {renderHint(
+                                            selectedType === 'emom'
+                                              ? 'Número total de minutos (vueltas) que se deben completar en este ejercicio EMOM.'
+                                              : 'Número total de series o vueltas que se deben completar en este ejercicio.',
+                                            'absolute right-2 top-1.5 sm:right-1.5 sm:top-1.5'
+                                          )}
+                                          <div className="flex items-center gap-1.5">
+                                            <div className="rounded-xl bg-background/90 p-1.5 text-primary shadow-sm sm:p-1">
+                                              <List className="h-3 w-3 sm:h-2.5 sm:w-2.5" />
                                             </div>
                                             <div className={cn('flex items-center gap-1 pr-7 sm:pr-6', isCompactMobile && 'sr-only')}>
-                                              <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground sm:text-[10px]">
-                                                Series
+                                              <span className="text-[9px] font-bold uppercase tracking-[0.16em] text-muted-foreground sm:text-[9px]">
+                                                {selectedType === 'emom' ? 'Minutos' : 'Series'}
                                               </span>
                                             </div>
                                           </div>
@@ -2500,33 +2549,62 @@ function ExercisesFieldArray({ nestIndex, control, register, setValue, watch, is
                                             placeholder="0"
                                             type="number"
                                             min={0}
-                                            className="mt-2 h-10 rounded-2xl border-border/60 bg-background px-2.5 text-sm font-bold shadow-none sm:mt-1.5 sm:h-8 sm:px-2.5 sm:text-sm lg:mt-1"
+                                            className="mt-1.5 h-9 rounded-xl border-border/60 bg-background px-2 text-sm font-bold shadow-none sm:mt-1 sm:h-7 sm:px-2"
                                           />
                                         </div>
 
-                                        <div className="relative min-w-0 rounded-[18px] border border-border/60 bg-muted/20 p-2.5 sm:rounded-[20px] sm:p-1.5 lg:flex lg:h-full lg:flex-col lg:justify-between lg:p-2">
-                                          {renderHint('Tiempo de recuperación entre una serie y la siguiente, expresado en segundos.', 'absolute right-2 top-2 sm:right-1.5 sm:top-1.5')}
-                                          <div className="flex items-center gap-2">
-                                            <div className="rounded-2xl bg-background/90 p-2 text-primary shadow-sm sm:p-1">
-                                              <BedDouble className="h-3.5 w-3.5 sm:h-3 sm:w-3" />
+                                        <div className="relative min-w-0 rounded-[18px] border border-border/60 bg-muted/20 p-2 sm:rounded-[20px] sm:p-1.5 lg:flex lg:h-full lg:flex-col lg:justify-between">
+                                          {renderHint(
+                                            selectedType === 'emom'
+                                              ? 'Duración de cada ventana en segundos. Normalmente 60s (1 minuto), pero puede ser 30s, 90s, etc.'
+                                              : 'Tiempo de recuperación entre una serie y la siguiente, expresado en segundos.',
+                                            'absolute right-2 top-1.5 sm:right-1.5 sm:top-1.5'
+                                          )}
+                                          <div className="flex items-center gap-1.5">
+                                            <div className="rounded-xl bg-background/90 p-1.5 text-primary shadow-sm sm:p-1">
+                                              {selectedType === 'emom'
+                                                ? <Timer className="h-3 w-3 sm:h-2.5 sm:w-2.5" />
+                                                : <BedDouble className="h-3 w-3 sm:h-2.5 sm:w-2.5" />}
                                             </div>
                                             <div className={cn('flex items-center gap-1 pr-7 sm:pr-6', isCompactMobile && 'sr-only')}>
-                                              <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground sm:text-[10px]">
-                                                {isCompactMobile ? 'Descanso' : 'Rest'}
+                                              <span className="text-[9px] font-bold uppercase tracking-[0.16em] text-muted-foreground sm:text-[9px]">
+                                                {selectedType === 'emom' ? 'Ventana' : isCompactMobile ? 'Descanso' : 'Rest'}
                                               </span>
                                             </div>
                                           </div>
-                                          <div className="relative mt-2 sm:mt-1.5 lg:mt-1">
-                                            <Input
-                                              {...register(`sections.${nestIndex}.exercises.${k}.rest`)}
-                                              placeholder="0"
-                                              type="number"
-                                              min={0}
-                                              className="h-10 rounded-2xl border-border/60 bg-background pr-10 pl-3 text-sm font-bold shadow-none sm:h-8 sm:pr-9 sm:pl-2.5 sm:text-sm"
-                                            />
-                                            <span className={cn('absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-semibold text-muted-foreground sm:right-3 sm:text-[11px]', isCompactMobile && 'hidden')}>
-                                              seg
-                                            </span>
+                                          <div className="relative mt-1.5 sm:mt-1">
+                                            {selectedType === 'emom' ? (
+                                              <>
+                                                <input
+                                                  type="hidden"
+                                                  {...register(`sections.${nestIndex}.exercises.${k}.rest`)}
+                                                  value={0}
+                                                />
+                                                <Input
+                                                  {...register(`sections.${nestIndex}.exercises.${k}.duration`)}
+                                                  placeholder="0"
+                                                  type="number"
+                                                  min={0}
+                                                  className="h-9 rounded-xl border-border/60 bg-background pr-9 pl-2 text-sm font-bold shadow-none sm:h-7 sm:pr-8 sm:pl-2"
+                                                />
+                                                <span className={cn('absolute right-2.5 top-1/2 -translate-y-1/2 text-[9px] font-semibold text-muted-foreground sm:right-2.5 sm:text-[10px]', isCompactMobile && 'hidden')}>
+                                                  seg
+                                                </span>
+                                              </>
+                                            ) : (
+                                              <>
+                                                <Input
+                                                  {...register(`sections.${nestIndex}.exercises.${k}.rest`)}
+                                                  placeholder="0"
+                                                  type="number"
+                                                  min={0}
+                                                  className="h-9 rounded-xl border-border/60 bg-background pr-9 pl-2 text-sm font-bold shadow-none sm:h-7 sm:pr-8 sm:pl-2"
+                                                />
+                                                <span className={cn('absolute right-2.5 top-1/2 -translate-y-1/2 text-[9px] font-semibold text-muted-foreground sm:right-2.5 sm:text-[10px]', isCompactMobile && 'hidden')}>
+                                                  seg
+                                                </span>
+                                              </>
+                                            )}
                                           </div>
                                         </div>
                                       </div>

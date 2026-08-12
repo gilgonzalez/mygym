@@ -189,7 +189,11 @@ export function WorkoutChangeTypeView({
                     </div>
                     <p className="min-w-0 flex-1 truncate text-sm font-semibold text-white/85">{exercise.name}</p>
                     <p className="shrink-0 text-xs font-semibold text-white/40">
-                      {exercise.type === 'time' ? formatDuration(exercise.duration || 0) : `${exercise.reps || 0} reps`}
+                      {exercise.type === 'time'
+                        ? formatDuration(exercise.duration || 0)
+                        : exercise.type === 'emom'
+                          ? `${exercise.reps || 0} reps · ${formatDuration(exercise.duration || 0)}`
+                          : `${exercise.reps || 0} reps`}
                     </p>
                   </div>
                 ))}

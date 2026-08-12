@@ -94,7 +94,9 @@ export function PreviewActivity({
               <p className="text-base sm:text-xl text-gray-400">
                 {exercise.type === 'time'
                   ? `${exercise.sets} Series × ${formatDuration(exercise.duration || 0)}`
-                  : `${exercise.sets} Series × ${exercise.reps} Repeticiones`}
+                  : exercise.type === 'emom'
+                    ? `${exercise.sets} Minutos × ${exercise.reps} Reps · ${formatDuration(exercise.duration || 0)}`
+                    : `${exercise.sets} Series × ${exercise.reps} Repeticiones`}
               </p>
             </div>
 

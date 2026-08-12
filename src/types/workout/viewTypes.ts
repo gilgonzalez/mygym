@@ -15,7 +15,7 @@ export interface ExerciseTutorial {
 export interface LocalExercise {
   id: string
   name: string
-  type: 'reps' | 'time'
+  type: 'reps' | 'time' | 'emom'
   reps?: number | string
   sets?: number
   duration?: number // seconds

@@ -135,7 +135,7 @@ export function ExerciseView({
           
           <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-black/40 pointer-events-none" />
 
-          {currentExercise.type === 'time' && (
+          {(currentExercise.type === 'time' || currentExercise.type === 'emom') && (
             <div className="absolute top-20 left-6 z-30">
                <div className="bg-black/30 backdrop-blur-xl rounded-[2rem] pr-6 border border-white/10 shadow-2xl ring-1 ring-white/5">
                   <WorkoutTimer 
@@ -166,7 +166,11 @@ export function ExerciseView({
               <div className="flex-1 space-y-2 max-w-2xl w-full">
                  <div className="flex items-center gap-2 mb-2">
                    <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-primary text-primary-foreground">
-                     {currentExercise.type === 'time' ? 'Duración' : 'Repeticiones'}
+                     {currentExercise.type === 'emom'
+                       ? 'Reps · Duración'
+                       : currentExercise.type === 'time'
+                         ? 'Duración'
+                         : 'Repeticiones'}
                    </span>
                    <span className="text-white/60 text-xs font-mono">
                      {currentExerciseIndex + 1} / {currentSection.exercises.length}
@@ -184,6 +188,23 @@ export function ExerciseView({
                                 Repeticiones
                             </span>
                         </>
+                    ) : currentExercise.type === 'emom' ? (
+                        <div className="flex flex-wrap items-baseline gap-4">
+                          <div className="flex items-baseline gap-1">
+                            <span className="text-5xl sm:text-6xl font-black tracking-tighter leading-none">
+                                {currentExercise.reps}
+                            </span>
+                            <span className="text-lg sm:text-xl font-medium text-white/60 uppercase tracking-widest ml-1">
+                                Reps
+                            </span>
+                          </div>
+                          <span className="text-2xl font-light text-white/30">·</span>
+                          <div className="flex items-baseline gap-1">
+                            <span className="text-4xl sm:text-5xl font-black tracking-tighter leading-none font-timer">
+                              {formatDuration(currentExercise.duration || 0)}
+                            </span>
+                          </div>
+                        </div>
                     ) : (
                         <>
                             <span className="text-4xl sm:text-5xl font-black tracking-tighter leading-none">
