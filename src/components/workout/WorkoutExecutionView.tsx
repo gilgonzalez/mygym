@@ -932,7 +932,7 @@ export function WorkoutExecutionView({
           <div ref={visualStageRef} className="flex w-full min-h-0 flex-1 flex-col items-center justify-center py-1 sm:py-0">
             <div className="flex min-h-0 w-full flex-1 items-center justify-center">
               <div
-                className="relative h-auto max-h-full max-w-full [container-type:inline-size]"
+                className="relative w-full max-w-[min(82vw,72dvh)] [container-type:inline-size]"
                 style={fluidCircleFrameStyle}
               >
               <div className="absolute inset-0 rounded-full blur-3xl" style={{ backgroundColor: `${strokeColor}22` }} />
