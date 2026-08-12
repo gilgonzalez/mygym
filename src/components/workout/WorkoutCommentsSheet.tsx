@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { MessageSquare, Star, User, Trophy, Timer, RotateCcw, Plus } from 'lucide-react'
+import { MessageSquare, Star, User, Trophy, Timer, RotateCcw, Crown } from 'lucide-react'
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription } from '@/components/ui/drawer'
 import { getWorkoutComments, countWorkoutComments } from '@/app/actions/workout/get-comment'
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
@@ -150,7 +150,7 @@ export function WorkoutCommentsSheet({ workoutId, isChallenge = false, children 
 
           <div className={cn(
             "flex-1 overflow-y-auto custom-scrollbar",
-            isDesktop ? "mt-6 px-7 pb-8" : "mt-4 px-5 pb-safe overscroll-contain"
+            isDesktop ? "mt-6 px-7 pb-8 pt-2" : "mt-4 px-5 pb-safe overscroll-contain pt-1"
           )}>
             <div className={cn(isDesktop ? "space-y-6" : "space-y-4")}>
               {isLoading ? (
@@ -161,14 +161,36 @@ export function WorkoutCommentsSheet({ workoutId, isChallenge = false, children 
                 </div>
               ) : comments.length > 0 ? (
                 <>
-                  {comments.map((comment, index) => (
-                    <CommentCard
-                      key={comment.id}
-                      comment={comment}
-                      index={index}
-                      compact={!isDesktop}
-                    />
-                  ))}
+                  {(() => {
+                    let maxScore = -Infinity
+                    let topRecordId: string | null = null
+                    let topRecordDate: string | null = null
+                    for (const c of comments) {
+                      const score = c.challenge?.score
+                      if (typeof score !== 'number') continue
+                      const date = c.completed_at ?? ''
+                      if (
+                        score > maxScore ||
+                        (score === maxScore &&
+                          topRecordDate &&
+                          date &&
+                          new Date(date).getTime() < new Date(topRecordDate).getTime())
+                      ) {
+                        maxScore = score
+                        topRecordId = c.id
+                        topRecordDate = date
+                      }
+                    }
+                    return comments.map((comment, index) => (
+                      <CommentCard
+                        key={comment.id}
+                        comment={comment}
+                        index={index}
+                        compact={!isDesktop}
+                        isTopRecord={comment.id === topRecordId}
+                      />
+                    ))
+                  })()}
 
                   <div
                     ref={observerTarget}
@@ -224,23 +246,50 @@ function EmptyState({ compact = false }: { compact?: boolean }) {
   )
 }
 
-function CommentCard({ comment, index, compact = false }: { comment: any; index: number; compact?: boolean }) {
+function CommentCard({
+  comment,
+  index,
+  compact = false,
+  isTopRecord = false,
+}: {
+  comment: any
+  index: number
+  compact?: boolean
+  isTopRecord?: boolean
+}) {
   const feeling = comment.feeling ? FEELING_CONFIG[comment.feeling as keyof typeof FEELING_CONFIG] : null
 
   return (
     <div
-      className="group relative perspective-1000 animate-in fade-in zoom-in-95 duration-500 fill-mode-backwards"
+      className={cn(
+        "group relative perspective-1000 animate-in fade-in zoom-in-95 duration-500 fill-mode-backwards",
+        isTopRecord && "z-10"
+      )}
       style={{ animationDelay: `${index * 80}ms` }}
     >
       <div className={cn(
-        "relative overflow-hidden bg-gradient-to-br from-background/80 via-background/60 to-background/40 backdrop-blur-md border border-white/10 transition-all duration-300 hover:scale-[1.015] hover:border-primary/30 hover:shadow-[0_8px_32px_-8px_rgba(0,0,0,0.5)]",
+        "relative overflow-hidden backdrop-blur-md border transition-all duration-300 hover:scale-[1.015] hover:shadow-[0_8px_32px_-8px_rgba(0,0,0,0.5)]",
+        isTopRecord
+          ? "bg-gradient-to-br from-amber-500/15 via-yellow-400/10 to-orange-500/10 border-amber-400/50 shadow-[0_0_40px_-16px_rgba(245,158,11,0.5)] hover:border-amber-300/70"
+          : "bg-gradient-to-br from-background/80 via-background/60 to-background/40 border-white/10 hover:border-primary/30",
         compact ? "rounded-[1.25rem] p-4" : "rounded-[2rem] p-6"
       )}>
-        <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-3xl -mr-10 -mt-10 transition-opacity group-hover:opacity-70" />
-        <div className="absolute bottom-0 left-0 w-24 h-24 bg-secondary/5 rounded-full blur-2xl -ml-5 -mb-5" />
+        {isTopRecord ? (
+          <>
+            <div className="absolute top-0 right-0 w-52 h-52 bg-amber-400/10 rounded-full blur-3xl -mr-16 -mt-16 transition-opacity group-hover:opacity-70 pointer-events-none" />
+            <div className="absolute bottom-0 left-0 w-40 h-40 bg-orange-500/10 rounded-full blur-3xl -ml-8 -mb-8 pointer-events-none" />
+            <div className="absolute inset-0 bg-gradient-to-tr from-amber-400/0 via-amber-400/[0.04] to-amber-400/0 pointer-events-none" />
+            <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-amber-300/70 to-transparent opacity-80 pointer-events-none" />
+          </>
+        ) : (
+          <>
+            <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-3xl -mr-10 -mt-10 transition-opacity group-hover:opacity-70" />
+            <div className="absolute bottom-0 left-0 w-24 h-24 bg-secondary/5 rounded-full blur-2xl -ml-5 -mb-5" />
+          </>
+        )}
 
-        <div className="flex justify-between items-start mb-3 sm:mb-4 relative z-10">
-          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+        <div className="flex justify-between items-center gap-3 mb-3 sm:mb-4 relative z-10">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
              <div className={cn("relative shrink-0 group-hover:scale-105 transition-transform duration-300", compact ? "w-10 h-10" : "w-12 h-12")}>
                 <div className="absolute inset-0 bg-gradient-to-tr from-primary/20 to-transparent rounded-xl rotate-6 group-hover:rotate-12 transition-transform duration-500" />
                 {comment.user.avatar_url ? (
@@ -286,6 +335,21 @@ function CommentCard({ comment, index, compact = false }: { comment: any; index:
                 </div>
              </div>
           </div>
+
+          {isTopRecord && (
+            <div
+              className="shrink-0 flex items-center gap-1 rounded-full bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500 text-amber-950 px-2.5 py-1 sm:px-3 sm:py-1.5 border border-amber-200/70 shadow-[0_4px_14px_-4px_rgba(245,158,11,0.7)] animate-[pulse_2.5s_ease-in-out_infinite]"
+              title="Récord actual — mejor puntuación"
+            >
+              <Crown className={cn("text-amber-900 drop-shadow-[0_1px_0_rgba(255,255,255,0.5)]", compact ? "w-3 h-3" : "w-3.5 h-3.5")} />
+              <span className={cn(
+                "font-black uppercase italic tracking-[0.18em] whitespace-nowrap",
+                compact ? "text-[10px]" : "text-[10px] sm:text-[11px]"
+              )}>
+                RÉCORD
+              </span>
+            </div>
+          )}
         </div>
 
         <div className="relative z-10">
@@ -387,23 +451,36 @@ function CommentCard({ comment, index, compact = false }: { comment: any; index:
 }
 
 function ChallengeStats({ challenge, compact = false }: { challenge: any; compact?: boolean }) {
+  const isWorkoutRecord = !!challenge.is_workout_record
+
   return (
     <div className={cn(
-      "rounded-2xl bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border border-primary/20",
+      "rounded-2xl border",
+      isWorkoutRecord
+        ? "bg-gradient-to-r from-amber-400/25 via-yellow-300/10 to-amber-500/15 border-amber-400/60 shadow-[0_0_24px_-8px_rgba(251,191,36,0.4)]"
+        : "bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-primary/20",
       compact ? "mb-2 p-2.5" : "mb-2 p-3"
     )}>
       <div className="flex flex-wrap items-center gap-2 sm:gap-3">
         <div className="flex items-center gap-1.5 sm:gap-2">
           <div className={cn(
-            "bg-primary/20 rounded-lg flex items-center justify-center",
-            compact ? "p-1" : "p-1.5"
+            "rounded-lg flex items-center justify-center",
+            isWorkoutRecord
+              ? compact ? "p-1 bg-amber-400/40" : "p-1.5 bg-amber-400/40"
+              : compact ? "p-1 bg-primary/20" : "p-1.5 bg-primary/20"
           )}>
-            <Trophy className={cn("text-primary", compact ? "w-3 h-3" : "w-3.5 h-3.5")} />
+            <Trophy className={cn(
+              isWorkoutRecord ? "text-amber-700 dark:text-amber-300" : "text-primary",
+              compact ? "w-3 h-3" : "w-3.5 h-3.5"
+            )} />
           </div>
           <div className="flex flex-col leading-none">
             <span className="hidden sm:block text-[9px] font-black uppercase tracking-widest text-muted-foreground/70">Puntuación</span>
             <span className={cn(
-              "font-black text-primary font-mono tabular-nums",
+              "font-black font-mono tabular-nums",
+              isWorkoutRecord
+                ? "text-amber-700 dark:text-amber-300"
+                : "text-primary",
               compact ? "text-sm" : "text-sm"
             )}>{challenge.score}</span>
           </div>
@@ -425,43 +502,26 @@ function ChallengeStats({ challenge, compact = false }: { challenge: any; compac
           </div>
         </div>
 
-        <div className="flex items-center gap-1.5 sm:gap-2">
-          <div className={cn(
-            "bg-sky-500/20 rounded-lg flex items-center justify-center",
-            compact ? "p-1" : "p-1.5"
-          )}>
-            <Plus className={cn("text-sky-500", compact ? "w-3 h-3" : "w-3.5 h-3.5")} />
-          </div>
-          <div className="flex flex-col leading-none">
-            <span className="hidden sm:block text-[9px] font-black uppercase tracking-widest text-muted-foreground/70">Extra</span>
-            <span className={cn(
-              "font-black text-sky-500 font-mono tabular-nums",
-              compact ? "text-sm" : "text-sm"
-            )}>{challenge.extra_reps}</span>
-          </div>
-        </div>
-
         <div className="hidden sm:flex items-center gap-2">
-          <div className="p-1.5 bg-amber-500/20 rounded-lg">
-            <Timer className="w-3.5 h-3.5 text-amber-500" />
+          <div className={cn(
+            "rounded-lg",
+            isWorkoutRecord ? "p-1.5 bg-amber-400/30" : "p-1.5 bg-amber-500/20"
+          )}>
+            <Timer className={cn(
+              "w-3.5 h-3.5",
+              isWorkoutRecord ? "text-amber-700 dark:text-amber-300" : "text-amber-500"
+            )} />
           </div>
           <div className="flex flex-col leading-none">
             <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/70">Límite</span>
-            <span className="text-sm font-black text-amber-500 font-mono tabular-nums">
+            <span className={cn(
+              "text-sm font-black font-mono tabular-nums",
+              isWorkoutRecord ? "text-amber-700 dark:text-amber-300" : "text-amber-500"
+            )}>
               {Math.floor(challenge.time_cap_seconds / 60)}:{String(challenge.time_cap_seconds % 60).padStart(2, '0')}
             </span>
           </div>
         </div>
-
-        {challenge.is_pr && (
-          <div className="ml-auto flex items-center gap-1 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-[0_0_16px_-4px_rgba(245,158,11,0.6)] animate-pulse">
-            <Trophy className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
-            <span className={cn(
-              "font-black uppercase tracking-wider",
-              compact ? "text-[9px]" : "text-[9px]"
-            )}>PR</span>
-          </div>
-        )}
       </div>
     </div>
   )

@@ -8,6 +8,7 @@ import { MusicPlayer } from './MusicPlayer'
 import { LocalWorkout, ExerciseTutorial } from '@/types/workout/viewTypes'
 import { CheckCircle2, ChevronLeft, Clock, Dumbbell, Info, Pause, Play, Plus, SkipForward } from 'lucide-react'
 import { getNextWorkoutCursor, getStepInfo } from '@/lib/workout/sessionNavigation'
+import { getWorkoutSegmentKind, WorkoutSegmentKind } from '@/lib/workout/segmentKind'
 import { formatDuration } from '@/lib/time'
 import { useWorkoutStore } from '@/store/workOutStore'
 
@@ -44,6 +45,30 @@ function getStrokeColor(stage: SessionStage) {
       return '#22c55e'
     default:
       return '#8b5cf6'
+  }
+}
+
+// Copy shown during the rest that follows the very last exercise/round of a section, when
+// the section coming next plays by different rules than the one just finished (e.g. handing
+// off into the AMRAP circuit). Keyed by the upcoming section's kind so a future mode (EMOM…)
+// just needs a new case here.
+function getRestTransitionTheme(upcomingKind: WorkoutSegmentKind, sectionName?: string) {
+  if (upcomingKind === 'amrap') {
+    return {
+      badge: 'Después del descanso',
+      badgeClass: 'border-emerald-400/30 bg-emerald-400/10 text-emerald-300',
+      headline: 'Se acerca un reto AMRAP',
+      subline: sectionName
+        ? `${sectionName}: aguanta el ritmo, viene contrarreloj`
+        : 'Aguanta el ritmo, viene contrarreloj',
+    }
+  }
+
+  return {
+    badge: 'Después del descanso',
+    badgeClass: 'border-violet-400/30 bg-violet-400/10 text-violet-300',
+    headline: 'Cambia el formato del entrenamiento',
+    subline: sectionName ? `A continuación: ${sectionName}` : 'Prepárate para el nuevo formato',
   }
 }
 
@@ -138,6 +163,25 @@ export function WorkoutExecutionView({
     [currentCursor, isResting, upcomingCursor]
   )
 
+  // True only for the rest right after the last exercise of the last round of the current
+  // section — i.e. the point where getNextWorkoutCursor has to cross into another section —
+  // and only when that next section plays by different rules (see getWorkoutSegmentKind).
+  // Lets the rest screen warn about the format change before WorkoutChangeTypeView takes over.
+  const currentSectionKind = useMemo(
+    () => getWorkoutSegmentKind(workout, currentSectionIndex),
+    [workout, currentSectionIndex]
+  )
+  const upcomingSectionKind = useMemo(
+    () => (upcomingCursor ? getWorkoutSegmentKind(workout, upcomingCursor.sectionIndex) : null),
+    [upcomingCursor, workout]
+  )
+  const isRestBeforeModeChange =
+    isResting &&
+    Boolean(upcomingCursor) &&
+    upcomingCursor?.sectionIndex !== currentSectionIndex &&
+    upcomingSectionKind !== null &&
+    upcomingSectionKind !== currentSectionKind
+
   const displaySection = isResting ? upcomingStep?.section || currentSection : currentSection
   const displayExercise = isResting ? upcomingStep?.exercise || currentExercise : currentExercise
   const executionCircleMediaUrl = useMemo(() => {
@@ -157,14 +201,24 @@ export function WorkoutExecutionView({
         ? 'exercise-timed'
         : 'exercise-reps'
 
-  const stageTheme = getStageTheme(stage)
+  const stageTheme =
+    stage === 'rest' && isRestBeforeModeChange && upcomingSectionKind
+      ? getRestTransitionTheme(upcomingSectionKind, upcomingStep?.section?.name)
+      : getStageTheme(stage)
   const hasTimer = stage !== 'exercise-reps'
   const totalDuration = useMemo(() => {
     if (stage === 'prepare') return 5
-    if (stage === 'rest') return Math.max(currentExercise?.rest || 5, 1)
+    if (stage === 'rest') {
+      // Exercises with no configured rest still get a few courtesy seconds to reposition —
+      // except right before handing off into a different-mode section (e.g. AMRAP): that
+      // handoff already goes through WorkoutChangeTypeView, whose own "Comenzar" button is
+      // the pacing point, so there's nothing to wait for here when there was no real rest.
+      if (isRestBeforeModeChange && !currentExercise?.rest) return 0
+      return Math.max(currentExercise?.rest || 5, 1)
+    }
     if (stage === 'exercise-timed') return Math.max(displayExercise?.duration || 60, 1)
     return 0
-  }, [stage, currentExercise?.rest, displayExercise?.duration])
+  }, [stage, currentExercise?.rest, displayExercise?.duration, isRestBeforeModeChange])
 
   const timerKey = `${stage}-${currentSectionIndex}-${currentExerciseIndex}-${currentSet}`
 
@@ -282,6 +336,17 @@ export function WorkoutExecutionView({
 
     onNextStep()
   }, [hasTimer, onNextStep, stage, timeLeft])
+
+  // The effect above only reacts to timeLeft *crossing* down to 0, so it never fires for a
+  // rest whose totalDuration is already 0 (see isRestBeforeModeChange above) — timeLeft
+  // starts at 0 and never "crosses" anything. Advance explicitly instead, once per rest
+  // instance (timerKey), so this handoff has no visible wait at all.
+  useEffect(() => {
+    if (stage !== 'rest' || !isRestBeforeModeChange || currentExercise?.rest) return
+
+    onNextStep()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [timerKey])
 
   useEffect(() => {
     previousTimeLeftRef.current = timeLeft
@@ -864,7 +929,10 @@ export function WorkoutExecutionView({
  
           <div ref={visualStageRef} className="flex w-full min-h-0 flex-1 flex-col items-center justify-center py-1 sm:py-0">
             <div className="flex min-h-0 w-full flex-1 items-center justify-center">
-              <div className="relative h-auto max-h-full max-w-full" style={fluidCircleFrameStyle}>
+              <div
+                className="relative h-auto max-h-full max-w-full [container-type:inline-size]"
+                style={fluidCircleFrameStyle}
+              >
               <div className="absolute inset-0 rounded-full blur-3xl" style={{ backgroundColor: `${strokeColor}22` }} />
               <svg
                 width={circleSize}
@@ -919,8 +987,12 @@ export function WorkoutExecutionView({
                 )}
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.22),transparent_52%),linear-gradient(180deg,rgba(255,255,255,0.04),rgba(15,23,42,0.08))]" />
                 {stage === 'rest' ? (
-                  <div className="absolute inset-0 flex items-center justify-center bg-[radial-gradient(circle_at_center,rgba(251,191,36,0.28),rgba(251,191,36,0.42)_58%,rgba(180,83,9,0.56))]">
-                    <div className="animate-pulse text-center text-[clamp(2rem,14vw,4.2rem)] font-black uppercase leading-none tracking-[0.22em] text-amber-600 drop-shadow-[0_2px_12px_rgba(251,191,36,0.35)] sm:text-[clamp(2.5rem,9vw,4.7rem)] sm:tracking-[0.3em] lg:text-[4.9rem] lg:tracking-[0.36em]">
+                  <div className="absolute inset-0 flex items-center justify-center overflow-hidden bg-[radial-gradient(circle_at_center,rgba(251,191,36,0.28),rgba(251,191,36,0.42)_58%,rgba(180,83,9,0.56))] px-[6%]">
+                    {/* Sized in cqw (relative to the circle's own rendered width, via the
+                        [container-type:inline-size] ancestor) instead of vw — the circle can
+                        be much smaller than the viewport would suggest on compact phones, and
+                        vw-based sizing made this overflow and clip down to just "ES". */}
+                    <div className="animate-pulse text-center text-[clamp(1rem,15cqw,3.25rem)] font-black uppercase leading-none tracking-[0.12em] text-amber-600 drop-shadow-[0_2px_12px_rgba(251,191,36,0.35)]">
                       REST
                     </div>
                   </div>

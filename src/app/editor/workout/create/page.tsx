@@ -409,7 +409,14 @@ function CreateWorkoutContent() {
   }, [])
 
   const { isLoading: isLoadingWorkout, data: loadedWorkout, error: loadError } = useQuery({
-    queryKey: ['workout', workoutId],
+    // Namespaced separately from the ['workout', id] key used by the workout viewer
+    // (src/app/workout/[id]/page.tsx). Both share the same global QueryClient, and the
+    // viewer caches a completely different shape ({ workout, errorCode, errorMessage })
+    // than what this editor needs (flattened WorkoutFormValues). Reusing the same key
+    // meant the editor could pick up the viewer's cached data on first navigation and
+    // reset() the form with the wrong shape, leaving it blank until a hard reload wiped
+    // the cache. See conversation for the full repro.
+    queryKey: ['workout-editor', workoutId],
     queryFn: async () => {
       if (!workoutId) return null
       const timeout = new Promise<never>((_, reject) =>
