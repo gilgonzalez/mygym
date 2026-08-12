@@ -84,10 +84,10 @@ export function WorkoutCompleted({
         <div className="flex flex-col items-center justify-center p-3 rounded-2xl bg-secondary/20 hover:bg-secondary/30 transition-colors">
             <Dumbbell className="w-5 h-5 text-blue-500 mb-1" />
             <span className="text-xl font-bold tracking-tight">
-              {challengeResult ? `${challengeResult.roundsCompleted} + ${challengeResult.extraReps}` : totalSets}
+              {challengeResult ? `${challengeResult.roundsCompleted}` : totalSets}
             </span>
             <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-              {challengeResult ? 'Puntuación' : 'Series'}
+              {challengeResult ? 'Rondas' : 'Series'}
             </span>
         </div>
         <div className="flex flex-col items-center justify-center p-3 rounded-2xl bg-secondary/20 hover:bg-secondary/30 transition-colors">
@@ -116,10 +116,10 @@ export function WorkoutCompleted({
             )}
           </div>
           <p className="mt-3 text-lg font-black text-foreground">
-            {challengeResult.roundsCompleted} rondas + {challengeResult.extraReps} reps
+            {challengeResult.roundsCompleted} rondas
           </p>
           <p className="mt-1 text-sm text-muted-foreground">
-            Resultado final del reto dentro del time cap.
+            Resultado final del reto dentro del time cap. Solo cuentan las rondas completadas.
           </p>
         </div>
       )}

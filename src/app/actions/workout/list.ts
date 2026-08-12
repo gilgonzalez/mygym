@@ -173,25 +173,32 @@ async function buildWorkoutsWithMetadata(
   )
   const commentsCounts = await buildWorkoutCommentsCount(supabase, workoutIds)
 
-  return rawData.map((workout: any) => ({
-    ...workout,
-    user: workout.user,
-    likes_count: likesCounts[workout.id] || 0,
-    is_liked: likedByUser[workout.id] || false,
-    likes_preview: likesPreviews[workout.id] || [],
-    comments_count: commentsCounts[workout.id] || 0,
-    viewer_follow_status:
-      workout.user_id && workout.user_id !== viewer?.id
-        ? followStatusByOwner[workout.user_id] || 'none'
-        : undefined,
-    sections: (workout.workout_sections || [])
-      .sort((a: any, b: any) => a.order_index - b.order_index)
-      .map((ws: any) => ({
-        ...ws.sections,
-        total_exercises: ws.sections.section_exercises?.[0]?.count || 0,
-        exercises: []
-      }))
-  }))
+  return rawData.map((workout: any) => {
+    const challengeData = Array.isArray(workout.challenge)
+      ? workout.challenge[0]
+      : workout.challenge
+
+    return {
+      ...workout,
+      challenge: challengeData || null,
+      user: workout.user,
+      likes_count: likesCounts[workout.id] || 0,
+      is_liked: likedByUser[workout.id] || false,
+      likes_preview: likesPreviews[workout.id] || [],
+      comments_count: commentsCounts[workout.id] || 0,
+      viewer_follow_status:
+        workout.user_id && workout.user_id !== viewer?.id
+          ? followStatusByOwner[workout.user_id] || 'none'
+          : undefined,
+      sections: (workout.workout_sections || [])
+        .sort((a: any, b: any) => a.order_index - b.order_index)
+        .map((ws: any) => ({
+          ...ws.sections,
+          total_exercises: ws.sections.section_exercises?.[0]?.count || 0,
+          exercises: []
+        }))
+    }
+  })
 }
 
 function matchesSearch(workout: any, search: string): boolean {
@@ -223,6 +230,7 @@ async function fetchWorkoutWindow(
   const SELECT_FIELDS = `
     id, user_id, title, description, visibility, created_at, updated_at,
     rating, difficulty, estimated_time, exp_earned, cover, audio, stats, tags,
+    challenge:workout_challenges(*),
     user:users!user_id(id, username, name, avatar_url),
     workout_sections(
       order_index,
@@ -408,6 +416,7 @@ export async function getUserWorkoutsAction(userId: string): Promise<{ success: 
       .from('workouts')
       .select(`
         *,
+        challenge:workout_challenges(*),
         user:users!user_id(id, username, name, avatar_url),
         workout_sections(
           order_index,
@@ -424,6 +433,12 @@ export async function getUserWorkoutsAction(userId: string): Promise<{ success: 
 
     if (error) throw error
 
+    const followStatusByOwner = await buildViewerFollowStatusMap(
+      supabase,
+      viewer?.id,
+      (data ?? []).map((workout: any) => workout.user_id)
+    )
+
     const workoutIdsUser = ((data as any[]) ?? []).map((workout: any) => workout.id)
     const { likesCounts, likedByUser, likesPreviews } = await buildWorkoutLikesData(
       supabase,
@@ -432,21 +447,32 @@ export async function getUserWorkoutsAction(userId: string): Promise<{ success: 
     )
     const commentsCounts = await buildWorkoutCommentsCount(supabase, workoutIdsUser)
 
-    const workouts: Workout[] = (data as any).map((workout: any) => ({
-      ...workout,
-      user: workout.user,
-      likes_count: likesCounts[workout.id] || 0,
-      is_liked: likedByUser[workout.id] || false,
-      likes_preview: likesPreviews[workout.id] || [],
-      comments_count: commentsCounts[workout.id] || 0,
-      sections: (workout.workout_sections || [])
-        .sort((a: any, b: any) => a.order_index - b.order_index)
-        .map((ws: any) => ({
-          ...ws.sections,
-          total_exercises: ws.sections.section_exercises?.[0]?.count || 0,
-          exercises: []
-        }))
-    }))
+    const workouts: Workout[] = (data as any).map((workout: any) => {
+      const challengeData = Array.isArray(workout.challenge)
+        ? workout.challenge[0]
+        : workout.challenge
+
+      return {
+        ...workout,
+        challenge: challengeData || null,
+        user: workout.user,
+        likes_count: likesCounts[workout.id] || 0,
+        is_liked: likedByUser[workout.id] || false,
+        likes_preview: likesPreviews[workout.id] || [],
+        comments_count: commentsCounts[workout.id] || 0,
+        viewer_follow_status:
+          workout.user_id && workout.user_id !== viewer?.id
+            ? followStatusByOwner[workout.user_id] || 'none'
+            : undefined,
+        sections: (workout.workout_sections || [])
+          .sort((a: any, b: any) => a.order_index - b.order_index)
+          .map((ws: any) => ({
+            ...ws.sections,
+            total_exercises: ws.sections.section_exercises?.[0]?.count || 0,
+            exercises: []
+          }))
+      }
+    })
 
     return { success: true, data: workouts }
   } catch (error: any) {

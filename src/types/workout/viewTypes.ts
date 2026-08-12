@@ -44,7 +44,6 @@ export interface LocalWorkoutChallenge {
 export interface LocalWorkoutChallengeResult {
   mode: 'amrap_section'
   roundsCompleted: number
-  extraReps: number
   score: number
   timeCapSeconds: number
   isPr?: boolean

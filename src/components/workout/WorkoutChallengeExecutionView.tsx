@@ -82,8 +82,7 @@ export function WorkoutChallengeExecutionView({
     const result: LocalWorkoutChallengeResult = {
       mode: 'amrap_section',
       roundsCompleted,
-      extraReps: 0,
-      score: roundsCompleted * 10000,
+      score: roundsCompleted,
       timeCapSeconds: challenge.timeCapSeconds,
     }
 

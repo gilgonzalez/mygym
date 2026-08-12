@@ -10,7 +10,6 @@ export type WorkoutChallengeInput = {
 export type WorkoutChallengeResultInput = {
   mode: 'amrap_section'
   roundsCompleted: number
-  extraReps: number
   score: number
   timeCapSeconds: number
 }
