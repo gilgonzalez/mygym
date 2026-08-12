@@ -17,6 +17,7 @@ import { getWorkoutById } from '@/app/actions/workout/get'
 import { useAuthStore } from '@/store/authStore'
 import { completeWorkoutAction } from '@/app/actions/user/completeWorkout'
 import { calcWorkoutXP } from '@/lib/workout-utils'
+import { useWakeLock } from '@/hooks/useWakeLock'
 
 function normalizeExerciseKey(value: string) {
   return value
@@ -90,7 +91,13 @@ export default function WorkoutSessionPage({ params }: { params: { id: string } 
     jumpToStep,
     completeWorkout
   } = useWorkoutStore()
-  
+
+  // Mobile screens dim/lock mid-session otherwise, taking the elapsed-time clock and the
+  // current exercise off screen with them. Spans every in-progress view — normal exercises,
+  // the AMRAP challenge and the mode-change transition in between — and releases the instant
+  // the session isn't actively running (overview, completed, exited).
+  useWakeLock(hasStarted && !isCompleted)
+
   // Fetch Workout Data
   const { data: workoutData, isLoading, error: queryError, refetch } = useQuery({
     queryKey: ['workout', params.id],
