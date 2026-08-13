@@ -142,7 +142,9 @@ export function WorkoutChallengeExecutionView({
   const targetLabel =
     currentExercise.type === 'time'
       ? formatDuration(currentExercise.duration || 0)
-      : `${currentExercise.reps || 0} reps`
+      : currentExercise.type === 'emom'
+        ? `${currentExercise.reps || 0} reps · ${formatDuration(currentExercise.duration || 0)}`
+        : `${currentExercise.reps || 0} reps`
   const currentExerciseNumber = currentExerciseIndex + 1
   const nextExercise = exercises[currentExerciseIndex < totalExercises - 1 ? currentExerciseIndex + 1 : 0]
 
@@ -341,7 +343,9 @@ export function WorkoutChallengeExecutionView({
                         const subtitle =
                           exercise.type === 'time'
                             ? formatDuration(exercise.duration || 0)
-                            : `${exercise.reps || 0} reps`
+                            : exercise.type === 'emom'
+                              ? `${exercise.reps || 0} reps · ${formatDuration(exercise.duration || 0)}`
+                              : `${exercise.reps || 0} reps`
 
                         return (
                           <div
@@ -404,7 +408,9 @@ export function WorkoutChallengeExecutionView({
                         <p className="mt-0.5 text-xs text-white/52 sm:mt-1 sm:text-sm">
                           {nextExercise?.type === 'time'
                             ? formatDuration(nextExercise.duration || 0)
-                            : `${nextExercise?.reps || 0} reps`}
+                            : nextExercise?.type === 'emom'
+                              ? `${nextExercise?.reps || 0} reps · ${formatDuration(nextExercise?.duration || 0)}`
+                              : `${nextExercise?.reps || 0} reps`}
                         </p>
                       </div>
 

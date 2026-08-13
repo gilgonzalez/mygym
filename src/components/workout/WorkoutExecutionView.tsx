@@ -967,9 +967,11 @@ export function WorkoutExecutionView({
                 </>
               ) : displayExercise ? (
                 <span className="rounded-full border border-white/10 bg-white/8 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-white/70">
-                  {displayExercise.type === 'time'
-                    ? formatDuration(displayExercise.duration || 0)
-                    : `${displayExercise.reps || 0} reps`}
+                  {displayExercise.type === 'emom'
+                    ? `${displayExercise.reps || 0} reps · ${formatDuration(displayExercise.duration || 0)}`
+                    : displayExercise.type === 'time'
+                      ? formatDuration(displayExercise.duration || 0)
+                      : `${displayExercise.reps || 0} reps`}
                 </span>
               ) : null}
               {totalSets > 1 && (

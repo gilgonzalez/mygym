@@ -48,6 +48,10 @@ export function ActiveSession({
     const formatDetails = (ex: any) => {
       if (ex.type === 'time') {
         return `${ex.duration} segundos`
+      } else if (ex.type === 'emom') {
+        const repsValue = ex.reps || 0
+        const cleanReps = repsValue.toString().replace('/', ' por ')
+        return `${cleanReps} repeticiones en ${ex.duration || 60} segundos`
       } else if (ex.type === 'reps') {
         const repsValue = ex.reps || 0
         const cleanReps = repsValue.toString().replace('/', ' por ')
