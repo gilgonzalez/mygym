@@ -8,6 +8,7 @@ export const WORKOUT_TAGS = [
   'Strongman',
   'Halterofilia',
   'Entrenamiento Funcional',
+  'Militar',
   'HIIT',
   'LISS',
   'Tabata',

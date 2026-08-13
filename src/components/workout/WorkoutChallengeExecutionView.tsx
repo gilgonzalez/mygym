@@ -214,15 +214,15 @@ export function WorkoutChallengeExecutionView({
         </div>
 
         <main className="mx-auto flex min-h-0 w-full max-w-6xl flex-1 flex-col gap-3 overflow-hidden px-4 pb-3 pt-3 sm:gap-6 sm:px-6 sm:pb-6 sm:pt-5 lg:grid lg:grid-cols-[minmax(0,1.15fr)_minmax(280px,0.85fr)] lg:items-stretch">
-          <section className="flex min-h-0 flex-col self-stretch">
+          <section className="flex min-h-0 min-w-0 flex-1 flex-col self-stretch">
             <div className="flex min-h-0 flex-1 flex-col gap-3 sm:gap-5">
-              <div className="mx-auto flex h-full min-h-0 w-full max-w-[840px] flex-1 flex-col justify-between gap-3 rounded-[26px] bg-white/[0.04] p-3 sm:gap-5 sm:rounded-[34px] sm:p-5 lg:p-6">
-                <div className="flex items-start justify-between gap-4">
+              <div className="mx-auto flex h-full min-h-0 w-full max-w-[840px] flex-1 flex-col gap-3 overflow-hidden rounded-[26px] bg-white/[0.04] p-3 sm:gap-5 sm:rounded-[34px] sm:p-5 lg:p-6">
+                <div className="flex shrink-0 items-start justify-between gap-4">
                   <div className="min-w-0 flex-1">
                     <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-emerald-200/55">
                       {phase === 'prepare' ? 'Preparate' : 'Ejercicio actual'}
                     </p>
-                    <h1 className="mt-1.5 text-[clamp(1.5rem,6.2vw,3rem)] font-black leading-[0.95] tracking-[-0.04em] text-white lg:text-5xl">
+                    <h1 className="mt-1.5 text-[clamp(1.25rem,5.4vw,3rem)] font-black leading-[0.95] tracking-[-0.04em] text-white lg:text-5xl">
                       {phase === 'prepare' ? 'Entra fuerte' : currentExercise.name}
                     </h1>
                     <p className="mt-2 text-base font-black text-emerald-300 sm:mt-3 sm:text-2xl">
@@ -238,22 +238,22 @@ export function WorkoutChallengeExecutionView({
                   </div>
                 </div>
 
-                <div className="relative flex min-h-[148px] items-center justify-center overflow-hidden rounded-[24px] bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.08),transparent_45%),linear-gradient(180deg,rgba(15,23,42,0.5),rgba(2,6,23,0.18))] px-3 py-3 sm:min-h-[300px] sm:rounded-[28px] sm:px-6 sm:py-8 lg:min-h-[340px] lg:px-8">
-                  <div className="absolute inset-0 rounded-[30px] bg-[radial-gradient(circle,rgba(16,185,129,0.12),transparent_58%)] opacity-90" />
+                <div className="relative flex min-h-0 min-w-0 flex-1 items-center justify-center overflow-hidden rounded-[24px] bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.08),transparent_45%),linear-gradient(180deg,rgba(15,23,42,0.5),rgba(2,6,23,0.18))] px-3 py-3 sm:rounded-[28px] sm:px-6 sm:py-8 lg:px-8">
+                  <div className="pointer-events-none absolute inset-0 rounded-[30px] bg-[radial-gradient(circle,rgba(16,185,129,0.12),transparent_58%)] opacity-90" />
                   {displayMediaUrl ? (
                     <img
                       src={displayMediaUrl}
                       alt={currentExercise.name}
-                      className="relative z-10 h-full max-h-[140px] w-full max-w-[220px] object-contain sm:max-h-[360px] sm:max-w-[500px] lg:max-h-[420px] lg:max-w-[520px]"
+                      className="relative z-10 h-full max-h-full w-full max-w-full object-contain"
                     />
                   ) : (
-                    <div className="relative z-10 flex h-24 w-24 items-center justify-center rounded-full bg-white/[0.04] sm:h-56 sm:w-56">
-                      <Dumbbell className="h-10 w-10 text-white/25 sm:h-16 sm:w-16" />
+                    <div className="relative z-10 flex h-[min(40%,9rem)] w-[min(40%,9rem)] items-center justify-center rounded-full bg-white/[0.04]">
+                      <Dumbbell className="h-1/2 w-1/2 text-white/25" />
                     </div>
                   )}
                 </div>
 
-                <div className="flex items-center gap-2.5 sm:gap-3">
+                <div className="flex shrink-0 items-center gap-2.5 sm:gap-3">
                   <Button
                     className="h-10 min-w-0 flex-1 rounded-full bg-emerald-400 px-3 text-slate-950 shadow-[0_18px_50px_rgba(34,197,94,0.22)] hover:bg-emerald-300 sm:h-14 sm:px-7 sm:text-base"
                     onClick={handleAdvance}
@@ -300,7 +300,7 @@ export function WorkoutChallengeExecutionView({
             </div>
           </section>
 
-          <aside className="flex min-h-0 flex-1 flex-col gap-3 self-stretch sm:gap-5 lg:h-full lg:flex-none">
+          <aside className="flex min-h-0 min-w-0 flex-1 flex-col gap-3 self-stretch sm:gap-5 lg:h-full lg:flex-none">
             <div className="hidden rounded-[30px] bg-white/[0.04] p-5 sm:block sm:p-6">
               <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-white/35">Puntuación actual</p>
               <p className="mt-3 text-3xl font-black leading-none tracking-[-0.04em] text-emerald-300 sm:text-4xl">

@@ -161,7 +161,7 @@ export default function WorkoutSessionPage({ params }: { params: { id: string } 
         exercises: s.exercises.map(e => ({
           id: e.id,
           name: e.name,
-          type: (e.type as 'reps' | 'time') || 'reps',
+          type: (e.type as 'reps' | 'time' | 'emom') || 'reps',
           reps: e.reps || 0,
           sets: e.sets || 0,
           duration: e.duration || 0,

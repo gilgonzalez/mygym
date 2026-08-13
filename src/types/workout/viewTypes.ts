@@ -15,7 +15,9 @@ export interface ExerciseTutorial {
 export interface LocalExercise {
   id: string
   name: string
-  type: 'reps' | 'time'
+  // 'emom' sets both duration (the time window) and reps (target within it) at once —
+  // rest is always 0, since whatever's left of the window after the reps are done is rest.
+  type: 'reps' | 'time' | 'emom'
   reps?: number | string
   sets?: number
   duration?: number // seconds

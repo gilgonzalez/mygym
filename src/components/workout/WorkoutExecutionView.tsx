@@ -2,17 +2,18 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { PremiumFeatureDialog } from '@/components/premium/PremiumFeatureDialog'
 import { ExerciseTutorialDialog } from './ExerciseTutorialDialog'
 import { MusicPlayer } from './MusicPlayer'
 import { LocalWorkout, ExerciseTutorial } from '@/types/workout/viewTypes'
-import { CheckCircle2, ChevronLeft, Clock, Dumbbell, Info, Pause, Play, Plus, SkipForward } from 'lucide-react'
+import { CheckCircle2, ChevronDown, ChevronLeft, Clock, Dumbbell, Info, Pause, Play, Plus, SkipForward } from 'lucide-react'
 import { getNextWorkoutCursor, getStepInfo } from '@/lib/workout/sessionNavigation'
 import { getWorkoutSegmentKind, WorkoutSegmentKind } from '@/lib/workout/segmentKind'
 import { formatDuration } from '@/lib/time'
 import { useWorkoutStore } from '@/store/workOutStore'
 
-type SessionStage = 'prepare' | 'rest' | 'exercise-timed' | 'exercise-reps'
+type SessionStage = 'prepare' | 'rest' | 'exercise-timed' | 'exercise-reps' | 'exercise-emom'
 
 interface WorkoutExecutionViewProps {
   workout: LocalWorkout
@@ -43,6 +44,8 @@ function getStrokeColor(stage: SessionStage) {
       return '#f97316'
     case 'exercise-timed':
       return '#22c55e'
+    case 'exercise-emom':
+      return '#ec4899'
     default:
       return '#8b5cf6'
   }
@@ -95,6 +98,23 @@ function getStageTheme(stage: SessionStage) {
         headline: 'Mantén el ritmo',
         subline: 'Sigue el temporizador y controla la técnica',
       }
+    case 'exercise-emom':
+      return {
+        badge: 'EMOM',
+        badgeClass: 'border-pink-400/30 bg-pink-400/10 text-pink-300',
+        // No mention of "descanso" here on purpose — there's no separate rest stage for
+        // EMOM, whatever's left of the window after the reps are done just plays out on
+        // this same clock.
+        headline: 'Completa las repeticiones a tiempo',
+        subline: 'Mantén el ritmo hasta que se acabe el tiempo asignado',
+      }
+    case 'exercise-reps':
+      return {
+        badge: 'Actividad',
+        badgeClass: 'border-violet-400/30 bg-violet-400/10 text-violet-300',
+        headline: 'Completa la serie',
+        subline: 'Marca la serie cuando termines',
+      }
     default:
       return {
         badge: 'Actividad',
@@ -107,6 +127,95 @@ function getStageTheme(stage: SessionStage) {
 
 function isGifUrl(url?: string) {
   return Boolean(url && /\.gif($|\?)/i.test(url))
+}
+
+function WorkoutSessionCircle({
+  circleSize,
+  radius,
+  strokeWidth,
+  circumference,
+  dashOffset,
+  strokeColor,
+  innerInset,
+  mediaUrl,
+  alt,
+  showRest,
+}: {
+  circleSize: number
+  radius: number
+  strokeWidth: number
+  circumference: number
+  dashOffset: number
+  strokeColor: string
+  innerInset: string
+  mediaUrl?: string
+  alt: string
+  showRest: boolean
+}) {
+  return (
+    <div className="grid h-full w-full min-h-0 min-w-0 place-items-center overflow-hidden [container-type:size]">
+      <div
+        className="relative [container-type:inline-size]"
+        style={{ width: 'min(100cqw, 100cqh)', aspectRatio: '1 / 1' }}
+      >
+        <div className="pointer-events-none absolute inset-0 rounded-full blur-3xl" style={{ backgroundColor: `${strokeColor}22` }} />
+        <svg
+          viewBox={`0 0 ${circleSize} ${circleSize}`}
+          className="h-full w-full"
+          style={{ transform: 'rotate(-90deg)', transformOrigin: '50% 50%' }}
+          aria-hidden
+        >
+          <circle
+            cx={circleSize / 2}
+            cy={circleSize / 2}
+            r={radius}
+            fill="transparent"
+            stroke="rgba(255,255,255,0.10)"
+            strokeWidth={strokeWidth}
+          />
+          <circle
+            cx={circleSize / 2}
+            cy={circleSize / 2}
+            r={radius}
+            fill="transparent"
+            stroke={strokeColor}
+            strokeWidth={strokeWidth}
+            strokeLinecap="round"
+            strokeDasharray={circumference}
+            strokeDashoffset={dashOffset}
+            className="transition-[stroke-dashoffset] duration-1000 ease-linear"
+          />
+        </svg>
+
+        <div
+          className="absolute overflow-hidden rounded-full border border-white/10 bg-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
+          style={{ inset: innerInset }}
+        >
+          {mediaUrl ? (
+            <div className="flex h-full w-full items-center justify-center">
+              <img
+                src={mediaUrl}
+                alt={alt}
+                className="h-full w-full object-cover"
+              />
+            </div>
+          ) : (
+            <div className="flex h-full w-full items-center justify-center bg-white">
+              <Dumbbell className="h-[28%] w-[28%] max-h-20 max-w-20 text-slate-300" />
+            </div>
+          )}
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.22),transparent_52%),linear-gradient(180deg,rgba(255,255,255,0.04),rgba(15,23,42,0.08))]" />
+          {showRest ? (
+            <div className="absolute inset-0 flex items-center justify-center overflow-hidden bg-[radial-gradient(circle_at_center,rgba(251,191,36,0.28),rgba(251,191,36,0.42)_58%,rgba(180,83,9,0.56))] px-[6%]">
+              <div className="animate-pulse text-center text-[clamp(1rem,15cqw,3.25rem)] font-black uppercase leading-none tracking-[0.12em] text-amber-600 drop-shadow-[0_2px_12px_rgba(251,191,36,0.35)]">
+                REST
+              </div>
+            </div>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  )
 }
 
 export function WorkoutExecutionView({
@@ -197,9 +306,11 @@ export function WorkoutExecutionView({
     ? 'prepare'
     : isResting
       ? 'rest'
-      : displayExercise?.type === 'time'
-        ? 'exercise-timed'
-        : 'exercise-reps'
+      : displayExercise?.type === 'emom'
+        ? 'exercise-emom'
+        : displayExercise?.type === 'time'
+          ? 'exercise-timed'
+          : 'exercise-reps'
 
   const stageTheme =
     stage === 'rest' && isRestBeforeModeChange && upcomingSectionKind
@@ -216,7 +327,7 @@ export function WorkoutExecutionView({
       if (isRestBeforeModeChange && !currentExercise?.rest) return 0
       return Math.max(currentExercise?.rest || 5, 1)
     }
-    if (stage === 'exercise-timed') return Math.max(displayExercise?.duration || 60, 1)
+    if (stage === 'exercise-timed' || stage === 'exercise-emom') return Math.max(displayExercise?.duration || 60, 1)
     return 0
   }, [stage, currentExercise?.rest, displayExercise?.duration, isRestBeforeModeChange])
 
@@ -455,18 +566,20 @@ export function WorkoutExecutionView({
   const displaySet = Math.min(Math.max(activeCursor.set, 1), totalSets)
   const exerciseDescription = displayExercise?.description?.trim() || ''
   const showCompactTimerLabel = !isCompactMobileViewport || hasTimer
-  const circleClassName = 'h-full w-full'
   const baseInnerInset = circleSize / 2 - (radius - strokeWidth / 2) + 2
   const circleInnerInset = `${(baseInnerInset / circleSize) * 100}%`
-  const innerCircleStyle = {
-    inset: circleInnerInset,
+  const sessionCircleProps = {
+    circleSize,
+    radius,
+    strokeWidth,
+    circumference,
+    dashOffset,
+    strokeColor,
+    innerInset: circleInnerInset,
+    mediaUrl: executionCircleMediaUrl,
+    alt: displayExercise?.name || 'Vista previa del ejercicio',
+    showRest: stage === 'rest',
   }
-  const desktopInnerCircleStyle = {
-    inset: circleInnerInset,
-  }
-  const fluidCircleFrameStyle = {
-    aspectRatio: '1 / 1',
-  } as const
 
   const nextButtonLabel =
     stage === 'prepare'
@@ -713,80 +826,20 @@ export function WorkoutExecutionView({
                 <span className={`rounded-[16px] border border-white/10 bg-white/[0.06] px-4 py-2 text-sm font-bold uppercase tracking-[0.16em] text-white/78 ${hasTimer ? 'font-timer normal-case tracking-[0.08em]' : ''}`}>
                   {timerLabel}
                 </span>
+                {stage === 'exercise-emom' ? (
+                  <span className="rounded-[16px] border border-pink-300/15 bg-pink-400/10 px-4 py-2 text-sm font-bold uppercase tracking-[0.16em] text-pink-200">
+                    {displayExercise?.reps || 0} reps
+                  </span>
+                ) : null}
               </div>
             </div>
 
               <div
                 ref={visualStageRef}
-                className="mx-auto flex h-[min(60vh,720px)] w-fit max-w-full items-center justify-center gap-10 xl:gap-12"
+                className="mx-auto flex h-[min(60vh,720px)] w-fit max-w-full min-h-0 items-center justify-center gap-10 xl:gap-12"
               >
-                <div className="flex h-full shrink-0 items-center justify-center">
-                  <div
-                    className="relative aspect-square h-full w-auto max-w-[min(calc(100vw-20rem),74vh)]"
-                    style={fluidCircleFrameStyle}
-                  >
-                    <div className="absolute inset-0 rounded-full blur-3xl" style={{ backgroundColor: `${strokeColor}22` }} />
-                    <svg
-                      width={circleSize}
-                      height={circleSize}
-                      viewBox={`0 0 ${circleSize} ${circleSize}`}
-                      className={circleClassName}
-                      style={{
-                        width: '100%',
-                        height: '100%',
-                        transform: 'rotate(-90deg)',
-                        transformOrigin: '50% 50%',
-                      }}
-                    >
-                      <circle
-                        cx={circleSize / 2}
-                        cy={circleSize / 2}
-                        r={radius}
-                        fill="transparent"
-                        stroke="rgba(255,255,255,0.10)"
-                        strokeWidth={strokeWidth}
-                      />
-                      <circle
-                        cx={circleSize / 2}
-                        cy={circleSize / 2}
-                        r={radius}
-                        fill="transparent"
-                        stroke={strokeColor}
-                        strokeWidth={strokeWidth}
-                        strokeLinecap="round"
-                        strokeDasharray={circumference}
-                        strokeDashoffset={dashOffset}
-                        className="transition-[stroke-dashoffset] duration-1000 ease-linear"
-                      />
-                    </svg>
-
-                    <div
-                      className="absolute overflow-hidden rounded-full border border-white/10 bg-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
-                      style={desktopInnerCircleStyle}
-                    >
-                      {executionCircleMediaUrl ? (
-                        <div className="flex h-full w-full items-center justify-center">
-                          <img
-                            src={executionCircleMediaUrl}
-                            alt={displayExercise?.name || 'Vista previa del ejercicio'}
-                            className="h-full w-full object-cover"
-                          />
-                        </div>
-                      ) : (
-                        <div className="flex h-full w-full items-center justify-center bg-white">
-                          <Dumbbell className="h-20 w-20 text-slate-300" />
-                        </div>
-                      )}
-                      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.22),transparent_52%),linear-gradient(180deg,rgba(255,255,255,0.04),rgba(15,23,42,0.08))]" />
-                      {stage === 'rest' ? (
-                        <div className="absolute inset-0 flex items-center justify-center bg-[radial-gradient(circle_at_center,rgba(251,191,36,0.28),rgba(251,191,36,0.42)_58%,rgba(180,83,9,0.56))]">
-                          <div className="animate-pulse text-center text-[4.8rem] font-black uppercase leading-none tracking-[0.34em] text-amber-600 drop-shadow-[0_2px_12px_rgba(251,191,36,0.35)]">
-                            REST
-                          </div>
-                        </div>
-                      ) : null}
-                    </div>
-                  </div>
+                <div className="aspect-square h-full min-h-0 min-w-0 w-auto max-w-[min(calc(100vw-24rem),100%)]">
+                  <WorkoutSessionCircle {...sessionCircleProps} />
                 </div>
 
                 <div className="flex h-full w-[300px] flex-none flex-col items-center justify-center xl:w-[320px]">
@@ -897,19 +950,28 @@ export function WorkoutExecutionView({
           </div>
         </div>
 
-        <div className="mx-auto flex h-full w-full max-w-6xl flex-col items-center gap-3 sm:justify-center sm:gap-6 lg:hidden">
+        <div className="mx-auto flex h-full min-h-0 w-full min-w-0 max-w-6xl flex-col items-center gap-3 overflow-hidden sm:justify-center sm:gap-6 lg:hidden">
           <div className="shrink-0 pt-1 text-center sm:mb-3 sm:pt-0">
             <div className="mb-2 flex flex-wrap items-center justify-center gap-2">
               <span className={`rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] ${stageTheme.badgeClass}`}>
                 {stageTheme.badge}
               </span>
-              {displayExercise && (
+              {displayExercise && displayExercise.type === 'emom' ? (
+                <>
+                  <span className="rounded-full border border-pink-300/15 bg-pink-400/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-pink-200">
+                    {displayExercise.reps || 0} reps
+                  </span>
+                  <span className="rounded-full border border-white/10 bg-white/8 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-white/70">
+                    {formatDuration(displayExercise.duration || 0)}
+                  </span>
+                </>
+              ) : displayExercise ? (
                 <span className="rounded-full border border-white/10 bg-white/8 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-white/70">
                   {displayExercise.type === 'time'
                     ? formatDuration(displayExercise.duration || 0)
                     : `${displayExercise.reps || 0} reps`}
                 </span>
-              )}
+              ) : null}
               {totalSets > 1 && (
                 <span className="rounded-full border border-orange-300/15 bg-orange-400/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-orange-200">
                   Serie {displaySet}/{totalSets}
@@ -927,81 +989,58 @@ export function WorkoutExecutionView({
             ) : null}
           </div>
  
-          <div ref={visualStageRef} className="flex w-full min-h-0 flex-1 flex-col items-center justify-center py-1 sm:py-0">
-            <div className="flex min-h-0 w-full flex-1 items-center justify-center">
-              <div
-                className="relative h-auto max-h-full max-w-full [container-type:inline-size]"
-                style={fluidCircleFrameStyle}
-              >
-              <div className="absolute inset-0 rounded-full blur-3xl" style={{ backgroundColor: `${strokeColor}22` }} />
-              <svg
-                width={circleSize}
-                height={circleSize}
-                viewBox={`0 0 ${circleSize} ${circleSize}`}
-                className={circleClassName}
-                style={{
-                  width: '100%',
-                  height: '100%',
-                  transform: 'rotate(-90deg)',
-                  transformOrigin: '50% 50%',
-                }}
-              >
-                <circle
-                  cx={circleSize / 2}
-                  cy={circleSize / 2}
-                  r={radius}
-                  fill="transparent"
-                  stroke="rgba(255,255,255,0.10)"
-                  strokeWidth={strokeWidth}
-                />
-                <circle
-                  cx={circleSize / 2}
-                  cy={circleSize / 2}
-                  r={radius}
-                  fill="transparent"
-                  stroke={strokeColor}
-                  strokeWidth={strokeWidth}
-                  strokeLinecap="round"
-                  strokeDasharray={circumference}
-                  strokeDashoffset={dashOffset}
-                  className="transition-[stroke-dashoffset] duration-1000 ease-linear"
-                />
-              </svg>
+          <div ref={visualStageRef} className="flex w-full min-h-0 min-w-0 flex-1 flex-col items-center justify-center overflow-hidden py-1 sm:py-0">
+            <div className="flex h-full min-h-0 min-w-0 w-full flex-1 items-center justify-center overflow-hidden">
+              <WorkoutSessionCircle {...sessionCircleProps} />
+            </div>
 
-              <div
-                className="absolute overflow-hidden rounded-full border border-white/10 bg-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
-                style={innerCircleStyle}
-              >
-                {executionCircleMediaUrl ? (
-                  <div className="flex h-full w-full items-center justify-center">
-                    <img
-                      src={executionCircleMediaUrl}
-                      alt={displayExercise?.name || 'Exercise preview'}
-                      className="h-full w-full object-cover"
-                    />
-                  </div>
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center bg-white">
-                    <Dumbbell className="h-16 w-16 text-slate-300 sm:h-20 sm:w-20" />
-                  </div>
-                )}
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.22),transparent_52%),linear-gradient(180deg,rgba(255,255,255,0.04),rgba(15,23,42,0.08))]" />
-                {stage === 'rest' ? (
-                  <div className="absolute inset-0 flex items-center justify-center overflow-hidden bg-[radial-gradient(circle_at_center,rgba(251,191,36,0.28),rgba(251,191,36,0.42)_58%,rgba(180,83,9,0.56))] px-[6%]">
-                    {/* Sized in cqw (relative to the circle's own rendered width, via the
-                        [container-type:inline-size] ancestor) instead of vw — the circle can
-                        be much smaller than the viewport would suggest on compact phones, and
-                        vw-based sizing made this overflow and clip down to just "ES". */}
-                    <div className="animate-pulse text-center text-[clamp(1rem,15cqw,3.25rem)] font-black uppercase leading-none tracking-[0.12em] text-amber-600 drop-shadow-[0_2px_12px_rgba(251,191,36,0.35)]">
-                      REST
-                    </div>
-                  </div>
+            <div className="mt-2 w-full shrink-0 px-1 text-center sm:mt-3">
+              <div className="flex w-full items-center justify-center gap-1.5">
+                <h1 className={`min-w-0 truncate text-lg font-black tracking-tight sm:text-2xl md:text-3xl ${isCompactMobileViewport ? 'max-w-[calc(100%-2.75rem)]' : 'max-w-full'}`}>
+                  {displayExercise?.name || stageTheme.headline}
+                </h1>
+                {isCompactMobileViewport ? (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 shrink-0 rounded-full border border-white/10 bg-white/10 text-white hover:bg-white/20 data-[state=open]:bg-white/20 [&[data-state=open]>svg]:rotate-180"
+                        aria-label="Ver descripción del ejercicio"
+                      >
+                        <ChevronDown className="h-4 w-4 transition-transform" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent
+                      align="center"
+                      side="bottom"
+                      collisionPadding={16}
+                      className="max-h-[min(40vh,16rem)] w-[min(20rem,calc(100vw-2rem))] overflow-y-auto border-white/10 bg-[#0b1020]/95 p-3 text-white shadow-[0_18px_40px_rgba(0,0,0,0.35)] backdrop-blur-xl"
+                    >
+                      <p className="whitespace-normal text-left text-sm leading-5 text-white/70">
+                        {exerciseDescription || stageTheme.subline}
+                      </p>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 ) : null}
               </div>
-            </div>
+              {!isCompactMobileViewport ? (
+                <>
+                  <div className="mx-auto mt-2 hidden max-w-2xl sm:block">
+                    <p className="text-sm leading-6 text-white/60">
+                      {exerciseDescription || stageTheme.subline}
+                    </p>
+                  </div>
+                  <div className="mx-auto mt-2 w-full max-w-sm px-2 sm:hidden">
+                    <p className="line-clamp-3 text-sm leading-5 text-white/60">
+                      {exerciseDescription || stageTheme.subline}
+                    </p>
+                  </div>
+                </>
+              ) : null}
             </div>
 
-            <div className="mt-4 hidden flex-wrap items-center justify-center gap-2.5 sm:flex">
+            <div className="mt-4 hidden shrink-0 flex-wrap items-center justify-center gap-2.5 sm:flex">
               {workout.audio?.length ? (
                 <div className="w-full sm:hidden">
                   <MusicPlayer playlist={workout.audio || []} className="!fixed-none !top-auto !left-auto !translate-x-0" />
@@ -1064,7 +1103,7 @@ export function WorkoutExecutionView({
               </Button>
             </div>
 
-            <div className="mt-4 w-full text-center">
+            <div className="mt-4 w-full shrink-0 text-center">
               {workout.audio?.length ? (
                 <div className="mb-3 flex justify-center sm:hidden">
                   <MusicPlayer playlist={workout.audio || []} className="!fixed-none !top-auto !left-auto !translate-x-0" />
@@ -1129,24 +1168,6 @@ export function WorkoutExecutionView({
                   {nextButtonLabel}
                 </Button>
               </div>
-
-              {!isCompactMobileViewport && (
-                <>
-                  <h1 className="mt-4 text-xl font-black tracking-tight sm:mt-0 sm:text-2xl md:text-3xl">
-                    {displayExercise?.name || stageTheme.headline}
-                  </h1>
-                  <div className="mt-2 hidden max-w-2xl sm:block">
-                    <p className="text-sm leading-6 text-white/60">
-                      {exerciseDescription || stageTheme.subline}
-                    </p>
-                  </div>
-                  <div className="mx-auto mt-2 w-full max-w-sm px-2 sm:hidden">
-                    <p className="line-clamp-3 text-sm leading-5 text-white/60">
-                      {exerciseDescription || stageTheme.subline}
-                    </p>
-                  </div>
-                </>
-              )}
             </div>
           </div>
         </div>

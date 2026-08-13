@@ -12,6 +12,7 @@ export const TAG_STATS_WEIGHTS: Record<WorkoutTag, Partial<Record<StatType, numb
   'Strongman': { strength: 0.9, cardio: 0.1 },
   'Halterofilia': { strength: 0.7, agility: 0.3 },
   'Entrenamiento Funcional': { strength: 0.5, agility: 0.3, cardio: 0.2 },
+  'Militar': { strength: 0.3, cardio: 0.4, agility: 0.3 },
   'HIIT': { cardio: 0.8, strength: 0.2 },
   'LISS': { cardio: 1.0 },
   'Tabata': { cardio: 0.9, strength: 0.1 },
