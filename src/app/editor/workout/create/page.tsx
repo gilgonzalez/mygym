@@ -823,11 +823,20 @@ function CreateWorkoutContent() {
                     exercises: s.exercises.map((e: WorkoutFormExercise) => {
                         const sanitizedTutorial = sanitizeTutorial(e.tutorial)
                         const persistedId = isPersistedExerciseId(e.db_id)
-                        const { id: _formId, db_id: _dbId, tutorial: _tutorial, ...exerciseFields } = e
 
                         return {
-                            ...exerciseFields,
                             ...(persistedId ? { id: persistedId } : {}),
+                            name: e.name,
+                            type: e.type,
+                            reps: e.reps,
+                            sets: e.sets,
+                            duration: e.duration,
+                            rest: e.rest,
+                            description: e.description,
+                            muscle_groups: e.muscle_groups,
+                            equipment: e.equipment,
+                            difficulty: e.difficulty,
+                            link_id: e.link_id,
                             thumbnail_url: e.thumbnail_url,
                             thumbnail_media_id: e.thumbnail_media_id,
                             filename: e.filename,
