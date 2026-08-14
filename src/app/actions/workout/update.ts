@@ -1,7 +1,7 @@
 'use server'
 
 import { createClient } from "@/lib/supabase/server"
-import { WorkoutInput } from "./create"
+import { sanitizeWorkoutInput, WorkoutInput } from "./create"
 import { syncWorkoutChallengeConfig } from "./challenge"
 
 export async function updateWorkoutAction(workoutId: string, data: WorkoutInput) {
@@ -14,7 +14,7 @@ export async function updateWorkoutAction(workoutId: string, data: WorkoutInput)
     const { error } = await supabase.rpc('update_complete_workout', {
         p_workout_id: workoutId,
         p_user_id: user.id,
-        p_workout_data: data
+        p_workout_data: sanitizeWorkoutInput(data)
     })
 
     if (error) {

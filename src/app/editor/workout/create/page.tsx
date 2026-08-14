@@ -220,6 +220,14 @@ function summarizeFormErrors(error: unknown): { count: number; first: string } {
   return { count: list.length, first: human }
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+function isPersistedExerciseId(value?: string | null) {
+  const trimmed = value?.trim()
+  if (!trimmed || !UUID_RE.test(trimmed)) return undefined
+  return trimmed
+}
+
 function inferMediaType(value?: string | null): 'image' | 'video' | 'audio' {
   if (!value) return 'image'
   if (value.includes('#audio') || /\.(mp3|wav|ogg|m4a|aac)($|\?)/i.test(value)) return 'audio'
@@ -817,7 +825,7 @@ function CreateWorkoutContent() {
 
                         return {
                             ...e,
-                            id: e.db_id || undefined, // Use db_id if available (existing), else undefined (new)
+                            id: isPersistedExerciseId(e.db_id),
                             thumbnail_url: e.thumbnail_url,
                             thumbnail_media_id: e.thumbnail_media_id,
                             filename: e.filename,
@@ -988,7 +996,7 @@ function CreateWorkoutContent() {
                 amrap: { enabled: false, timeCapSeconds: 600 },
                 exercises: s.exercises.map((e: any, eIdx: number): WorkoutFormExercise => ({
                     id: `ex-${Date.now()}-${idx}-${eIdx}`,
-                    db_id: e.id || e.db_id,
+                    db_id: isPersistedExerciseId(e.is_new_exercise ? undefined : (e.id || e.db_id)),
                     name: e.name,
                     type: (e.type === 'time' || e.type === 'emom') ? e.type : 'reps',
                     reps: e.reps || 0,
