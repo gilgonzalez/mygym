@@ -49,30 +49,6 @@ export type WorkoutInput = Omit<DbWorkout, 'id' | 'created_at' | 'updated_at' | 
     challenge?: WorkoutChallengeInput | null
 }
 
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-
-function asUuid(value?: string | null) {
-  const trimmed = value?.trim()
-  if (!trimmed || !UUID_RE.test(trimmed)) return undefined
-  return trimmed
-}
-
-export function sanitizeWorkoutInput(data: WorkoutInput): WorkoutInput {
-  return {
-    ...data,
-    sections: (data.sections || []).map((section) => ({
-      ...section,
-      id: asUuid(section.id),
-      exercises: (section.exercises || []).map((exercise) => ({
-        ...exercise,
-        id: asUuid(exercise.id),
-        link_id: asUuid(exercise.link_id),
-        thumbnail_media_id: asUuid(exercise.thumbnail_media_id),
-      })),
-    })),
-  }
-}
-
 export async function createWorkoutAction(data: WorkoutInput) {
   try {
     const supabase = await createClient()
@@ -84,7 +60,7 @@ export async function createWorkoutAction(data: WorkoutInput) {
 
     const { data: workoutId, error } = await supabase.rpc('create_complete_workout', {
       p_user_id: user.id,
-      p_workout_data: sanitizeWorkoutInput(data)
+      p_workout_data: data
     })
 
     if (error) {
