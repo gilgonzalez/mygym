@@ -17,7 +17,6 @@ function LoginForm() {
   const searchParams = useSearchParams()
   const redirect = searchParams?.get('redirect') || searchParams?.get('next') || '/feed'
   const { setUser, isAuthenticated, isLoading: authLoading } = useAuthStore()
-  const [supportMessage, setSupportMessage] = useState('')
 
   const [formData, setFormData] = useState({
     email: '',
@@ -133,13 +132,6 @@ function LoginForm() {
               </div>
             )}
 
-            {supportMessage && !error && (
-              <div className="flex items-center gap-2 rounded-xl border border-border/60 bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
-                <AlertCircle className="h-4 w-4" />
-                {supportMessage}
-              </div>
-            )}
-            
             {successMessage && (
               <div className="flex items-center gap-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-green-600 dark:text-green-400 px-4 py-3 rounded text-sm">
                 <CheckCircle2 className="h-4 w-4" />
@@ -170,16 +162,12 @@ function LoginForm() {
                   <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                     Contraseña
                   </label>
-                  <button
-                    type="button"
+                  <Link
+                    href="/auth/forgot-password"
                     className="text-sm font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400"
-                    onClick={() => {
-                      setSupportMessage('La recuperacion de contrasena se activara pronto. Mientras tanto, usa Google o crea una cuenta nueva para pruebas.')
-                      setError('')
-                    }}
                   >
                     ¿Has olvidado tu contraseña?
-                  </button>
+                  </Link>
                 </div>
                 <Input
                   id="password"

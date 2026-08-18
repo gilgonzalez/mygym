@@ -1,0 +1,7 @@
+[install]
+# Node modules "hoisted" clásico (npm/yarn-style) en vez del store aislado
+# por defecto de bun. Metro/React Native (apps/mobile) espera un único
+# node_modules plano por paquete; el modo "isolated" de bun crea varias
+# instancias del mismo paquete bajo node_modules/.bun/ y expo-doctor las
+# reporta como dependencias nativas duplicadas.
+linker = "hoisted"

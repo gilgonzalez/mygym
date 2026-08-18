@@ -1,0 +1,24 @@
+{
+  "expo": {
+    "name": "MyGym",
+    "slug": "mygym-mobile",
+    "scheme": "mygym",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.mygym.app"
+    },
+    "android": {
+      "package": "com.mygym.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#0B0B0F"
+      }
+    },
+    "plugins": ["expo-router"],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

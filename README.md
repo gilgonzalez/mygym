@@ -1,13 +1,14 @@
 # MyGym
 
-Aplicación social y de ejecución de entrenamientos construida con Next.js, Supabase, TypeScript y Tailwind CSS.
+Aplicación social y de ejecución de entrenamientos construida con Next.js, Supabase, TypeScript y Tailwind CSS. Monorepo (bun workspaces) que incluye la web y la app móvil (Android/iOS, Expo).
 
 ## Stack
 
-- Next.js 14 + App Router
-- React 18 + TypeScript
+- Next.js 14 + App Router (web)
+- Expo + Expo Router (móvil, en `apps/mobile`)
+- React 18 (web) / React 19 (móvil) + TypeScript
 - Tailwind CSS
-- Supabase Auth + Postgres
+- Supabase Auth + Postgres — la web vía Server Actions/SSR, el móvil vía `@supabase/supabase-js` directo
 - Zustand + React Query
 - Cloudflare R2 para media
 
@@ -22,16 +23,29 @@ Aplicación social y de ejecución de entrenamientos construida con Next.js, Sup
 
 ## Estructura
 
+Monorepo con bun workspaces. La web sigue viviendo en la raíz (no se movió,
+para no romper el deploy actual); lo nuevo son `apps/mobile` y `packages/shared`.
+
 ```text
-src/
+src/                      # apps/web (Next.js), en la raíz del repo
 ├── app/                  # Rutas, layouts, server actions y route handlers
 ├── components/           # UI reusable y vistas de negocio
 ├── lib/                  # Clientes externos, utilidades y lógica compartida
 ├── services/             # Servicios cliente como uploads
 ├── store/                # Stores de Zustand
-├── types/                # Tipos de dominio y DB
+├── types/                # Tipos de dominio (database.ts re-exporta desde packages/shared)
 └── constants/            # Constantes de UI y negocio
+
+apps/
+└── mobile/                # App Android/iOS (Expo + Expo Router) — ver apps/mobile/README.md
+
+packages/
+└── shared/                 # Código compartido entre web y móvil (solo TS puro, sin React)
+    └── src/types/database.ts  # Tipos generados por Supabase (fuente única)
 ```
+
+Ver [`apps/mobile/README.md`](apps/mobile/README.md) para el setup y el estado
+de la app móvil (qué se auditó, qué falta).
 
 ## Variables de entorno
 
@@ -56,12 +70,17 @@ cp .env.example .env.local
 
 ## Desarrollo
 
+Instalar dependencias siempre desde la raíz (instala los tres workspaces: web, mobile, shared):
+
 ```bash
-npm install
-npm run dev
+bun install
+bun run dev        # apps/web, disponible en http://localhost:3000
+bun run mobile      # apps/mobile (Expo) — ver apps/mobile/README.md para el setup de .env
 ```
 
-La app queda disponible en `http://localhost:3000`.
+`npm install` / `npm run dev` en la raíz también siguen funcionando para
+`apps/web` sola, pero no resuelven el workspace `@mygym/shared` — para tocar
+o correr la app móvil hace falta bun.
 
 ## Scripts
 

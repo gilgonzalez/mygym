@@ -1,8 +1,22 @@
 # dependencies
 /node_modules
+node_modules/
 /.pnp
 .pnp.js
 .env
+
+# expo / react native (apps/mobile)
+apps/mobile/.expo/
+apps/mobile/dist/
+apps/mobile/expo-env.d.ts
+apps/mobile/ios/
+apps/mobile/android/
+*.orig.*
+apps/mobile/*.jks
+apps/mobile/*.p8
+apps/mobile/*.p12
+apps/mobile/*.key
+apps/mobile/*.mobileprovision
 # testing
 /coverage
 

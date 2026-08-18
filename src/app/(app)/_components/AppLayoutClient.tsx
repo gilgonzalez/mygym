@@ -19,9 +19,19 @@ export default function AppLayoutClient({
   const { user, logout } = useAuthStore()
 
   const handleLogout = async () => {
-    await supabase.auth.signOut()
-    logout()
-    router.push('/auth/login')
+    // signOut() puede rechazar (sesión ya vencida, error de red, etc.). Si
+    // pasa eso sin try/catch, el estado nunca se limpia ni se redirige y la
+    // UI queda "logueada" hasta refrescar. Limpiamos y navegamos siempre,
+    // haya pasado lo que haya pasado con la llamada a Supabase.
+    try {
+      await supabase.auth.signOut()
+    } catch (err) {
+      console.error('Error al cerrar sesión:', err)
+    } finally {
+      logout()
+      router.push('/auth/login')
+      router.refresh()
+    }
   }
 
   const isActive = (path: string) => pathname === path
