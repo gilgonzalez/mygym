@@ -1,9 +1,13 @@
 import { useState } from 'react'
 import { Link, router } from 'expo-router'
 import * as Linking from 'expo-linking'
-import { Button, StyleSheet, Text, TextInput, View } from 'react-native'
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { Mail, MailCheck } from 'lucide-react-native'
 
 import { supabase } from '@/lib/supabase'
+import { useTheme } from '@/theme'
+import { Button } from '@/components/ui'
+import { AuthBackground, AuthCard, AuthFormError, AuthHeader, AuthStatus, AuthTextField } from '@/components/auth'
 
 // Paso 1 del flujo "olvidé mi contraseña": pedimos el mail y Supabase manda
 // un link mágico a mygym://reset-password?code=... (ver app/reset-password.tsx).
@@ -11,6 +15,7 @@ import { supabase } from '@/lib/supabase'
 // que se creó la cuenta con Google configure una contraseña por primera vez:
 // resetPasswordForEmail no distingue entre ambos casos.
 export default function ForgotPassword() {
+  const theme = useTheme()
   const [email, setEmail] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [sent, setSent] = useState(false)
@@ -40,69 +45,80 @@ export default function ForgotPassword() {
 
   if (sent) {
     return (
-      <View style={styles.container}>
-        <Text style={styles.title}>Revisá tu correo</Text>
-        <Text style={styles.subtitle}>
-          Si {email.trim()} está registrado, te enviamos un link para configurar tu contraseña.
-        </Text>
-        <Button title="Volver a iniciar sesión" onPress={() => router.replace('/login')} />
-      </View>
+      <AuthStatus
+        icon={MailCheck}
+        tone="success"
+        title="Revisá tu correo"
+        description={`Si ${email.trim()} está registrado, te enviamos un link para configurar tu contraseña.`}
+        actionLabel="Volver a iniciar sesión"
+        // '/' en vez de '/login' a propósito: '/login' solo está registrada
+        // mientras no hay sesión (ver Stack.Protected en app/_layout.tsx), y
+        // esta pantalla también es alcanzable desde un deep link estando
+        // logueado. '/' resuelve bien en los dos casos (login si no hay
+        // sesión, tabs si la hay).
+        onAction={() => router.replace('/')}
+      />
     )
   }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Olvidé mi contraseña</Text>
-      <Text style={styles.subtitle}>
-        Te mandamos un link para crear o restablecer tu contraseña, aunque hoy entres solo con Google.
-      </Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Email"
-        autoCapitalize="none"
-        keyboardType="email-address"
-        value={email}
-        onChangeText={setEmail}
-      />
-      {error ? <Text style={styles.error}>{error}</Text> : null}
-      <Button title={loading ? 'Enviando...' : 'Enviar link'} onPress={handleSubmit} disabled={loading} />
-      <Link href="/login" style={styles.link}>
-        Volver a iniciar sesión
-      </Link>
+    <View style={styles.fill}>
+      <AuthBackground />
+      <KeyboardAvoidingView style={styles.fill} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+          <AuthHeader
+            title="Olvidé mi contraseña"
+            subtitle="Te mandamos un link para crear o restablecer tu contraseña, aunque hoy entres solo con Google."
+          />
+
+          <AuthCard style={styles.card}>
+            <View style={styles.form}>
+              <AuthTextField
+                icon={Mail}
+                placeholder="Email"
+                autoCapitalize="none"
+                keyboardType="email-address"
+                value={email}
+                onChangeText={setEmail}
+              />
+
+              <AuthFormError message={error} />
+
+              <Button title={loading ? 'Enviando...' : 'Enviar link'} onPress={handleSubmit} loading={loading} />
+
+              <Link href="/" asChild>
+                <Text style={StyleSheet.flatten([styles.link, { fontFamily: theme.fontFamily.semibold }])}>
+                  Volver a iniciar sesión
+                </Text>
+              </Link>
+            </View>
+          </AuthCard>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </View>
   )
 }
 
 const styles = StyleSheet.create({
-  container: {
+  fill: {
     flex: 1,
+  },
+  scroll: {
+    flexGrow: 1,
     justifyContent: 'center',
-    gap: 12,
     padding: 24,
+    gap: 28,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: '700',
+  card: {
+    width: '100%',
   },
-  subtitle: {
-    fontSize: 14,
-    opacity: 0.7,
-    marginBottom: 4,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-  },
-  error: {
-    color: '#e11d48',
+  form: {
+    gap: 14,
   },
   link: {
-    marginTop: 8,
+    marginTop: 4,
     fontSize: 14,
     textAlign: 'center',
-    textDecorationLine: 'underline',
+    color: '#34d399',
   },
 })

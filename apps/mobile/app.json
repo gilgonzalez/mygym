@@ -6,6 +6,7 @@
     "version": "0.1.0",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
+    "icon": "./assets/images/icon.png",
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.mygym.app"
@@ -13,10 +14,30 @@
     "android": {
       "package": "com.mygym.app",
       "adaptiveIcon": {
-        "backgroundColor": "#0B0B0F"
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#09090b"
       }
     },
-    "plugins": ["expo-router"],
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#09090b",
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 180,
+          "resizeMode": "contain",
+          "dark": {
+            "backgroundColor": "#09090b",
+            "image": "./assets/images/splash-icon.png"
+          }
+        }
+      ],
+      "expo-image",
+      "expo-web-browser",
+      "@react-native-community/datetimepicker"
+    ],
     "experiments": {
       "typedRoutes": true
     }

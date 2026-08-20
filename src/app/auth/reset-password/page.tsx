@@ -108,7 +108,7 @@ function ResetPasswordContent() {
   return (
     <div className="max-w-md w-full space-y-8">
       <div className="text-center">
-        <h2 className="text-3xl font-extrabold text-gray-900 dark:text-white">Elegí tu nueva contraseña</h2>
+        <h2 className="text-3xl font-extrabold text-gray-900 dark:text-white">Elige tu nueva contraseña</h2>
       </div>
 
       <form className="space-y-6" onSubmit={handleSubmit}>

@@ -386,10 +386,14 @@ export type Database = {
       }
       users: {
         Row: {
+          achievements: string | null
           avatar_url: string | null
           bio: string | null
+          birth_date: string | null
           created_at: string | null
           email: string
+          goals: string[]
+          height_cm: number | null
           id: string
           isPremium: boolean
           name: string | null
@@ -398,10 +402,14 @@ export type Database = {
           username: string
         }
         Insert: {
+          achievements?: string | null
           avatar_url?: string | null
           bio?: string | null
+          birth_date?: string | null
           created_at?: string | null
           email: string
+          goals?: string[]
+          height_cm?: number | null
           id: string
           isPremium?: boolean
           name?: string | null
@@ -410,10 +418,14 @@ export type Database = {
           username: string
         }
         Update: {
+          achievements?: string | null
           avatar_url?: string | null
           bio?: string | null
+          birth_date?: string | null
           created_at?: string | null
           email?: string
+          goals?: string[]
+          height_cm?: number | null
           id?: string
           isPremium?: boolean
           name?: string | null
@@ -422,6 +434,38 @@ export type Database = {
           username?: string
         }
         Relationships: []
+      }
+      weight_logs: {
+        Row: {
+          created_at: string | null
+          id: string
+          logged_at: string
+          user_id: string
+          weight_kg: number
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          logged_at?: string
+          user_id: string
+          weight_kg: number
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          logged_at?: string
+          user_id?: string
+          weight_kg?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "weight_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       workout_logs: {
         Row: {

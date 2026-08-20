@@ -1,8 +1,12 @@
 import { useEffect, useState } from 'react'
 import { router, useLocalSearchParams } from 'expo-router'
-import { Button, StyleSheet, Text, TextInput, View } from 'react-native'
+import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { CheckCircle2, Lock, ShieldAlert } from 'lucide-react-native'
 
 import { supabase } from '@/lib/supabase'
+import { useTheme } from '@/theme'
+import { Button } from '@/components/ui'
+import { AuthBackground, AuthCard, AuthFormError, AuthHeader, AuthStatus, AuthTextField } from '@/components/auth'
 
 // Paso 2 del flujo: acá cae el deep link mygym://reset-password?code=...
 // que manda el mail de Supabase (ver app/forgot-password.tsx). Cambiamos el
@@ -10,6 +14,7 @@ import { supabase } from '@/lib/supabase'
 // nueva con updateUser. Misma pantalla sirve para "primera contraseña" de
 // una cuenta creada con Google que para un reset normal.
 export default function ResetPassword() {
+  const theme = useTheme()
   const params = useLocalSearchParams<{ code?: string; error_description?: string }>()
   const [exchanging, setExchanging] = useState(true)
   const [linkError, setLinkError] = useState<string | null>(null)
@@ -74,78 +79,104 @@ export default function ResetPassword() {
 
   if (exchanging) {
     return (
-      <View style={styles.container}>
-        <Text style={styles.subtitle}>Validando link...</Text>
+      <View style={styles.fill}>
+        <AuthBackground />
+        <View style={styles.centered}>
+          <ActivityIndicator color="#fafafa" />
+          <Text style={[styles.subtitle, { fontFamily: theme.fontFamily.regular }]}>Validando link...</Text>
+        </View>
       </View>
     )
   }
 
   if (linkError) {
     return (
-      <View style={styles.container}>
-        <Text style={styles.title}>Link inválido o vencido</Text>
-        <Text style={styles.error}>{linkError}</Text>
-        <Button title="Pedir un link nuevo" onPress={() => router.replace('/forgot-password')} />
-      </View>
+      <AuthStatus
+        icon={ShieldAlert}
+        tone="error"
+        title="Link inválido o vencido"
+        description={linkError}
+        actionLabel="Pedir un link nuevo"
+        onAction={() => router.replace('/forgot-password')}
+      />
     )
   }
 
   if (done) {
     return (
-      <View style={styles.container}>
-        <Text style={styles.title}>Contraseña actualizada</Text>
-        <Text style={styles.subtitle}>Ya podés usarla para entrar con tu email.</Text>
-        <Button title="Ir a la app" onPress={() => router.replace('/')} />
-      </View>
+      <AuthStatus
+        icon={CheckCircle2}
+        tone="success"
+        title="Contraseña actualizada"
+        description="Ya podés usarla para entrar con tu email."
+        actionLabel="Ir a la app"
+        onAction={() => router.replace('/')}
+      />
     )
   }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Elegí tu nueva contraseña</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Nueva contraseña"
-        secureTextEntry
-        value={password}
-        onChangeText={setPassword}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Repetir contraseña"
-        secureTextEntry
-        value={confirmPassword}
-        onChangeText={setConfirmPassword}
-      />
-      {error ? <Text style={styles.error}>{error}</Text> : null}
-      <Button title={loading ? 'Guardando...' : 'Guardar contraseña'} onPress={handleSubmit} disabled={loading} />
+    <View style={styles.fill}>
+      <AuthBackground />
+      <KeyboardAvoidingView style={styles.fill} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+          <AuthHeader title="Elegí tu nueva contraseña" />
+
+          <AuthCard style={styles.card}>
+            <View style={styles.form}>
+              <AuthTextField
+                icon={Lock}
+                placeholder="Nueva contraseña"
+                secureTextEntry
+                value={password}
+                onChangeText={setPassword}
+              />
+              <AuthTextField
+                icon={Lock}
+                placeholder="Repetir contraseña"
+                secureTextEntry
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+              />
+
+              <AuthFormError message={error} />
+
+              <Button title={loading ? 'Guardando...' : 'Guardar contraseña'} onPress={handleSubmit} loading={loading} />
+            </View>
+          </AuthCard>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </View>
   )
 }
 
 const styles = StyleSheet.create({
-  container: {
+  fill: {
     flex: 1,
+  },
+  centered: {
+    flex: 1,
+    alignItems: 'center',
     justifyContent: 'center',
-    gap: 12,
+    gap: 10,
     padding: 24,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: '700',
+  scroll: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    padding: 24,
+    gap: 24,
   },
   subtitle: {
     fontSize: 14,
-    opacity: 0.7,
+    textAlign: 'center',
+    lineHeight: 20,
+    color: 'rgba(250,250,250,0.62)',
   },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
+  card: {
+    width: '100%',
   },
-  error: {
-    color: '#e11d48',
+  form: {
+    gap: 14,
   },
 })

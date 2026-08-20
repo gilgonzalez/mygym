@@ -7,4 +7,10 @@
 //   ninguno de los dos.
 // - Los tipos de la base de datos (`./types/database`) se regeneran acá con
 //   `bun run supabase:types` desde la raíz del repo — no editar a mano.
+export * from './feeling'
+export * from './profile'
+export * from './social'
+export * from './streak'
 export * from './types'
+export * from './workout'
+export * from './workout-tags'
