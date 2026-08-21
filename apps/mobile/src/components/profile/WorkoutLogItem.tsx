@@ -2,7 +2,7 @@ import { Image, StyleSheet, Text, View } from 'react-native'
 import { Clock, Star, Zap } from 'lucide-react-native'
 
 import { FEELING_COLORS, FEELING_LABELS, formatDuration, timeAgo } from '@mygym/shared'
-import { useTheme } from '@/theme'
+import { amber, useTheme } from '@/theme'
 import { Card } from '@/components/ui'
 import type { WorkoutLogEntry } from '@/lib/profile'
 
@@ -48,8 +48,8 @@ export function WorkoutLogItem({ entry }: { entry: WorkoutLogEntry }) {
           </Text>
         </View>
         <View style={styles.metaItem}>
-          <Zap size={14} color="#f59e0b" />
-          <Text style={[styles.metaText, { color: '#f59e0b', fontFamily: theme.fontFamily.bold }]}>
+          <Zap size={14} color={amber[500]} />
+          <Text style={[styles.metaText, { color: amber[500], fontFamily: theme.fontFamily.bold }]}>
             +{entry.xpEarned} XP
           </Text>
         </View>

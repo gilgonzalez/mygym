@@ -1,17 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native'
+import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { Image as ExpoImage } from 'expo-image'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import Animated, { FadeIn, useAnimatedStyle, useSharedValue, withTiming, ZoomIn } from 'react-native-reanimated'
+import Animated, { FadeIn, ZoomIn } from 'react-native-reanimated'
 import * as Haptics from 'expo-haptics'
 import { ChevronLeft, ChevronRight, Dumbbell, Info, Pause, Play, Trophy, Zap } from 'lucide-react-native'
 
 import { formatDuration } from '@mygym/shared'
-import { useTheme } from '@/theme'
-import { Badge, Sheet, usePressScale } from '@/components/ui'
+import { amber, useTheme } from '@/theme'
+import { Badge, Sheet } from '@/components/ui'
 import type { WorkoutDetail } from '@/lib/workouts'
 import { SessionBackground } from './SessionBackground'
 import { SessionMediaRing } from './SessionMediaRing'
+import { ControlButton, PREPARE_SECONDS, ProgressBar, StatCard } from './executionShared'
 
 // Puerto de WorkoutChallengeExecutionView.tsx (apps/web) — ya era
 // independiente ahí (no necesita un cursor externo, se ubica solo dentro
@@ -31,7 +32,6 @@ interface ChallengeExecutionViewProps {
 
 type Phase = 'prepare' | 'active'
 
-const PREPARE_SECONDS = 5
 const DEFAULT_TIME_CAP_SECONDS = 720 // 12 min — mismo default que la web cuando no hay challenge cargado
 
 export function ChallengeExecutionView({ workout, onExit, onComplete }: ChallengeExecutionViewProps) {
@@ -134,7 +134,7 @@ export function ChallengeExecutionView({ workout, onExit, onComplete }: Challeng
 
   return (
     <View style={styles.container}>
-      <SessionBackground baseColor="#040612" accentColor={ringColor} secondaryColors={['#f59e0b', '#8b5cf6']} />
+      <SessionBackground baseColor="#040612" accentColor={ringColor} secondaryColors={[amber[500], '#8b5cf6']} />
 
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <ControlButton onPress={onExit} hitSlop={10} style={styles.iconButton}>
@@ -149,7 +149,7 @@ export function ChallengeExecutionView({ workout, onExit, onComplete }: Challeng
         </View>
 
         <Animated.View key={`rounds-${roundsCompleted}`} entering={ZoomIn.duration(260)} style={styles.roundsChip}>
-          <Trophy size={12} color="#f59e0b" />
+          <Trophy size={12} color={amber[500]} />
           <Text style={styles.roundsChipText}>{roundsCompleted}</Text>
         </Animated.View>
       </View>
@@ -267,77 +267,6 @@ export function ChallengeExecutionView({ workout, onExit, onComplete }: Challeng
   )
 }
 
-// Misma barra de progreso y tarjeta de estadística grande que ExecutionView
-// (ver ese archivo) — se repite acá en vez de compartirse porque cada
-// componente de ejecución es independiente a propósito.
-function ProgressBar({ ratio, color }: { ratio: number; color: string }) {
-  const width = useSharedValue(ratio)
-
-  useEffect(() => {
-    width.value = withTiming(Math.max(0, Math.min(ratio, 1)), { duration: 350 })
-  }, [ratio, width])
-
-  const style = useAnimatedStyle(() => ({
-    width: `${width.value * 100}%`,
-  }))
-
-  return (
-    <View style={styles.progressTrack}>
-      <Animated.View style={[styles.progressFill, style, { backgroundColor: color }]} />
-    </View>
-  )
-}
-
-function StatCard({ label, current, total, color }: { label: string; current: number; total: number; color: string }) {
-  return (
-    <View style={[styles.statCard, { borderColor: `${color}40` }]}>
-      <Text style={styles.statCardLabel}>{label}</Text>
-      <Animated.View key={`${label}-${current}`} entering={ZoomIn.duration(240)}>
-        <Text style={styles.statCardValue}>
-          {current}
-          <Text style={styles.statCardValueTotal}>/{total}</Text>
-        </Text>
-      </Animated.View>
-      <ProgressBar ratio={total > 0 ? current / total : 0} color={color} />
-    </View>
-  )
-}
-
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable)
-
-// Mismo botón con feedback táctil que ExecutionView (ver ese archivo) — se
-// repite acá en vez de compartirse porque cada componente de ejecución es
-// independiente a propósito (ver el comentario del archivo).
-function ControlButton({
-  onPress,
-  children,
-  style,
-  hitSlop,
-  disabled,
-  scaleTo = 0.92,
-}: {
-  onPress: () => void
-  children: React.ReactNode
-  style?: StyleProp<ViewStyle>
-  hitSlop?: number
-  disabled?: boolean
-  scaleTo?: number
-}) {
-  const { style: pressStyle, onPressIn, onPressOut } = usePressScale(scaleTo)
-  return (
-    <AnimatedPressable
-      onPress={onPress}
-      onPressIn={onPressIn}
-      onPressOut={onPressOut}
-      hitSlop={hitSlop}
-      disabled={disabled}
-      style={[pressStyle, style, disabled && styles.controlButtonDisabled]}
-    >
-      {children}
-    </AnimatedPressable>
-  )
-}
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -384,7 +313,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(245,158,11,0.3)',
   },
   roundsChipText: {
-    color: '#fbbf24',
+    color: amber[400],
     fontSize: 12,
     fontWeight: '800',
     fontVariant: ['tabular-nums'],
@@ -392,16 +321,6 @@ const styles = StyleSheet.create({
   sectionProgressTrack: {
     paddingHorizontal: 20,
     marginBottom: 6,
-  },
-  progressTrack: {
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    borderRadius: 2,
   },
   body: {
     flex: 1,
@@ -415,6 +334,9 @@ const styles = StyleSheet.create({
     gap: 12,
     width: '100%',
   },
+  // A diferencia de ExecutionView, acá el segundo StatCard (Rondas) es un
+  // bloque custom sin el sufijo "/total" — usa estos 3 estilos directo en
+  // vez del componente StatCard de executionShared.tsx.
   statCard: {
     flex: 1,
     paddingHorizontal: 16,
@@ -436,11 +358,6 @@ const styles = StyleSheet.create({
     fontSize: 21,
     fontWeight: '800',
     letterSpacing: -0.3,
-  },
-  statCardValueTotal: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: 'rgba(255,255,255,0.4)',
   },
   statCardHint: {
     flexDirection: 'row',
@@ -548,9 +465,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: 'rgba(255,255,255,0.1)',
   },
-  controlButtonDisabled: {
-    opacity: 0.4,
-  },
   controlButtonPrimary: {
     flex: 1,
     flexDirection: 'row',
@@ -559,7 +473,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#10b981',
   },
   controlButtonFinish: {
-    backgroundColor: '#f59e0b',
+    backgroundColor: amber[500],
   },
   controlPrimaryText: {
     color: '#fff',

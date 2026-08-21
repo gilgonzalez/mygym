@@ -87,7 +87,12 @@ export default function ForgotPassword() {
               <Button title={loading ? 'Enviando...' : 'Enviar link'} onPress={handleSubmit} loading={loading} />
 
               <Link href="/" asChild>
-                <Text style={StyleSheet.flatten([styles.link, { fontFamily: theme.fontFamily.semibold }])}>
+                <Text
+                  style={StyleSheet.flatten([
+                    styles.link,
+                    { color: theme.colors.emerald, fontFamily: theme.fontFamily.semibold },
+                  ])}
+                >
                   Volver a iniciar sesión
                 </Text>
               </Link>
@@ -119,6 +124,5 @@ const styles = StyleSheet.create({
     marginTop: 4,
     fontSize: 14,
     textAlign: 'center',
-    color: '#34d399',
   },
 })

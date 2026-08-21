@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { ChevronLeft, Clock, Play, Target, Trophy, Wrench } from 'lucide-react-native'
 
 import { visibilityLabelMap, type WorkoutVisibility } from '@mygym/shared'
-import { useTheme } from '@/theme'
+import { amber, useTheme } from '@/theme'
 import { Badge, Card } from '@/components/ui'
 import type { WorkoutDetail } from '@/lib/workouts'
 import { DifficultyBadge } from './DifficultyBadge'
@@ -193,10 +193,10 @@ export function WorkoutOverview({ workout, onStart, onBack }: WorkoutOverviewPro
               ]}
             >
               <View style={[styles.challengeIcon, { backgroundColor: 'rgba(245,158,11,0.2)', borderRadius: theme.radius.lg }]}>
-                <Trophy size={20} color="#f59e0b" />
+                <Trophy size={20} color={amber[500]} />
               </View>
               <View style={styles.challengeText}>
-                <Text style={[styles.challengeLabel, { color: '#f59e0b', fontFamily: theme.fontFamily.bold }]}>
+                <Text style={[styles.challengeLabel, { color: amber[500], fontFamily: theme.fontFamily.bold }]}>
                   Modo reto incluido
                 </Text>
                 <Text style={[styles.challengeDescription, { color: theme.colors.foreground, fontFamily: theme.fontFamily.bold }]}>

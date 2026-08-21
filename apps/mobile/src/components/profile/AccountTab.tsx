@@ -3,7 +3,7 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native'
 import { Award, Cake, Flame, Plus, Ruler, Scale, Target, Timer, Trophy, User } from 'lucide-react-native'
 
 import { calculateAge, formatDuration, type StreakStatus } from '@mygym/shared'
-import { useTheme } from '@/theme'
+import { amber, useTheme } from '@/theme'
 import { Badge, Button } from '@/components/ui'
 import { deleteWeightEntry, fetchWeightHistory, type UserProfile, type WeightEntry } from '@/lib/profile'
 import { LogWeightSheet } from './LogWeightSheet'
@@ -21,7 +21,7 @@ interface AccountTabProps {
 }
 
 const STREAK_STATUS_META: Record<StreakStatus, { label: string; color: string }> = {
-  active_today: { label: 'Entrenaste hoy', color: '#f59e0b' },
+  active_today: { label: 'Entrenaste hoy', color: amber[500] },
   at_risk: { label: 'En riesgo — entrená hoy', color: '#f97316' },
   broken: { label: 'Se cortó', color: '#a1a1aa' },
   none: { label: 'Arrancá tu racha', color: '#a1a1aa' },

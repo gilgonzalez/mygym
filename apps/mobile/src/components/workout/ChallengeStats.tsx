@@ -1,7 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native'
 import { RotateCcw, Timer, Trophy } from 'lucide-react-native'
 
-import { useTheme } from '@/theme'
+import { amber, useTheme } from '@/theme'
 import type { ChallengeResultInfo } from '@/lib/comments'
 
 // Puerto de ChallengeStats en WorkoutCommentsSheet.tsx (apps/web) — score,
@@ -10,7 +10,7 @@ import type { ChallengeResultInfo } from '@/lib/comments'
 export function ChallengeStats({ challenge }: { challenge: ChallengeResultInfo }) {
   const theme = useTheme()
   const isRecord = Boolean(challenge.is_workout_record)
-  const accent = isRecord ? '#f59e0b' : theme.colors.primary
+  const accent = isRecord ? amber[500] : theme.colors.primary
   const minutes = Math.floor(challenge.time_cap_seconds / 60)
   const seconds = String(challenge.time_cap_seconds % 60).padStart(2, '0')
 
@@ -27,7 +27,7 @@ export function ChallengeStats({ challenge }: { challenge: ChallengeResultInfo }
     >
       <Stat icon={Trophy} color={accent} label="Puntuación" value={String(challenge.score)} theme={theme} />
       <Stat icon={RotateCcw} color="#10b981" label="Rondas" value={String(challenge.rounds_completed)} theme={theme} />
-      <Stat icon={Timer} color={isRecord ? accent : '#f59e0b'} label="Límite" value={`${minutes}:${seconds}`} theme={theme} />
+      <Stat icon={Timer} color={isRecord ? accent : amber[500]} label="Límite" value={`${minutes}:${seconds}`} theme={theme} />
     </View>
   )
 }

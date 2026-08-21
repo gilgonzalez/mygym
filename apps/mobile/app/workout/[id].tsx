@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useState } from 'react'
 import { router, useLocalSearchParams } from 'expo-router'
 import { RefreshCcw } from 'lucide-react-native'
 
 import { StatusScreen } from '@/components/ui'
 import { WorkoutOverview, WorkoutOverviewSkeleton } from '@/components/workout'
 import { fetchWorkoutById, type WorkoutDetail } from '@/lib/workouts'
+import { useAsyncData } from '@/hooks/useAsyncData'
 
 // Preview que se ve al tocar "Comenzar workout" en el feed — puerto de
 // src/app/workout/[id]/page.tsx (apps/web), pero solo la parte de
@@ -12,23 +12,12 @@ import { fetchWorkoutById, type WorkoutDetail } from '@/lib/workouts'
 // app/session/[id].tsx), que orquesta ExecutionView/ChallengeExecutionView.
 export default function WorkoutDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
-  const [workout, setWorkout] = useState<WorkoutDetail | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  const load = useCallback(() => {
-    if (!id) return
-    setLoading(true)
-    setError(null)
-    fetchWorkoutById(id)
-      .then(setWorkout)
-      .catch((err: any) => setError(err?.message ?? 'No se pudo cargar el workout'))
-      .finally(() => setLoading(false))
-  }, [id])
-
-  useEffect(() => {
-    load()
-  }, [load])
+  const {
+    data: workout,
+    loading,
+    error,
+    reload: load,
+  } = useAsyncData<WorkoutDetail>(() => (id ? fetchWorkoutById(id) : null), [id], 'No se pudo cargar el workout')
 
   if (loading) {
     return <WorkoutOverviewSkeleton />

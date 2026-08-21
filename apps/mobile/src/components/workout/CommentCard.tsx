@@ -3,7 +3,7 @@ import { LinearGradient } from 'expo-linear-gradient'
 import { BatteryWarning, Crown, Frown, Meh, Smile, Star, User, Zap } from 'lucide-react-native'
 import { FEELING_COLORS, FEELING_LABELS, FEELING_LEVELS, timeAgo, type FeelingType } from '@mygym/shared'
 
-import { useTheme } from '@/theme'
+import { amber, useTheme } from '@/theme'
 import type { WorkoutComment } from '@/lib/comments'
 import { ChallengeStats } from './ChallengeStats'
 
@@ -83,7 +83,7 @@ export function CommentCard({ comment, isTopRecord }: CommentCardProps) {
 
         {isTopRecord && (
           <LinearGradient
-            colors={['#fbbf24', '#fde047', '#f59e0b']}
+            colors={[amber[400], '#fde047', amber[500]]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={[styles.recordBadge, { borderRadius: theme.radius.full }]}
@@ -117,7 +117,7 @@ function RatingRow({ rating, theme }: { rating: number; theme: ReturnType<typeof
   return (
     <View style={styles.statRow}>
       <View style={styles.statLabel}>
-        <Star size={11} color="#f59e0b" fill="#f59e0b" />
+        <Star size={11} color={amber[500]} fill={amber[500]} />
       </View>
       <View style={styles.bars}>
         {[1, 2, 3, 4, 5].map((i) => (
@@ -125,12 +125,12 @@ function RatingRow({ rating, theme }: { rating: number; theme: ReturnType<typeof
             key={i}
             style={[
               styles.bar,
-              { backgroundColor: i <= rating ? '#f59e0b' : theme.colors.secondary },
+              { backgroundColor: i <= rating ? amber[500] : theme.colors.secondary },
             ]}
           />
         ))}
       </View>
-      <Text style={[styles.statValue, { color: '#f59e0b', fontFamily: theme.fontFamily.bold }]}>{rating}</Text>
+      <Text style={[styles.statValue, { color: amber[500], fontFamily: theme.fontFamily.bold }]}>{rating}</Text>
     </View>
   )
 }

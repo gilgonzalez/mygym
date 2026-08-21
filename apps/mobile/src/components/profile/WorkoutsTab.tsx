@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useState } from 'react'
 import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-native'
 import { RefreshCcw } from 'lucide-react-native'
 
 import { useTheme } from '@/theme'
 import { FluidTabs, StatusScreen, type FluidTabOption } from '@/components/ui'
 import { fetchMyWorkouts, type MyWorkout, type MyWorkoutsFilter } from '@/lib/workouts'
+import { useAsyncData } from '@/hooks/useAsyncData'
 import { MyWorkoutCard } from './MyWorkoutCard'
 
 const VISIBILITY_OPTIONS: FluidTabOption<MyWorkoutsFilter>[] = [
@@ -26,26 +27,16 @@ interface WorkoutsTabProps {
 export function WorkoutsTab({ userId }: WorkoutsTabProps) {
   const theme = useTheme()
   const [filter, setFilter] = useState<MyWorkoutsFilter>('all')
-  const [workouts, setWorkouts] = useState<MyWorkout[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  const load = useCallback(() => {
-    setLoading(true)
-    setError(null)
-    fetchMyWorkouts(userId, filter)
-      .then(setWorkouts)
-      .catch((err: any) => setError(err?.message ?? 'No se pudieron cargar tus workouts'))
-      .finally(() => setLoading(false))
-  }, [userId, filter])
-
-  useEffect(() => {
-    load()
-  }, [load])
+  const {
+    data: workouts,
+    loading,
+    error,
+    reload: load,
+  } = useAsyncData<MyWorkout[]>(() => fetchMyWorkouts(userId, filter), [userId, filter], 'No se pudieron cargar tus workouts')
 
   return (
     <FlatList
-      data={workouts}
+      data={workouts ?? []}
       keyExtractor={(item) => item.id}
       contentContainerStyle={styles.content}
       ListHeaderComponent={

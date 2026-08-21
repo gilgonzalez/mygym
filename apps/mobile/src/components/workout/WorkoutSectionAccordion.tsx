@@ -12,7 +12,7 @@ import Animated, {
 } from 'react-native-reanimated'
 import { ChevronRight, Zap } from 'lucide-react-native'
 
-import { useTheme } from '@/theme'
+import { amber, useTheme } from '@/theme'
 import { Badge, Card } from '@/components/ui'
 import type { WorkoutDetailSection } from '@/lib/workouts'
 import { ExerciseListItem } from './ExerciseListItem'
@@ -48,7 +48,7 @@ const CLOSE_DURATION = 380
 // degradé de 2 stops del color al transparente, mismo efecto visual (el
 // "to-Y" de la web quedaba pisado por el "to-transparent" que se agrega
 // después, así que en la práctica ahí tampoco se ve un segundo color).
-const SECTION_ACCENT_COLORS = ['#0ea5e9', '#8b5cf6', '#10b981', '#f59e0b', '#f43f5e', '#06b6d4']
+const SECTION_ACCENT_COLORS = ['#0ea5e9', '#8b5cf6', '#10b981', amber[500], '#f43f5e', '#06b6d4']
 
 interface WorkoutSectionAccordionProps {
   index: number
@@ -106,7 +106,7 @@ export function WorkoutSectionAccordion({
             </Text>
           </View>
 
-          {isChallengeSection && <Badge label={`AMRAP ${challengeMinutes ?? 12}MIN`} icon={Zap} color="#f59e0b" />}
+          {isChallengeSection && <Badge label={`AMRAP ${challengeMinutes ?? 12}MIN`} icon={Zap} color={amber[500]} />}
 
           <Animated.View style={chevronStyle}>
             <ChevronRight size={18} color="rgba(255,255,255,0.75)" />

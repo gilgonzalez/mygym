@@ -208,7 +208,7 @@ export interface WorkoutLogsPage {
   hasMore: boolean
 }
 
-export const WORKOUT_LOGS_PAGE_SIZE = 5
+const WORKOUT_LOGS_PAGE_SIZE = 5
 
 export async function fetchWorkoutLogsPage(
   userId: string,

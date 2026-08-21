@@ -1,7 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native'
 import type { LucideIcon } from 'lucide-react-native'
 
-import { useTheme } from '@/theme'
+import { amber, useTheme } from '@/theme'
 import { Button, type ButtonVariant } from './Button'
 
 // Puerto genérico del patrón que se repite en toda la web para pantallas de
@@ -85,7 +85,7 @@ function toneColor(tone: StatusScreenTone, theme: ReturnType<typeof useTheme>) {
     case 'error':
       return theme.colors.destructive
     case 'warning':
-      return '#f59e0b'
+      return amber[500]
     default:
       return theme.colors.mutedForeground
   }
