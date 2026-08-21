@@ -2,10 +2,9 @@
 
 import Link from 'next/link'
 import { useAuthStore } from '@/store/authStore'
+import { useLogout } from '@/hooks/useLogout'
 import { Button } from '@/components/ui/button'
 import { User, LogIn, UserPlus, LogOut, Settings, Flame, Trophy, Timer, Dumbbell, Medal, FileEdit, Crown, Sparkles, Users, ShieldCheck, Inbox } from 'lucide-react'
-import { supabase } from '@/lib/supabase'
-import { useRouter } from 'next/navigation'
 import { Progress } from '@/components/ui/progress'
 import { ActivityHeatmap } from '@/components/profile/ActivityHeatmap'
 import { useState } from 'react'
@@ -46,8 +45,8 @@ const workoutFilters = [
 ] as const
 
 export default function ProfilePage() {
-  const { user, logout } = useAuthStore()
-  const router = useRouter()
+  const { user } = useAuthStore()
+  const handleLogout = useLogout()
   const [filter, setFilter] = useState<(typeof workoutFilters)[number]['value']>('all')
   const [showPremiumDialog, setShowPremiumDialog] = useState(false)
   const [showSocialSheet, setShowSocialSheet] = useState(false)
@@ -132,22 +131,6 @@ export default function ProfilePage() {
     },
     enabled: !!user?.id
   })
-
-  const handleLogout = async () => {
-    // signOut() puede rechazar (sesión ya vencida, error de red, etc.). Si
-    // pasa eso sin try/catch, el estado nunca se limpia ni se redirige y la
-    // UI queda "logueada" hasta refrescar. Limpiamos y navegamos siempre,
-    // haya pasado lo que haya pasado con la llamada a Supabase.
-    try {
-      await supabase.auth.signOut()
-    } catch (err) {
-      console.error('Error al cerrar sesión:', err)
-    } finally {
-      logout()
-      router.push('/auth/login')
-      router.refresh()
-    }
-  }
 
   if (!user) {
     return (

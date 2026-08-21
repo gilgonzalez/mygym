@@ -1,9 +1,9 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import { useAuthStore } from '@/store/authStore'
-import { supabase } from '@/lib/supabase'
+import { useLogout } from '@/hooks/useLogout'
 import { Home, User, LogOut, PlusSquare } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
@@ -15,24 +15,8 @@ export default function AppLayoutClient({
   children: React.ReactNode
 }) {
   const pathname = usePathname()
-  const router = useRouter()
-  const { user, logout } = useAuthStore()
-
-  const handleLogout = async () => {
-    // signOut() puede rechazar (sesión ya vencida, error de red, etc.). Si
-    // pasa eso sin try/catch, el estado nunca se limpia ni se redirige y la
-    // UI queda "logueada" hasta refrescar. Limpiamos y navegamos siempre,
-    // haya pasado lo que haya pasado con la llamada a Supabase.
-    try {
-      await supabase.auth.signOut()
-    } catch (err) {
-      console.error('Error al cerrar sesión:', err)
-    } finally {
-      logout()
-      router.push('/auth/login')
-      router.refresh()
-    }
-  }
+  const { user } = useAuthStore()
+  const handleLogout = useLogout()
 
   const isActive = (path: string) => pathname === path
 

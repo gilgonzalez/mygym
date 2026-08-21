@@ -39,10 +39,37 @@ export function getDifficultyLabel(difficulty: string | null): string {
   }
 }
 
-export function timeAgo(dateString: string): string {
+export type TimeAgoStyle = 'compact' | 'verbose'
+
+interface TimeAgoOptions {
+  style?: TimeAgoStyle
+}
+
+// Antes había dos versiones de esta misma cascada segundo/minuto/hora/día/
+// mes/año escritas por separado (una compacta, "hace 5m", y otra más
+// verbosa, "Hace 5 min") — el estilo es la única diferencia real, así que
+// ahora es un parámetro en vez de dos funciones.
+export function timeAgo(dateString: string | null | undefined, options: TimeAgoOptions = {}): string {
+  const { style = 'compact' } = options
+
+  if (!dateString) return style === 'verbose' ? 'Reciente' : 'ahora mismo'
+
   const date = new Date(dateString)
-  const now = new Date()
-  const seconds = Math.floor((now.getTime() - date.getTime()) / 1000)
+  const seconds = Math.floor((Date.now() - date.getTime()) / 1000)
+
+  if (style === 'verbose') {
+    if (seconds < 60) return 'Hace un momento'
+    const minutes = Math.floor(seconds / 60)
+    if (minutes < 60) return `Hace ${minutes} min`
+    const hours = Math.floor(minutes / 60)
+    if (hours < 24) return `Hace ${hours} h`
+    const days = Math.floor(hours / 24)
+    if (days < 30) return `Hace ${days} d`
+    const months = Math.floor(days / 30)
+    if (months < 12) return `Hace ${months} mes${months === 1 ? '' : 'es'}`
+    const years = Math.floor(months / 12)
+    return `Hace ${years} ano${years === 1 ? '' : 's'}`
+  }
 
   if (seconds < 60) return 'ahora mismo'
   const minutes = Math.floor(seconds / 60)

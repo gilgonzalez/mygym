@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import { useAuthStore } from '@/store/authStore'
 import { deleteWorkoutAction } from '@/app/actions/workout/delete'
 import { toggleWorkoutLikeAction } from '@/app/actions/workout/likes'
@@ -27,7 +28,14 @@ export interface UseWorkoutCardActionsResult {
   setShowMenu: (v: boolean) => void
   menuRef: React.RefObject<HTMLDivElement>
   handleLike: (e?: React.MouseEvent) => Promise<void>
-  handleDelete: () => Promise<void>
+  // Antes hacía window.confirm() + la operación en un solo paso — ahora solo
+  // pide confirmación (abre el diálogo, ver ConfirmDialog); confirmDelete es
+  // quien de verdad borra, para poder mostrar un diálogo real en vez de uno
+  // nativo del browser.
+  showDeleteConfirm: boolean
+  setShowDeleteConfirm: (v: boolean) => void
+  handleDelete: () => void
+  confirmDelete: () => Promise<void>
   syncFromProps: (p: { likes_count?: number; is_liked?: boolean; likes_preview?: WorkoutLikerPreview[] }) => void
 }
 
@@ -49,6 +57,7 @@ export function useWorkoutCardActions({
   const [isLiking, setIsLiking] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
   const syncFromProps = useCallback(
     (p: { likes_count?: number; is_liked?: boolean; likes_preview?: WorkoutLikerPreview[] }) => {
@@ -69,8 +78,12 @@ export function useWorkoutCardActions({
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  const handleDelete = useCallback(async () => {
-    if (!confirm('¿Estás seguro de que quieres borrar este workout? Esta acción no se puede deshacer.')) return
+  const handleDelete = useCallback(() => {
+    setShowDeleteConfirm(true)
+  }, [])
+
+  const confirmDelete = useCallback(async () => {
+    setShowDeleteConfirm(false)
     setIsDeleting(true)
     const res = await deleteWorkoutAction(workoutId)
     if (res.success) {
@@ -78,7 +91,7 @@ export function useWorkoutCardActions({
       setIsDeleting(false)
       router.refresh()
     } else {
-      alert('Error al borrar el workout: ' + res.error)
+      toast.error('Error al borrar el workout: ' + res.error)
       setIsDeleting(false)
     }
   }, [workoutId, queryClient, router])
@@ -166,7 +179,10 @@ export function useWorkoutCardActions({
     setShowMenu,
     menuRef,
     handleLike,
+    showDeleteConfirm,
+    setShowDeleteConfirm,
     handleDelete,
+    confirmDelete,
     syncFromProps,
   }
 }

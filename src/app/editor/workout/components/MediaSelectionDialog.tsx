@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
+import { EmptyState } from '@/components/common/EmptyState'
 
 interface MediaSelectionDialogProps {
   isOpen: boolean
@@ -120,39 +121,36 @@ export function MediaSelectionDialog({ isOpen, onClose, onSelect, mediaType = 'i
                     <p>Cargando tu biblioteca...</p>
                 </div>
             ) : mediaError ? (
-                <div className="h-full flex flex-col items-center justify-center text-center text-muted-foreground gap-3 px-6">
-                    <div className="p-4 rounded-full bg-destructive/10">
-                        <AlertCircle className="h-8 w-8 text-destructive" />
-                    </div>
-                    <div className="space-y-1">
-                        <p className="font-semibold text-foreground">No pudimos abrir tu biblioteca</p>
-                        <p className="text-sm">{mediaError}</p>
-                    </div>
+                <EmptyState
+                  className="h-full"
+                  icon={AlertCircle}
+                  tone="destructive"
+                  title="No pudimos abrir tu biblioteca"
+                  description={mediaError}
+                  action={
                     <Button variant="outline" onClick={() => refetch()}>
                         Reintentar
                     </Button>
-                </div>
+                  }
+                />
             ) : mediaList.length === 0 ? (
-                <div className="h-full flex flex-col items-center justify-center text-muted-foreground gap-3 text-center px-6">
-                    <div className="p-4 rounded-full bg-muted/50">
-                        {mediaType === 'audio' ? <Music className="h-8 w-8 opacity-50" /> : mediaType === 'video' ? <Film className="h-8 w-8 opacity-50" /> : <ImageIcon className="h-8 w-8 opacity-50" />}
-                    </div>
-                    <div className="space-y-1">
-                        <p className="font-semibold text-foreground">
-                          {debouncedSearch ? 'No encontramos archivos con esa busqueda' : 'Tu biblioteca esta vacia'}
-                        </p>
-                        <p className="text-sm">
-                          {debouncedSearch
-                            ? 'Prueba con otro nombre o limpia el filtro para ver todo tu contenido.'
-                            : 'Sube una imagen, audio o video y volvera a aparecer aqui automaticamente.'}
-                        </p>
-                    </div>
-                    {debouncedSearch && (
+                <EmptyState
+                  className="h-full"
+                  icon={mediaType === 'audio' ? Music : mediaType === 'video' ? Film : ImageIcon}
+                  title={debouncedSearch ? 'No encontramos archivos con esa busqueda' : 'Tu biblioteca esta vacia'}
+                  description={
+                    debouncedSearch
+                      ? 'Prueba con otro nombre o limpia el filtro para ver todo tu contenido.'
+                      : 'Sube una imagen, audio o video y volvera a aparecer aqui automaticamente.'
+                  }
+                  action={
+                    debouncedSearch && (
                       <Button variant="ghost" onClick={() => setSearch('')}>
                         Limpiar busqueda
                       </Button>
-                    )}
-                </div>
+                    )
+                  }
+                />
             ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                     {mediaList.map((item) => {

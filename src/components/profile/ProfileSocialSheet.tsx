@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, useTransition } from 'react'
 import { Check, Inbox, Loader2, UserPlus, Users, X } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import {
   acceptFollowRequestAction,
@@ -17,15 +18,9 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
+import { ConfirmDialog } from '@/components/common/ConfirmDialog'
 import { cn } from '@/lib/utils'
+import { timeAgo } from '@mygym/shared'
 import type { FollowListItem, FollowOverview } from '@/types/social'
 
 type SocialTab = 'requests' | 'followers' | 'following'
@@ -69,27 +64,7 @@ const X_ACTION_BUTTON_CLASS =
   'h-9 w-9 rounded-full border border-rose-500/20 bg-rose-500 p-0 text-white shadow-[0_10px_20px_rgba(244,63,94,0.2)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-rose-400'
 
 function formatRelativeDate(dateString: string | null) {
-  if (!dateString) return 'Reciente'
-
-  const date = new Date(dateString)
-  const seconds = Math.floor((Date.now() - date.getTime()) / 1000)
-
-  if (seconds < 60) return 'Hace un momento'
-
-  const minutes = Math.floor(seconds / 60)
-  if (minutes < 60) return `Hace ${minutes} min`
-
-  const hours = Math.floor(minutes / 60)
-  if (hours < 24) return `Hace ${hours} h`
-
-  const days = Math.floor(hours / 24)
-  if (days < 30) return `Hace ${days} d`
-
-  const months = Math.floor(days / 30)
-  if (months < 12) return `Hace ${months} mes${months === 1 ? '' : 'es'}`
-
-  const years = Math.floor(months / 12)
-  return `Hace ${years} ano${years === 1 ? '' : 's'}`
+  return timeAgo(dateString, { style: 'verbose' })
 }
 
 function SocialUserRow({
@@ -130,79 +105,49 @@ function SocialUserRow({
   }
 
   const confirmDialog = (
-    <Dialog open={!!confirmAction} onOpenChange={(open: boolean) => !open && setConfirmAction(null)}>
-      <DialogContent
-        showCloseButton={false}
-        className="max-w-[360px] overflow-hidden rounded-[28px] border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(34,197,94,0.10),transparent_24%),radial-gradient(circle_at_bottom_right,rgba(59,130,246,0.08),transparent_28%),linear-gradient(180deg,rgba(12,16,30,0.98),rgba(8,11,22,0.96))] p-0 shadow-[0_30px_80px_rgba(0,0,0,0.35)]"
-      >
-        <div className="p-5">
-          <DialogHeader className="items-center text-center">
-            <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.05] shadow-[0_12px_28px_rgba(0,0,0,0.18)]">
-              {confirmAction?.label === 'Aceptar' ? (
-                <Check className="h-4.5 w-4.5 text-emerald-300" />
-              ) : (
-                <X className="h-4.5 w-4.5 text-rose-300" />
-              )}
+    <ConfirmDialog
+      open={!!confirmAction}
+      onOpenChange={(open) => !open && setConfirmAction(null)}
+      icon={
+        confirmAction?.label === 'Aceptar' ? (
+          <Check className="h-4.5 w-4.5 text-emerald-300" />
+        ) : (
+          <X className="h-4.5 w-4.5 text-rose-300" />
+        )
+      }
+      title={confirmAction?.confirmTitle || 'Confirmar acción'}
+      description={confirmAction?.confirmDescription || 'Esta accion no se puede deshacer desde este paso.'}
+      confirmButtonClassName={confirmAction?.confirmButtonClassName}
+      onConfirm={() => {
+        const actionToRun = confirmAction
+        setConfirmAction(null)
+        runAction(actionToRun || undefined)
+      }}
+    >
+      <div className="mt-4 flex items-center gap-3 rounded-2xl border border-white/8 bg-white/[0.03] px-3 py-2.5">
+        <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full border border-white/10 bg-muted">
+          {item.user.avatar_url ? (
+            <img
+              src={item.user.avatar_url}
+              alt={item.user.name || item.user.username || 'Usuario'}
+              className="h-full w-full object-cover"
+              referrerPolicy="no-referrer"
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center bg-primary/10 text-primary">
+              <Users className="h-3.5 w-3.5" />
             </div>
-            <DialogTitle className="text-lg font-black tracking-tight text-foreground">
-              {confirmAction?.confirmTitle || 'Confirmar acción'}
-            </DialogTitle>
-            <DialogDescription className="mt-1 text-sm leading-relaxed text-white/60">
-              {confirmAction?.confirmDescription || 'Esta accion no se puede deshacer desde este paso.'}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="mt-4 flex items-center gap-3 rounded-2xl border border-white/8 bg-white/[0.03] px-3 py-2.5">
-            <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full border border-white/10 bg-muted">
-              {item.user.avatar_url ? (
-                <img
-                  src={item.user.avatar_url}
-                  alt={item.user.name || item.user.username || 'Usuario'}
-                  className="h-full w-full object-cover"
-                  referrerPolicy="no-referrer"
-                />
-              ) : (
-                <div className="flex h-full w-full items-center justify-center bg-primary/10 text-primary">
-                  <Users className="h-3.5 w-3.5" />
-                </div>
-              )}
-            </div>
-
-            <div className="min-w-0 text-left">
-              <p className="truncate text-sm font-semibold text-foreground">
-                {item.user.name || item.user.username || 'Usuario'}
-              </p>
-              <p className="truncate text-[11px] text-white/45">{meta}</p>
-            </div>
-          </div>
-
-          <DialogFooter className="mt-5 grid grid-cols-2 gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              className="h-10 rounded-2xl border-white/10 bg-white/[0.03] text-white/75 hover:bg-white/[0.06] hover:text-white"
-              onClick={() => setConfirmAction(null)}
-            >
-              Cancelar
-            </Button>
-            <Button
-              type="button"
-              className={cn(
-                'h-10 rounded-2xl',
-                confirmAction?.confirmButtonClassName || 'bg-primary text-primary-foreground hover:bg-primary/90'
-              )}
-              onClick={async () => {
-                const actionToRun = confirmAction
-                setConfirmAction(null)
-                runAction(actionToRun || undefined)
-              }}
-            >
-              Confirmar
-            </Button>
-          </DialogFooter>
+          )}
         </div>
-      </DialogContent>
-    </Dialog>
+
+        <div className="min-w-0 text-left">
+          <p className="truncate text-sm font-semibold text-foreground">
+            {item.user.name || item.user.username || 'Usuario'}
+          </p>
+          <p className="truncate text-[11px] text-white/45">{meta}</p>
+        </div>
+      </div>
+    </ConfirmDialog>
   )
 
   if (isRequestCard && primaryAction && secondaryAction) {
@@ -610,7 +555,7 @@ export function ProfileSocialSheet({
                               const result = await rejectFollowRequestAction(item.user.id)
 
                               if (!result.success) {
-                                window.alert(result.error || 'No pudimos rechazar la solicitud.')
+                                toast.error(result.error || 'No pudimos rechazar la solicitud.')
                                 return
                               }
 
@@ -628,7 +573,7 @@ export function ProfileSocialSheet({
                               const result = await acceptFollowRequestAction(item.user.id)
 
                               if (!result.success) {
-                                window.alert(result.error || 'No pudimos aceptar la solicitud.')
+                                toast.error(result.error || 'No pudimos aceptar la solicitud.')
                                 return
                               }
 
@@ -658,7 +603,7 @@ export function ProfileSocialSheet({
                               const result = await removeFollowerAction(item.user.id)
 
                               if (!result.success) {
-                                window.alert(result.error || 'No pudimos eliminar al seguidor.')
+                                toast.error(result.error || 'No pudimos eliminar al seguidor.')
                                 return
                               }
 
@@ -687,7 +632,7 @@ export function ProfileSocialSheet({
                             const result = await unfollowUserAction(item.user.id)
 
                             if (!result.success) {
-                              window.alert(result.error || 'No pudimos actualizar esta relacion.')
+                              toast.error(result.error || 'No pudimos actualizar esta relacion.')
                               return
                             }
 

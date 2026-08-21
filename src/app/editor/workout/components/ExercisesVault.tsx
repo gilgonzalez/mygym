@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 import {
   Search,
@@ -87,11 +88,11 @@ function FilterChipsSkeleton({ tone = 'default' }: { tone?: 'default' | 'orange'
 function ExerciseCardSkeleton() {
   return (
     <article className="overflow-hidden rounded-[22px] border border-border/60 bg-card/95 shadow-[0_18px_50px_-35px_rgba(0,0,0,0.45)]">
-      <div className="aspect-square animate-pulse rounded-t-[22px] bg-muted/50 sm:aspect-[4/3]" />
+      <Skeleton className="aspect-square rounded-t-[22px] rounded-b-none bg-muted/50 sm:aspect-[4/3]" />
       <div className="space-y-3 p-3 sm:p-4">
-        <div className="h-4 w-3/4 animate-pulse rounded-full bg-muted/50" />
-        <div className="h-4 w-1/2 animate-pulse rounded-full bg-muted/40" />
-        <div className="h-9 w-full animate-pulse rounded-xl bg-muted/40 md:hidden" />
+        <Skeleton className="h-4 w-3/4 rounded-full bg-muted/50" />
+        <Skeleton className="h-4 w-1/2 rounded-full bg-muted/40" />
+        <Skeleton className="h-9 w-full rounded-xl bg-muted/40 md:hidden" />
       </div>
     </article>
   )
@@ -504,8 +505,8 @@ export function ExercisesVault({ onSelect, trigger }: ExercisesVaultProps) {
               {loading ? (
                 <div className="space-y-3">
                   <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] sm:text-sm">
-                    <div className="h-4 w-24 animate-pulse rounded-full bg-muted/40" />
-                    <div className="h-4 w-20 animate-pulse rounded-full bg-muted/40" />
+                    <Skeleton className="h-4 w-24 rounded-full bg-muted/40" />
+                    <Skeleton className="h-4 w-20 rounded-full bg-muted/40" />
                   </div>
                   <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
                     {Array.from({ length: limit }).map((_, index) => (

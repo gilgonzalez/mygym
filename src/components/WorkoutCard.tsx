@@ -14,11 +14,38 @@ import { calcWorkoutXP, computeWorkoutStats, formatCount, formatDuration, visibi
 import { cn } from '@/lib/utils'
 import { getDifficultyColor } from '@/lib/workout-utils'
 import { VerifiedBadge } from './common/VerifiedBadge'
+import { ConfirmDialog } from './common/ConfirmDialog'
 import { useWorkoutCardActions } from '@/hooks/useWorkoutCardActions'
 
 interface WorkoutCardProps {
   workout: Workout
   variant?: 'full' | 'simplified'
+}
+
+// Compartido entre el variant "full" (Mobile/DesktopWorkoutCard) y
+// SimplifiedWorkoutCardView, que renderizan árboles JSX separados — antes
+// cada borrado pasaba por window.confirm() en vez de un diálogo real.
+function DeleteWorkoutConfirmDialog({
+  open,
+  onOpenChange,
+  onConfirm,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  onConfirm: () => void
+}) {
+  return (
+    <ConfirmDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      icon={<Trash2 className="h-4.5 w-4.5 text-rose-300" />}
+      title="¿Borrar este workout?"
+      description="Esta acción no se puede deshacer."
+      confirmLabel="Borrar"
+      confirmButtonClassName="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+      onConfirm={onConfirm}
+    />
+  )
 }
 
 export default function WorkoutCard({ workout, variant = 'full' }: WorkoutCardProps) {
@@ -35,7 +62,10 @@ export default function WorkoutCard({ workout, variant = 'full' }: WorkoutCardPr
     setShowMenu,
     menuRef,
     handleLike,
+    showDeleteConfirm,
+    setShowDeleteConfirm,
     handleDelete,
+    confirmDelete,
     syncFromProps,
   } = useWorkoutCardActions({
     workoutId: workout.id,
@@ -100,6 +130,9 @@ export default function WorkoutCard({ workout, variant = 'full' }: WorkoutCardPr
         menuRef={menuRef}
         onLike={handleLike}
         onDelete={handleDelete}
+        showDeleteConfirm={showDeleteConfirm}
+        setShowDeleteConfirm={setShowDeleteConfirm}
+        onConfirmDelete={confirmDelete}
       />
     )
   }
@@ -147,6 +180,11 @@ export default function WorkoutCard({ workout, variant = 'full' }: WorkoutCardPr
       />
 
       <ShareWorkoutDialog open={showShare} onOpenChange={setShowShare} workout={workout} />
+      <DeleteWorkoutConfirmDialog
+        open={showDeleteConfirm}
+        onOpenChange={setShowDeleteConfirm}
+        onConfirm={confirmDelete}
+      />
     </Card>
   )
 }
@@ -155,7 +193,8 @@ function SimplifiedWorkoutCardView(props: any) {
   const {
     workout, isOwner, isLiked, likesCount, likesPreview,
     xpEarned, durationLabel, isDeleting,
-    showMenu, setShowMenu, menuRef, onLike, onDelete
+    showMenu, setShowMenu, menuRef, onLike, onDelete,
+    showDeleteConfirm, setShowDeleteConfirm, onConfirmDelete
   } = props
   const router = useRouter()
   const [showShare, setShowShare] = useState(false)
@@ -365,6 +404,11 @@ function SimplifiedWorkoutCardView(props: any) {
       </div>
 
       <ShareWorkoutDialog open={showShare} onOpenChange={setShowShare} workout={workout} />
+      <DeleteWorkoutConfirmDialog
+        open={showDeleteConfirm}
+        onOpenChange={setShowDeleteConfirm}
+        onConfirm={onConfirmDelete}
+      />
     </Card>
   )
 }

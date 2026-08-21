@@ -67,6 +67,18 @@ function formatWithCommas(n: number): string {
   return s + out
 }
 
+// Antes duplicado entre WorkoutExecutionMockup y WorkoutChallengeExecutionMockup.
+// No usa formatDuration de @mygym/shared a propósito: acá mm/ss se renderizan
+// como dos <span> separados (con estilos distintos a cada lado de los ":"),
+// y esos contadores de demo pueden superar los 3600s sin que corresponda
+// mostrar horas — formatDuration cambiaría el formato en ese caso.
+function formatClockParts(totalSeconds: number): { mm: string; ss: string } {
+  return {
+    mm: String(Math.floor(totalSeconds / 60)).padStart(2, '0'),
+    ss: String(totalSeconds % 60).padStart(2, '0'),
+  }
+}
+
 function ExerciseVaultMockup() {
   const [search, setSearch] = useState('')
   const [activeMuscles, setActiveMuscles] = useState<string[]>([])
@@ -680,8 +692,7 @@ function WorkoutExecutionMockup() {
     return () => clearInterval(id)
   }, [running])
 
-  const mm = String(Math.floor(seconds / 60)).padStart(2, '0')
-  const ss = String(seconds % 60).padStart(2, '0')
+  const { mm, ss } = formatClockParts(seconds)
 
   const radius = 170
   const circumference = 2 * Math.PI * radius
@@ -877,8 +888,7 @@ function WorkoutChallengeExecutionMockup() {
     return () => clearInterval(id)
   }, [running])
 
-  const mm = String(Math.floor(secondsLeft / 60)).padStart(2, '0')
-  const ss = String(secondsLeft % 60).padStart(2, '0')
+  const { mm, ss } = formatClockParts(secondsLeft)
   const totalSeconds = 12 * 60
   const progress = 1 - secondsLeft / totalSeconds
 

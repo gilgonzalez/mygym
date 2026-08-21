@@ -4,6 +4,7 @@ import { useEffect, useState, useTransition } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { Check, Loader2, UserPlus, UserRoundX, UserRoundCheck } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import {
   cancelFollowRequestAction,
@@ -102,7 +103,7 @@ export function FollowButton({
 
       if (!result.success) {
         setStatus(previousStatus)
-        window.alert(result.error || 'No pudimos actualizar la relacion de seguimiento.')
+        toast.error(result.error || 'No pudimos actualizar la relacion de seguimiento.')
         return
       }
 

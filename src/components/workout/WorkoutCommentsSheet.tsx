@@ -7,21 +7,14 @@ import { getWorkoutComments, countWorkoutComments } from '@/app/actions/workout/
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
 import { cn } from '@/lib/utils'
 import { FEELING_CONFIG } from '@/constants/feeling'
-import { formatCount, timeAgo } from '@mygym/shared'
+import { FEELING_LEVELS, formatCount, formatDuration, timeAgo } from '@mygym/shared'
 import { useMediaQuery } from '@/hooks/useMediaQuery'
+import { EmptyState } from '@/components/common/EmptyState'
 
 interface WorkoutCommentsSheetProps {
   workoutId: string
   isChallenge?: boolean
   children: React.ReactNode
-}
-
-const FEELING_LEVELS: Record<string, number> = {
-  tired: 1,
-  sad: 2,
-  normal: 3,
-  happy: 4,
-  pumped: 5
 }
 
 export function WorkoutCommentsSheet({ workoutId, isChallenge = false, children }: WorkoutCommentsSheetProps) {
@@ -226,23 +219,19 @@ export function WorkoutCommentsSheet({ workoutId, isChallenge = false, children 
                   </div>
                 </>
               ) : (
-                <EmptyState compact={!isDesktop} />
+                <EmptyState
+                  icon={MessageSquare}
+                  bare
+                  compact={!isDesktop}
+                  title="Todavía no hay comentarios."
+                  description="¡Sé el primero en completar este workout y dejar una reseña!"
+                />
               )}
             </div>
           </div>
         </DrawerContent>
       </Drawer>
     </>
-  )
-}
-
-function EmptyState({ compact = false }: { compact?: boolean }) {
-  return (
-    <div className="flex flex-col items-center justify-center text-center text-muted-foreground" style={{ padding: compact ? '3rem 1rem' : '3rem 1rem' }}>
-       <MessageSquare className={cn("opacity-20 mb-4", compact ? "h-10 w-10" : "h-12 w-12")} />
-       <p className={cn("font-medium", compact ? "text-sm" : "text-base")}>Todavía no hay comentarios.</p>
-       <p className={cn("mt-1", compact ? "text-[11px]" : "text-xs")}>¡Sé el primero en completar este workout y dejar una reseña!</p>
-    </div>
   )
 }
 
@@ -409,7 +398,7 @@ function CommentCard({
                     </div>
                     <div className="flex gap-1 flex-1 h-1.5 max-w-[140px]">
                        {[1, 2, 3, 4, 5].map((i) => {
-                          const level = FEELING_LEVELS[comment.feeling || ''] || 0
+                          const level = (FEELING_LEVELS as Record<string, number>)[comment.feeling || ''] || 0
                           const isActive = i <= level
                           return (
                              <div
@@ -518,7 +507,7 @@ function ChallengeStats({ challenge, compact = false }: { challenge: any; compac
               "text-sm font-black font-mono tabular-nums",
               isWorkoutRecord ? "text-amber-700 dark:text-amber-300" : "text-amber-500"
             )}>
-              {Math.floor(challenge.time_cap_seconds / 60)}:{String(challenge.time_cap_seconds % 60).padStart(2, '0')}
+              {formatDuration(challenge.time_cap_seconds, { style: 'clock' })}
             </span>
           </div>
         </div>
