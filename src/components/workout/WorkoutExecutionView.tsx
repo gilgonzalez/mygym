@@ -7,13 +7,13 @@ import { PremiumFeatureDialog } from '@/components/premium/PremiumFeatureDialog'
 import { ExerciseTutorialDialog } from './ExerciseTutorialDialog'
 import { MusicPlayer } from './MusicPlayer'
 import { LocalWorkout, ExerciseTutorial } from '@/types/workout/viewTypes'
-import { CheckCircle2, ChevronDown, ChevronLeft, Clock, Dumbbell, Info, Pause, Play, Plus, SkipForward } from 'lucide-react'
+import { CheckCircle2, ChevronDown, ChevronLeft, Clock, Info, Pause, Play, Plus, SkipForward } from 'lucide-react'
 import { getNextWorkoutCursor, getStepInfo } from '@/lib/workout/sessionNavigation'
-import { getWorkoutSegmentKind, isGifUrl, WorkoutSegmentKind } from '@/lib/workout/segmentKind'
+import { getWorkoutSegmentKind, isGifUrl } from '@/lib/workout/segmentKind'
+import { getRestTransitionTheme, getStageTheme, getStrokeColor, type SessionStage } from '@/lib/workout/sessionTheme'
 import { formatDuration } from '@mygym/shared'
 import { useWorkoutStore } from '@/store/workOutStore'
-
-type SessionStage = 'prepare' | 'rest' | 'exercise-timed' | 'exercise-reps' | 'exercise-emom'
+import { WorkoutSessionCircle } from './WorkoutSessionCircle'
 
 interface WorkoutExecutionViewProps {
   workout: LocalWorkout
@@ -34,185 +34,6 @@ function hasRealTutorialContent(tutorial?: ExerciseTutorial) {
   const hasSteps = (tutorial.steps || []).some((step) => Boolean(step.title?.trim()) || Boolean(step.description?.trim()))
 
   return hasMedia || hasSteps
-}
-
-function getStrokeColor(stage: SessionStage) {
-  switch (stage) {
-    case 'prepare':
-      return '#38bdf8'
-    case 'rest':
-      return '#f97316'
-    case 'exercise-timed':
-      return '#22c55e'
-    case 'exercise-emom':
-      return '#ec4899'
-    default:
-      return '#8b5cf6'
-  }
-}
-
-// Copy shown during the rest that follows the very last exercise/round of a section, when
-// the section coming next plays by different rules than the one just finished (e.g. handing
-// off into the AMRAP circuit). Keyed by the upcoming section's kind so a future mode (EMOM…)
-// just needs a new case here.
-function getRestTransitionTheme(upcomingKind: WorkoutSegmentKind, sectionName?: string) {
-  if (upcomingKind === 'amrap') {
-    return {
-      badge: 'Después del descanso',
-      badgeClass: 'border-emerald-400/30 bg-emerald-400/10 text-emerald-300',
-      headline: 'Se acerca un reto AMRAP',
-      subline: sectionName
-        ? `${sectionName}: aguanta el ritmo, viene contrarreloj`
-        : 'Aguanta el ritmo, viene contrarreloj',
-    }
-  }
-
-  return {
-    badge: 'Después del descanso',
-    badgeClass: 'border-violet-400/30 bg-violet-400/10 text-violet-300',
-    headline: 'Cambia el formato del entrenamiento',
-    subline: sectionName ? `A continuación: ${sectionName}` : 'Prepárate para el nuevo formato',
-  }
-}
-
-function getStageTheme(stage: SessionStage) {
-  switch (stage) {
-    case 'prepare':
-      return {
-        badge: 'Prepárate',
-        badgeClass: 'border-sky-400/30 bg-sky-400/10 text-sky-300',
-        headline: 'Prepárate',
-        subline: 'Comenzamos en 5 segundos',
-      }
-    case 'rest':
-      return {
-        badge: 'Descanso',
-        badgeClass: 'border-orange-400/30 bg-orange-400/10 text-orange-300',
-        headline: 'Recupera y prepárate',
-        subline: 'La siguiente actividad ya está lista',
-      }
-    case 'exercise-timed':
-      return {
-        badge: 'Actividad',
-        badgeClass: 'border-emerald-400/30 bg-emerald-400/10 text-emerald-300',
-        headline: 'Mantén el ritmo',
-        subline: 'Sigue el temporizador y controla la técnica',
-      }
-    case 'exercise-emom':
-      return {
-        badge: 'EMOM',
-        badgeClass: 'border-pink-400/30 bg-pink-400/10 text-pink-300',
-        // No mention of "descanso" here on purpose — there's no separate rest stage for
-        // EMOM, whatever's left of the window after the reps are done just plays out on
-        // this same clock.
-        headline: 'Completa las repeticiones a tiempo',
-        subline: 'Mantén el ritmo hasta que se acabe el tiempo asignado',
-      }
-    case 'exercise-reps':
-      return {
-        badge: 'Actividad',
-        badgeClass: 'border-violet-400/30 bg-violet-400/10 text-violet-300',
-        headline: 'Completa la serie',
-        subline: 'Marca la serie cuando termines',
-      }
-    default:
-      return {
-        badge: 'Actividad',
-        badgeClass: 'border-violet-400/30 bg-violet-400/10 text-violet-300',
-        headline: 'Completa la serie',
-        subline: 'Marca la serie cuando termines',
-      }
-  }
-}
-
-
-function WorkoutSessionCircle({
-  circleSize,
-  radius,
-  strokeWidth,
-  circumference,
-  dashOffset,
-  strokeColor,
-  innerInset,
-  mediaUrl,
-  alt,
-  showRest,
-}: {
-  circleSize: number
-  radius: number
-  strokeWidth: number
-  circumference: number
-  dashOffset: number
-  strokeColor: string
-  innerInset: string
-  mediaUrl?: string
-  alt: string
-  showRest: boolean
-}) {
-  return (
-    <div className="grid h-full w-full min-h-0 min-w-0 place-items-center overflow-hidden [container-type:size]">
-      <div
-        className="relative [container-type:inline-size]"
-        style={{ width: 'min(100cqw, 100cqh)', aspectRatio: '1 / 1' }}
-      >
-        <div className="pointer-events-none absolute inset-0 rounded-full blur-3xl" style={{ backgroundColor: `${strokeColor}22` }} />
-        <svg
-          viewBox={`0 0 ${circleSize} ${circleSize}`}
-          className="h-full w-full"
-          style={{ transform: 'rotate(-90deg)', transformOrigin: '50% 50%' }}
-          aria-hidden
-        >
-          <circle
-            cx={circleSize / 2}
-            cy={circleSize / 2}
-            r={radius}
-            fill="transparent"
-            stroke="rgba(255,255,255,0.10)"
-            strokeWidth={strokeWidth}
-          />
-          <circle
-            cx={circleSize / 2}
-            cy={circleSize / 2}
-            r={radius}
-            fill="transparent"
-            stroke={strokeColor}
-            strokeWidth={strokeWidth}
-            strokeLinecap="round"
-            strokeDasharray={circumference}
-            strokeDashoffset={dashOffset}
-            className="transition-[stroke-dashoffset] duration-1000 ease-linear"
-          />
-        </svg>
-
-        <div
-          className="absolute overflow-hidden rounded-full border border-white/10 bg-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
-          style={{ inset: innerInset }}
-        >
-          {mediaUrl ? (
-            <div className="flex h-full w-full items-center justify-center">
-              <img
-                src={mediaUrl}
-                alt={alt}
-                className="h-full w-full object-cover"
-              />
-            </div>
-          ) : (
-            <div className="flex h-full w-full items-center justify-center bg-white">
-              <Dumbbell className="h-[28%] w-[28%] max-h-20 max-w-20 text-slate-300" />
-            </div>
-          )}
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.22),transparent_52%),linear-gradient(180deg,rgba(255,255,255,0.04),rgba(15,23,42,0.08))]" />
-          {showRest ? (
-            <div className="absolute inset-0 flex items-center justify-center overflow-hidden bg-[radial-gradient(circle_at_center,rgba(251,191,36,0.28),rgba(251,191,36,0.42)_58%,rgba(180,83,9,0.56))] px-[6%]">
-              <div className="animate-pulse text-center text-[clamp(1rem,15cqw,3.25rem)] font-black uppercase leading-none tracking-[0.12em] text-amber-600 drop-shadow-[0_2px_12px_rgba(251,191,36,0.35)]">
-                REST
-              </div>
-            </div>
-          ) : null}
-        </div>
-      </div>
-    </div>
-  )
 }
 
 export function WorkoutExecutionView({

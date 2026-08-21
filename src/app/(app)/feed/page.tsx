@@ -19,9 +19,7 @@ import {
   type FeedSort,
   type FeedFilter,
 } from '@/app/actions/workout/list'
-import type { Database } from '@/types/database'
-
-type DbWorkoutRow = Database['public']['Tables']['workouts']['Row']
+import { useFeedRealtimeUpdates } from '@/hooks/useFeedRealtimeUpdates'
 
 const PAGE_SIZE = 8
 
@@ -31,7 +29,6 @@ export default function Page() {
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [newestCreatedAt, setNewestCreatedAt] = useState<string | null>(null)
-  const [realtimeNewCount, setRealtimeNewCount] = useState<number>(0)
   const [viewerId, setViewerId] = useState<string | null>(null)
   const [followingIds, setFollowingIds] = useState<string[]>([])
   const sentinelRef = useRef<HTMLDivElement | null>(null)
@@ -125,59 +122,14 @@ export default function Page() {
     }
   }, [allWorkouts])
 
-  useEffect(() => {
-    setRealtimeNewCount(0)
-  }, [debouncedSearch, filter, sortBy])
-
-  useEffect(() => {
-    const channelName = 'feed-workouts-inserts'
-    const channel = supabase.channel(channelName, {
-      config: { broadcast: { self: false } },
-    })
-
-    channel
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'workouts',
-        },
-        (payload: any) => {
-          const row = payload.new as (DbWorkoutRow & { cover?: string | null; estimated_time?: number | null }) | null | undefined
-          if (!row) return
-
-          if (row.visibility !== 'public' && row.visibility !== 'followers') return
-          if (!row.created_at) return
-          if (newestCreatedAt && new Date(row.created_at).getTime() <= new Date(newestCreatedAt).getTime()) return
-
-          if (filter === 'following') {
-            const allowed = viewerId ? [...followingIds, viewerId] : [...followingIds]
-            if (!row.user_id || !allowed.includes(row.user_id)) return
-          }
-
-          const needle = debouncedSearch.trim().toLowerCase()
-          if (needle) {
-            const haystack = [
-              row.title ?? '',
-              row.description ?? '',
-              ...(Array.isArray(row.tags) ? (row.tags as string[]) : []),
-            ]
-              .filter(Boolean)
-              .join(' ')
-              .toLowerCase()
-            if (!haystack.includes(needle)) return
-          }
-
-          setRealtimeNewCount((prev) => prev + 1)
-        }
-      )
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [newestCreatedAt, filter, viewerId, followingIds, debouncedSearch])
+  const { newCount: realtimeNewCount, resetCount: resetRealtimeNewCount } = useFeedRealtimeUpdates({
+    newestCreatedAt,
+    filter,
+    sortBy,
+    viewerId,
+    followingIds,
+    debouncedSearch,
+  })
 
   useEffect(() => {
     const element = sentinelRef.current
@@ -201,7 +153,7 @@ export default function Page() {
   }, [fetchNextPage, hasNextPage, isFetchingNextPage])
 
   const handleLoadNew = async () => {
-    setRealtimeNewCount(0)
+    resetRealtimeNewCount()
     await refetch()
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
