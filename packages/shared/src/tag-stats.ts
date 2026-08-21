@@ -1,6 +1,11 @@
-import { WorkoutTag } from './workout-tags';
+import { WorkoutTag } from './workout-tags'
 
-export type StatType = 'strength' | 'cardio' | 'flexibility' | 'agility' | 'mind';
+// Mismo catálogo que src/constants/tag-stats.ts (apps/web, ahora migrado
+// acá) — pondera cuánto aporta cada tag a cada stat RPG del workout. Lo usa
+// computeWorkoutStats (./rewards.ts) para repartir el XP de un workout entre
+// sus stats al guardarlo, y como fallback de display para workouts viejos
+// que no tienen `stats` persistido todavía.
+export type StatType = 'strength' | 'cardio' | 'flexibility' | 'agility' | 'mind'
 
 export const TAG_STATS_WEIGHTS: Record<WorkoutTag, Partial<Record<StatType, number>>> = {
   // Training Styles
@@ -141,5 +146,5 @@ export const TAG_STATS_WEIGHTS: Record<WorkoutTag, Partial<Record<StatType, numb
   'Playa': {},
   'Viaje': {},
   'Gimnasio Hotel': {},
-  'Sin Material': {}
-};
+  'Sin Material': {},
+}

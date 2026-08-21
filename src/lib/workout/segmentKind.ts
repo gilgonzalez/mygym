@@ -15,3 +15,10 @@ export function getWorkoutSegmentKind(workout: LocalWorkout, sectionIndex: numbe
   if (workout.challenge && section?.id === workout.challenge.challengeSectionId) return 'amrap'
   return 'standard'
 }
+
+// Antes duplicado entre WorkoutExecutionView.tsx y
+// WorkoutChallengeExecutionView.tsx — decide si el tutorial de un ejercicio
+// es un gif (se reproduce distinto a un video/imagen estática).
+export function isGifUrl(url?: string): boolean {
+  return Boolean(url && /\.gif($|\?)/i.test(url))
+}

@@ -37,8 +37,7 @@ import { updateWorkoutAction } from '@/app/actions/workout/update'
 import { uploadFile } from '@/services/uploadFile'
 import { MediaSelectionDialog } from '../components/MediaSelectionDialog'
 import { PreviewWorkout } from '../components/PreviewWorkout'
-import { TAG_STATS_WEIGHTS, StatType } from '@/constants/tag-stats'
-import { WorkoutTag } from '@/constants/workout-tags'
+import { calcWorkoutXP, computeWorkoutStats, DIFFICULTY_VALUES } from '@mygym/shared'
 import { ExercisesVault } from '../components/ExercisesVault'
 import { WorkoutTagSelector } from '@/components/ui/workout-tag-selector'
 import { Exercise } from '@/app/actions/exercises/list'
@@ -79,7 +78,7 @@ const exerciseSchema = z.object({
   description: z.string().optional(),
   muscle_groups: z.array(z.string()).optional(),
   equipment: z.array(z.string()).optional(),
-  difficulty: z.enum(['beginner', 'intermediate', 'advanced']).optional(),
+  difficulty: z.enum(DIFFICULTY_VALUES).optional(),
   link_id: z.string().optional(),
   tutorial: tutorialSchema.optional().nullable(),
 })
@@ -104,7 +103,7 @@ const workoutSchema = z.object({
   description: z.string().optional(),
   cover: z.string().optional(),
   tags: z.array(z.string()).optional(),
-  difficulty: z.enum(['beginner', 'intermediate', 'advanced']).optional(),
+  difficulty: z.enum(DIFFICULTY_VALUES).optional(),
   visibility: z.enum(['draft', 'public', 'private', 'followers']).default('private'),
   audio: z.array(z.string()).optional(),
   challenge: z.object({
@@ -738,58 +737,10 @@ function CreateWorkoutContent() {
                 }, 0)
             }, 0)
 
-            // Calculate EXP based on time and difficulty
-            // Formula: 10 XP per minute * Difficulty Multiplier
-            const difficultyMultiplierMap: Record<'beginner' | 'intermediate' | 'advanced', number> = {
-                'beginner': 1,
-                'intermediate': 1.5,
-                'advanced': 2
-            }
-            const difficultyKey = (data.difficulty || 'beginner') as keyof typeof difficultyMultiplierMap
-            const difficultyMultiplier = difficultyMultiplierMap[difficultyKey] || 1
-
-            const expEarned = Math.round((estimatedTime / 60) * 10 * difficultyMultiplier)
-
-            // Calculate Stats Distribution
-            // 1. Sum up all weights from tags
-            const rawStats: Record<StatType, number> = {
-                strength: 0,
-                cardio: 0,
-                flexibility: 0,
-                agility: 0,
-                mind: 0
-            }
-            
-            let totalWeight = 0
-            const tags = data.tags || []
-            
-            tags.forEach((tag: string) => {
-                const weights = TAG_STATS_WEIGHTS[tag as WorkoutTag]
-                if (weights) {
-                    Object.entries(weights).forEach(([stat, weight]) => {
-                        rawStats[stat as StatType] += weight
-                        totalWeight += weight
-                    })
-                }
-            })
-
-            // If no tags or no weights, default to balanced distribution
-            if (totalWeight === 0) {
-                 rawStats.strength = 1
-                 rawStats.cardio = 1
-                 rawStats.flexibility = 1
-                 rawStats.agility = 1
-                 rawStats.mind = 1
-                 totalWeight = 5
-            }
-
-            // 2. Distribute Total EXP according to weights
-            const finalStats: Record<string, number> = {}
-            Object.entries(rawStats).forEach(([stat, weight]) => {
-                if (weight > 0) {
-                    finalStats[stat] = Math.round((weight / totalWeight) * expEarned)
-                }
-            })
+            // XP y desglose de stats: misma fórmula que se usa para mostrar/
+            // otorgar XP en el resto de la app (ver packages/shared/src/rewards.ts).
+            const expEarned = calcWorkoutXP(estimatedTime, data.difficulty)
+            const finalStats = computeWorkoutStats(data.tags, expEarned)
 
             // Prepare clean data for server action
             const cleanData: WorkoutInput = {
@@ -3036,8 +2987,10 @@ function MediaInput({ value, onChange, placeholder, type = 'media', variant = 'd
         if (isPlaying) {
             // Small timeout to ensure element is mounted
             const timeout = setTimeout(() => {
-                if (playbackVideoRef.current) playbackVideoRef.current.play().catch(e => console.log("Video play failed", e))
-                if (playbackAudioRef.current) playbackAudioRef.current.play().catch(e => console.log("Audio play failed", e))
+                // El navegador puede rechazar el autoplay (política de gesto del
+                // usuario) — no es un error real, se ignora en silencio.
+                if (playbackVideoRef.current) playbackVideoRef.current.play().catch(() => {})
+                if (playbackAudioRef.current) playbackAudioRef.current.play().catch(() => {})
             }, 100)
             return () => clearTimeout(timeout)
         }

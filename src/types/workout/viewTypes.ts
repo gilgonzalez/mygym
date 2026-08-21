@@ -1,3 +1,5 @@
+import type { Difficulty } from '@mygym/shared'
+
 export interface ExerciseTutorialStep {
   id?: string
   title: string
@@ -57,7 +59,7 @@ export interface LocalWorkout {
   cover?: string
   description: string
   tags?: string[]
-  difficulty?: string
+  difficulty?: Difficulty
   audio?: string[] // YouTube URLs
   sections: LocalSection[]
   challenge?: LocalWorkoutChallenge | null

@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 import { getWorkoutLogsAction } from "@/app/actions/user/getLogs"
 import { useQuery } from "@tanstack/react-query"
-import { formatDuration } from "@/lib/time"
+import { formatDuration } from '@mygym/shared'
 
 type WorkoutSession = {
   title: string
@@ -60,7 +60,6 @@ export function ActivityHeatmap({ userId, attributes }: ActivityHeatmapProps) {
         console.error('Error fetching logs:', error)
         throw new Error(error)
       }
-      console.log('Logs fetched:', data?.length)
       return data || []
     },
     enabled: !!userId,

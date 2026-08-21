@@ -10,9 +10,9 @@ import { useRouter } from 'next/navigation'
 import { ShareWorkoutDialog } from './share/ShareWorkoutDialog'
 import { FollowButton } from './social/FollowButton'
 import { WorkoutCommentsSheet } from './workout/WorkoutCommentsSheet'
-import { formatDuration } from '@/lib/time'
+import { calcWorkoutXP, computeWorkoutStats, formatCount, formatDuration, visibilityLabelMap, type StatType } from '@mygym/shared'
 import { cn } from '@/lib/utils'
-import { calcWorkoutXP, formatCount, getDifficultyColor, visibilityLabelMap } from '@/lib/workout-utils'
+import { getDifficultyColor } from '@/lib/workout-utils'
 import { VerifiedBadge } from './common/VerifiedBadge'
 import { useWorkoutCardActions } from '@/hooks/useWorkoutCardActions'
 
@@ -57,25 +57,26 @@ export default function WorkoutCard({ workout, variant = 'full' }: WorkoutCardPr
 
   const durationSeconds = workout.estimated_time || 45 * 60
   const durationLabel = formatDuration(durationSeconds)
-  const durationMinutes = Math.ceil(durationSeconds / 60)
-  const xpEarned = calcWorkoutXP(durationMinutes, false)
+  // exp_earned se calcula y persiste al guardar el workout (misma fórmula,
+  // ver packages/shared/src/rewards.ts) — acá solo se lee. El cálculo en vivo
+  // es fallback para workouts viejos que no tienen el campo todavía.
+  const xpEarned = workout.exp_earned ?? calcWorkoutXP(durationSeconds, workout.difficulty)
   const hasCover = Boolean(workout.cover)
 
   const attributes = useMemo(() => {
-    let strength = 0, agility = 0, endurance = 0, wisdom = 0
-    const tags = workout.tags || []
-    if (tags.some((t) => ['Fuerza', 'Barbell', 'Dumbbell'].includes(t))) strength += 2
-    if (tags.some((t) => ['Cardio', 'HIIT', 'Run'].includes(t))) endurance += 2
-    if (tags.some((t) => ['Yoga', 'Mobility'].includes(t))) {
-      agility += 2
-      wisdom += 1
+    // Mismo criterio que exp_earned: el desglose real por stat se persiste
+    // al crear el workout (workout.stats, ver computeWorkoutStats), acá solo
+    // se lee y se mapea a los 4 chips que muestra la card. Fallback a
+    // recalcularlo desde los tags solo si no hay nada persistido.
+    const stats =
+      (workout.stats as Partial<Record<StatType, number>> | null) ?? computeWorkoutStats(workout.tags, xpEarned)
+    return {
+      strength: stats.strength ?? 0,
+      agility: stats.agility ?? 0,
+      endurance: stats.cardio ?? 0,
+      wisdom: stats.mind ?? 0,
     }
-    if (strength === 0 && agility === 0 && endurance === 0 && wisdom === 0) {
-      strength = 1
-      endurance = 1
-    }
-    return { strength, agility, endurance, wisdom }
-  }, [workout.tags])
+  }, [workout.stats, workout.tags, xpEarned])
 
   const totalExercises = workout.sections?.reduce((acc, s) => acc + (s.total_exercises || 0), 0) || 0
   const totalSections = workout.sections?.length || 0

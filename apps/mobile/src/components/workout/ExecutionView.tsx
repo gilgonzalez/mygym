@@ -6,10 +6,16 @@ import Animated, { FadeIn, useAnimatedStyle, useSharedValue, withTiming, ZoomIn 
 import * as Haptics from 'expo-haptics'
 import { CheckCircle2, ChevronLeft, ChevronRight, Dumbbell, Info, Pause, Play, SkipForward } from 'lucide-react-native'
 
-import { formatDuration } from '@mygym/shared'
+import {
+  formatDuration,
+  getNextSessionCursor,
+  getPreviousSessionCursor,
+  getSectionPositionInfo,
+  type SessionCursor,
+} from '@mygym/shared'
 import { useTheme } from '@/theme'
 import { Badge, Sheet, usePressScale } from '@/components/ui'
-import type { WorkoutDetail, WorkoutDetailExercise, WorkoutDetailSection } from '@/lib/workouts'
+import type { WorkoutDetail } from '@/lib/workouts'
 import { SessionBackground } from './SessionBackground'
 import { SessionMediaRing } from './SessionMediaRing'
 
@@ -21,10 +27,11 @@ import { SessionMediaRing } from './SessionMediaRing'
 // responsive doble (desktop/mobile) que acá no hace falta — esto es
 // siempre "mobile". Achicado a lo esencial, sin duplicar nada:
 //   - nombre + imagen + cronómetro → un solo lugar, en el círculo central.
-//   - "serie actual" y "ronda actual dentro de la sección" → dos chips,
-//     una sola vez cada uno (ronda = posición en la secuencia ejercicio×serie
-//     circuito completo; con 3 ejercicios × 3 series son 9 rondas — no es
-//     lo mismo que "serie actual", por eso van separados).
+//   - "serie actual" y "ronda actual dentro de la sección" → dos chips, una
+//     sola vez cada uno (ronda = posición dentro del orden real de la
+//     sección — circuito o secuencial según orderType, ver
+//     getSectionPositionInfo en @mygym/shared; con 3 ejercicios × 3 series
+//     son 9 rondas — no es lo mismo que "serie actual", por eso van separados).
 //   - reloj global de la sesión → arriba a la derecha, chico, aparte del
 //     cronómetro de la actividad actual.
 // Todo lo no esencial (descripción, músculos, equipo) va a un <Sheet> con
@@ -37,106 +44,13 @@ interface ExecutionViewProps {
 
 type Stage = 'prepare' | 'exercise' | 'rest'
 
-interface Cursor {
-  sectionIndex: number
-  exerciseIndex: number
-  set: number
-}
+// El cursor y el algoritmo de avance/retroceso (circuito o secuencial según
+// section.orderType) viven en @mygym/shared — antes esto era un puerto manual
+// que ignoraba orderType (siempre circuito). Ver
+// packages/shared/src/workout/sessionNavigation.ts.
+type Cursor = SessionCursor
 
 const PREPARE_SECONDS = 5
-
-function maxSetsOf(exercises: WorkoutDetailExercise[]) {
-  return Math.max(...exercises.map((e) => Math.max(e.sets, 1)), 1)
-}
-
-// Orden "circuito": todas las series 1 de cada ejercicio, después todas las
-// series 2, etc. — mismo criterio que el roadmap de la web (ver
-// getVisibleSeriesNumber en WorkoutExecutionView.tsx). Un ejercicio con
-// menos series que otros dentro de la misma sección deja de aparecer en las
-// rondas finales.
-function nextCursor(workout: WorkoutDetail, cursor: Cursor): Cursor | null {
-  const section = workout.sections[cursor.sectionIndex]
-  const exercises = section.exercises
-  const maxSets = maxSetsOf(exercises)
-
-  for (let i = cursor.exerciseIndex + 1; i < exercises.length; i++) {
-    if (Math.max(exercises[i].sets, 1) >= cursor.set) {
-      return { sectionIndex: cursor.sectionIndex, exerciseIndex: i, set: cursor.set }
-    }
-  }
-
-  for (let s = cursor.set + 1; s <= maxSets; s++) {
-    for (let i = 0; i < exercises.length; i++) {
-      if (Math.max(exercises[i].sets, 1) >= s) {
-        return { sectionIndex: cursor.sectionIndex, exerciseIndex: i, set: s }
-      }
-    }
-  }
-
-  for (let sec = cursor.sectionIndex + 1; sec < workout.sections.length; sec++) {
-    if (workout.sections[sec].exercises.length > 0) {
-      return { sectionIndex: sec, exerciseIndex: 0, set: 1 }
-    }
-  }
-
-  return null
-}
-
-// Espejo de nextCursor recorriendo el circuito al revés — para el botón de
-// "atrás". Vuelve al último (ejercicio, serie) válido de la sección
-// anterior cuando se cruza el borde de la sección actual.
-function prevCursor(workout: WorkoutDetail, cursor: Cursor): Cursor | null {
-  const section = workout.sections[cursor.sectionIndex]
-  const exercises = section.exercises
-
-  for (let i = cursor.exerciseIndex - 1; i >= 0; i--) {
-    if (Math.max(exercises[i].sets, 1) >= cursor.set) {
-      return { sectionIndex: cursor.sectionIndex, exerciseIndex: i, set: cursor.set }
-    }
-  }
-
-  for (let s = cursor.set - 1; s >= 1; s--) {
-    for (let i = exercises.length - 1; i >= 0; i--) {
-      if (Math.max(exercises[i].sets, 1) >= s) {
-        return { sectionIndex: cursor.sectionIndex, exerciseIndex: i, set: s }
-      }
-    }
-  }
-
-  for (let sec = cursor.sectionIndex - 1; sec >= 0; sec--) {
-    const prevSection = workout.sections[sec]
-    if (prevSection.exercises.length === 0) continue
-
-    const maxSets = maxSetsOf(prevSection.exercises)
-    for (let s = maxSets; s >= 1; s--) {
-      for (let i = prevSection.exercises.length - 1; i >= 0; i--) {
-        if (Math.max(prevSection.exercises[i].sets, 1) >= s) {
-          return { sectionIndex: sec, exerciseIndex: i, set: s }
-        }
-      }
-    }
-  }
-
-  return null
-}
-
-function getRoundInfo(section: WorkoutDetailSection, cursor: Cursor) {
-  const exercises = section.exercises
-  const maxSets = maxSetsOf(exercises)
-  let total = 0
-  let current = 1
-
-  for (let s = 1; s <= maxSets; s++) {
-    for (let i = 0; i < exercises.length; i++) {
-      if (Math.max(exercises[i].sets, 1) >= s) {
-        total += 1
-        if (s === cursor.set && i === cursor.exerciseIndex) current = total
-      }
-    }
-  }
-
-  return { current, total: total || 1 }
-}
 
 const STAGE_COLOR: Record<Stage, string> = {
   prepare: '#38bdf8',
@@ -205,7 +119,7 @@ export function ExecutionView({ workout, onExit, onComplete }: ExecutionViewProp
   }
 
   const goNext = () => {
-    const next = nextCursor(workout, cursor)
+    const next = getNextSessionCursor(workout, cursor)
     if (!next) {
       if (!hasCompletedRef.current) {
         hasCompletedRef.current = true
@@ -222,7 +136,7 @@ export function ExecutionView({ workout, onExit, onComplete }: ExecutionViewProp
   // nuevo. No resta del reloj global: ese cuenta tiempo de sesión real, no
   // se "deshace" al navegar.
   const goPrev = () => {
-    const prev = prevCursor(workout, cursor)
+    const prev = getPreviousSessionCursor(workout, cursor)
     if (!prev) return
     setCursor(prev)
     setStage('exercise')
@@ -271,7 +185,7 @@ export function ExecutionView({ workout, onExit, onComplete }: ExecutionViewProp
     )
   }
 
-  const roundInfo = getRoundInfo(section, cursor)
+  const roundInfo = getSectionPositionInfo(workout, cursor)
   const totalSets = Math.max(exercise.sets, 1)
   const currentSet = Math.min(cursor.set, totalSets)
   const progress = hasTimer && totalDuration > 0 ? 1 - timeLeft / totalDuration : 1
@@ -287,10 +201,10 @@ export function ExecutionView({ workout, onExit, onComplete }: ExecutionViewProp
   const hasDetails = Boolean(exercise.description?.trim()) || exercise.muscle_groups.length > 0 || exercise.equipment.length > 0
   const isUrgent = hasTimer && timeLeft > 0 && timeLeft <= 3
 
-  const upcomingCursor = nextCursor(workout, cursor)
+  const upcomingCursor = getNextSessionCursor(workout, cursor)
   const upcomingExercise = upcomingCursor ? workout.sections[upcomingCursor.sectionIndex].exercises[upcomingCursor.exerciseIndex] : null
   const upcomingIsNewSection = upcomingCursor ? upcomingCursor.sectionIndex !== cursor.sectionIndex : false
-  const canGoBack = stage !== 'prepare' && Boolean(prevCursor(workout, cursor))
+  const canGoBack = stage !== 'prepare' && Boolean(getPreviousSessionCursor(workout, cursor))
 
   return (
     <View style={styles.container}>

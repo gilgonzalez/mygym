@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { AlertCircle, CheckCircle2, Loader2 } from 'lucide-react'
+import { getPasswordLengthError, isPasswordValid, MIN_PASSWORD_LENGTH } from '@mygym/shared'
 
 // Paso 2 del flujo: acá cae el link de recuperación (?code=...). El cliente
 // browser de Supabase (@supabase/ssr, flowType pkce) intercambia ese code
@@ -51,8 +52,8 @@ function ResetPasswordContent() {
     e.preventDefault()
     setError('')
 
-    if (password.length < 6) {
-      setError('La contraseña debe tener al menos 6 caracteres')
+    if (!isPasswordValid(password)) {
+      setError(getPasswordLengthError())
       return
     }
 
@@ -132,7 +133,7 @@ function ResetPasswordContent() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             disabled={isLoading}
-            minLength={6}
+            minLength={MIN_PASSWORD_LENGTH}
           />
         </div>
 
@@ -149,7 +150,7 @@ function ResetPasswordContent() {
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
             disabled={isLoading}
-            minLength={6}
+            minLength={MIN_PASSWORD_LENGTH}
           />
         </div>
 

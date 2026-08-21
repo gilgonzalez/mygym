@@ -29,7 +29,7 @@ import {
 import { GoogleAuthButton } from '@/components/auth/GoogleAuthButton'
 import { ShareWorkoutDialog } from '../share/ShareWorkoutDialog'
 import { ExercisePreviewDialog } from './ExercisePreviewDialog'
-import { formatDuration } from '@/lib/time'
+import { formatDuration } from '@mygym/shared'
 
 interface WorkoutOverviewProps {
   workout: LocalWorkout

@@ -4,7 +4,7 @@ import { CheckCircle2, ChevronLeft, Dumbbell, Info, Volume2, VolumeX } from 'luc
 import { LocalExercise, LocalSection } from '@/types/workout/viewTypes'
 import { useState, useRef } from 'react'
 import { ExerciseTutorialDialog } from './ExerciseTutorialDialog'
-import { formatDuration } from '@/lib/time'
+import { formatDuration } from '@mygym/shared'
 
 interface ExerciseViewProps {
   currentExercise: LocalExercise

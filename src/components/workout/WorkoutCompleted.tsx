@@ -12,7 +12,7 @@ import { logWorkoutCompletion } from '@/app/actions/workout/log'
 import { useWorkoutStore } from '@/store/workOutStore'
 import { FEELING_CONFIG } from '@/constants/feeling'
 import { PremiumFeatureDialog } from '@/components/premium/PremiumFeatureDialog'
-import { formatDuration } from '@/lib/time'
+import { formatDuration } from '@mygym/shared'
 import { LocalWorkoutChallengeResult } from '@/types/workout/viewTypes'
 
 

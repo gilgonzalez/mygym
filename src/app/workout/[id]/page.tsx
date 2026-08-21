@@ -16,7 +16,7 @@ import { useQuery } from '@tanstack/react-query'
 import { getWorkoutById } from '@/app/actions/workout/get'
 import { useAuthStore } from '@/store/authStore'
 import { completeWorkoutAction } from '@/app/actions/user/completeWorkout'
-import { calcWorkoutXP } from '@/lib/workout-utils'
+import { calcWorkoutXP, type Difficulty } from '@mygym/shared'
 import { useWakeLock } from '@/hooks/useWakeLock'
 
 function normalizeExerciseKey(value: string) {
@@ -144,7 +144,7 @@ export default function WorkoutSessionPage({ params }: { params: { id: string } 
       cover: raw.cover || undefined,
       description: raw.description || '',
       tags: raw.tags || [],
-      difficulty: raw.difficulty || undefined,
+      difficulty: (raw.difficulty as Difficulty) || undefined,
       audio: raw.audio || [],
       challenge: raw.challenge
         ? {
@@ -204,7 +204,10 @@ export default function WorkoutSessionPage({ params }: { params: { id: string } 
         hasLoggedRef.current = true
 
         const durationMinutes = Math.max(1, Math.ceil(elapsedMs / 60000))
-        const xpEarned = calcWorkoutXP(durationMinutes, false) // Base 50 + 5 per minute
+        // Misma fórmula (ponderada por dificultad) que se usa al guardar el
+        // workout para calcular su exp_earned "de catálogo" — ver
+        // packages/shared/src/rewards.ts.
+        const xpEarned = calcWorkoutXP(elapsedMs / 1000, activeWorkout?.difficulty)
         setXpEarnedState(xpEarned)
 
         if (!canSaveProgress) {

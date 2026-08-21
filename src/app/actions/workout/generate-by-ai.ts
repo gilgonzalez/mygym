@@ -3,6 +3,7 @@
 import OpenAI from 'openai'
 import { createClient } from '@/lib/supabase/server'
 import { type Exercise } from '@/app/actions/exercises/list'
+import type { Difficulty } from '@mygym/shared'
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -37,7 +38,7 @@ type WorkoutIntentClassification = {
 type PromptFilters = {
   muscleGroups: string[]
   equipment: string[]
-  difficulty?: 'beginner' | 'intermediate' | 'advanced'
+  difficulty?: Difficulty
   durationMinutes?: number | null
   avoidEquipment: boolean
   searchTerms: string[]
@@ -54,7 +55,7 @@ type GeneratedWorkoutExercise = {
   muscle_groups?: string[]
   equipment?: string[]
   description?: string
-  difficulty?: 'beginner' | 'intermediate' | 'advanced'
+  difficulty?: Difficulty
   is_new_exercise?: boolean
 }
 
@@ -66,7 +67,7 @@ type GeneratedWorkoutSection = {
 type GeneratedWorkout = {
   title: string
   description: string
-  difficulty?: 'beginner' | 'intermediate' | 'advanced'
+  difficulty?: Difficulty
   sections: GeneratedWorkoutSection[]
 }
 
@@ -383,7 +384,6 @@ function selectTopCandidateExercises(exercises: Exercise[], prompt: string, filt
 
 async function getCandidateExercises(prompt: string) {
   const filters = extractPromptFilters(prompt)
-  console.log('[AI Workout] Extracted filters:', filters)
 
   let fetchedExercises = await fetchExercisesForAi(filters)
 
@@ -689,24 +689,15 @@ export async function generateWorkoutAction(prompt: string, language: string = '
     return { success: false, error: 'Describe el workout que quieres generar.' }
   }
 
-  const start = Date.now()
   try {
-    console.log(`--- AI Generation Started (Lang: ${language}) ---`)
-    console.log('[AI Workout] Prompt received:', normalizedPrompt)
-
     const isWorkoutRequest = await classifyWorkoutIntent(normalizedPrompt, language)
-    console.log('[AI Workout] Intent classification result:', { isWorkoutRequest })
 
     if (!isWorkoutRequest) {
       return { success: false, error: OFF_TOPIC_ERROR }
     }
 
     const candidateResult = await getCandidateExercises(normalizedPrompt)
-    const { candidates, fetchedCount, filters } = candidateResult
-    console.log('[AI Workout] Fetched exercise count:', fetchedCount)
-    console.log('[AI Workout] Applied filters:', filters)
-    console.log('[AI Workout] Candidate exercise count:', candidates.length)
-    console.log('[AI Workout] Candidate exercise names:', candidates.map((exercise: Exercise) => exercise.name))
+    const { candidates } = candidateResult
 
     const candidateCatalog = buildCandidateCatalog(candidates)
     const catalogCount = candidates.length
@@ -786,11 +777,9 @@ Return a single valid JSON object. Do not include markdown formatting.
 
     const content = completion.choices[0].message.content
     if (!content) throw new Error('No content generated')
-    console.log('[AI Workout] Raw model response:', content)
     
     const workout = JSON.parse(content) as GeneratedWorkout
     const enrichedWorkout = enrichGeneratedWorkout(workout, candidates, normalizedPrompt)
-    console.log(`--- AI Generation Completed in ${(Date.now() - start) / 1000}s ---`)
     return { success: true, data: enrichedWorkout }
   } catch (error) {
     console.error('AI Generation Error:', error)

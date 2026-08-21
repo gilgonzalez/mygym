@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Play, Pause, SkipForward } from 'lucide-react'
-import { formatDuration } from '@/lib/time'
+import { formatDuration } from '@mygym/shared'
 
 interface WorkoutTimerProps {
   duration: number

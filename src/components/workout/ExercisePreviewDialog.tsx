@@ -10,7 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { formatDuration } from '@/lib/time'
+import { formatDuration } from '@mygym/shared'
 import { LocalExercise } from '@/types/workout/viewTypes'
 import { Clock3, Dumbbell, ImageOff, Layers3, Lock, PlayCircle, Target, Wrench } from 'lucide-react'
 import { PremiumFeatureDialog } from '@/components/premium/PremiumFeatureDialog'

@@ -3,7 +3,7 @@
 import { Button } from '@/components/ui/button'
 import { LocalSection, LocalWorkout } from '@/types/workout/viewTypes'
 import { ChevronLeft, Dumbbell, Flame, LucideIcon, Repeat, Timer, Zap } from 'lucide-react'
-import { formatDuration } from '@/lib/time'
+import { formatDuration } from '@mygym/shared'
 import { WorkoutSegmentKind } from '@/lib/workout/segmentKind'
 
 interface WorkoutSegmentStat {

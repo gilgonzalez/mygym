@@ -8,7 +8,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { WORKOUT_TAGS } from '@/constants/workout-tags'
+import { WORKOUT_TAGS } from '@mygym/shared'
 import { cn } from '@/lib/utils'
 
 interface WorkoutTagSelectorProps {

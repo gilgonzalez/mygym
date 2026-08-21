@@ -9,8 +9,8 @@ import { MusicPlayer } from './MusicPlayer'
 import { LocalWorkout, ExerciseTutorial } from '@/types/workout/viewTypes'
 import { CheckCircle2, ChevronDown, ChevronLeft, Clock, Dumbbell, Info, Pause, Play, Plus, SkipForward } from 'lucide-react'
 import { getNextWorkoutCursor, getStepInfo } from '@/lib/workout/sessionNavigation'
-import { getWorkoutSegmentKind, WorkoutSegmentKind } from '@/lib/workout/segmentKind'
-import { formatDuration } from '@/lib/time'
+import { getWorkoutSegmentKind, isGifUrl, WorkoutSegmentKind } from '@/lib/workout/segmentKind'
+import { formatDuration } from '@mygym/shared'
 import { useWorkoutStore } from '@/store/workOutStore'
 
 type SessionStage = 'prepare' | 'rest' | 'exercise-timed' | 'exercise-reps' | 'exercise-emom'
@@ -125,9 +125,6 @@ function getStageTheme(stage: SessionStage) {
   }
 }
 
-function isGifUrl(url?: string) {
-  return Boolean(url && /\.gif($|\?)/i.test(url))
-}
 
 function WorkoutSessionCircle({
   circleSize,

@@ -9,6 +9,7 @@ import Link from 'next/link'
 import { Loader2, AlertCircle, ShieldCheck } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { GoogleAuthButton } from '@/components/auth/GoogleAuthButton'
+import { MIN_PASSWORD_LENGTH } from '@mygym/shared'
 
 function RegisterContent() {
   const [isLoading, setIsLoading] = useState(false)
@@ -198,7 +199,7 @@ function RegisterContent() {
                     value={formData.password}
                     onChange={handleChange}
                     disabled={isLoading}
-                    minLength={6}
+                    minLength={MIN_PASSWORD_LENGTH}
                   />
                 </div>
               </div>

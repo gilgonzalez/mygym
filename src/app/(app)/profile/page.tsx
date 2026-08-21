@@ -16,7 +16,7 @@ import { ProfileSocialSheet } from '@/components/profile/ProfileSocialSheet'
 import WorkoutCard from '@/components/WorkoutCard'
 import { PremiumFeatureDialog } from '@/components/premium/PremiumFeatureDialog'
 import { PremiumLockedOverlay } from '@/components/premium/PremiumLockedOverlay'
-import { formatDurationFromMinutes } from '@/lib/time'
+import { computeEffectiveStreak, formatDurationFromMinutes } from '@mygym/shared'
 import type { FollowOverview } from '@/types/social'
 
 interface UserStats {
@@ -80,7 +80,11 @@ export default function ProfilePage() {
           level: data.level ?? 1,
           current_xp: data.current_xp ?? 0,
           next_level_xp: data.next_level_xp ?? 1000,
-          streak_current: data.streak_current ?? 0,
+          // streak_current en la fila queda "congelado" hasta el próximo
+          // workout completado — derivamos el valor real acá en vez de
+          // mostrar un número que puede estar desactualizado (ver
+          // packages/shared/src/streak.ts, mismo criterio que usa mobile).
+          streak_current: computeEffectiveStreak(data.last_activity_date, data.streak_current ?? 0).current,
           total_workouts: data.total_workouts ?? 0,
           total_minutes: data.total_minutes ?? 0,
           rank_title: data.rank_title ?? 'Novato',

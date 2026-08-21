@@ -3,7 +3,7 @@ import { Play, Dumbbell, TimerIcon, Info, ChevronLeft, Clock, Trophy } from 'luc
 import { Button } from '@/components/ui/button'
 import { PreviewActivity } from './PreviewActivity'
 import { LocalWorkout } from '@/types/workout/viewTypes'
-import { formatDuration } from '@/lib/time'
+import { formatDuration } from '@mygym/shared'
 
 interface PreviewWorkoutProps {
   data: any

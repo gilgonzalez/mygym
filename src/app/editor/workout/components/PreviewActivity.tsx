@@ -2,7 +2,7 @@ import React from 'react'
 import { X, ChevronLeft, ChevronRight, Clock, CheckCircle2, Info } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ExerciseTutorialDialog } from '@/components/workout/ExerciseTutorialDialog'
-import { formatDuration } from '@/lib/time'
+import { formatDuration } from '@mygym/shared'
 
 interface PreviewActivityProps {
   exercise: any

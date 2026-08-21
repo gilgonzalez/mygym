@@ -7,7 +7,7 @@ import { getWorkoutComments, countWorkoutComments } from '@/app/actions/workout/
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
 import { cn } from '@/lib/utils'
 import { FEELING_CONFIG } from '@/constants/feeling'
-import { formatCount, timeAgo } from '@/lib/workout-utils'
+import { formatCount, timeAgo } from '@mygym/shared'
 import { useMediaQuery } from '@/hooks/useMediaQuery'
 
 interface WorkoutCommentsSheetProps {

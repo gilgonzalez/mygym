@@ -9,8 +9,12 @@
 //   `bun run supabase:types` desde la raíz del repo — no editar a mano.
 export * from './feeling'
 export * from './profile'
+export * from './rewards'
 export * from './social'
 export * from './streak'
+export * from './tag-stats'
 export * from './types'
+export * from './validation'
 export * from './workout'
 export * from './workout-tags'
+export * from './workout/sessionNavigation'

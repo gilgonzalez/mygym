@@ -4,18 +4,15 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { LocalWorkout, LocalWorkoutChallengeResult } from '@/types/workout/viewTypes'
 import { ChevronLeft, Dumbbell, Pause, Play, Trophy, Zap } from 'lucide-react'
-import { formatDuration } from '@/lib/time'
+import { formatDuration } from '@mygym/shared'
 import { useWorkoutStore } from '@/store/workOutStore'
+import { isGifUrl } from '@/lib/workout/segmentKind'
 
 interface WorkoutChallengeExecutionViewProps {
   workout: LocalWorkout
   canAccessTutorial: boolean
   onExit: () => void
   onComplete: (result: LocalWorkoutChallengeResult, elapsedSeconds: number) => void
-}
-
-function isGifUrl(url?: string) {
-  return Boolean(url && /\.gif($|\?)/i.test(url))
 }
 
 export function WorkoutChallengeExecutionView({

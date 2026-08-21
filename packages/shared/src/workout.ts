@@ -7,14 +7,8 @@ export function formatCount(count: number): string | number {
   return count > 99 ? '+99' : count
 }
 
-export function calcWorkoutXP(durationSecondsOrMinutes: number, fromSeconds = true): number {
-  const durationMinutes = fromSeconds
-    ? Math.max(1, Math.ceil(durationSecondsOrMinutes / 60))
-    : Math.max(1, Math.ceil(durationSecondsOrMinutes))
-  return Math.ceil(durationMinutes * 5) + 50
-}
-
-export type WorkoutDifficulty = 'beginner' | 'intermediate' | 'advanced'
+export const DIFFICULTY_VALUES = ['beginner', 'intermediate', 'advanced'] as const
+export type Difficulty = (typeof DIFFICULTY_VALUES)[number]
 
 // En vez de clases de Tailwind (como en la web), acá exponemos un color hex
 // crudo: en React Native no hay className, cada pantalla lo usa en su propio
@@ -107,4 +101,8 @@ export function formatDuration(totalSeconds: number, options: FormatDurationOpti
   if (seconds > 0 || parts.length === 0) parts.push(`${seconds} s`)
 
   return parts.join(' ')
+}
+
+export function formatDurationFromMinutes(totalMinutes: number, options: FormatDurationOptions = {}) {
+  return formatDuration(totalMinutes * 60, options)
 }

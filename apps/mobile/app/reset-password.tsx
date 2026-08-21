@@ -3,6 +3,8 @@ import { router, useLocalSearchParams } from 'expo-router'
 import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { CheckCircle2, Lock, ShieldAlert } from 'lucide-react-native'
 
+import { getPasswordLengthError, isPasswordValid } from '@mygym/shared'
+
 import { supabase } from '@/lib/supabase'
 import { useTheme } from '@/theme'
 import { Button } from '@/components/ui'
@@ -55,8 +57,8 @@ export default function ResetPassword() {
   const handleSubmit = async () => {
     setError(null)
 
-    if (password.length < 6) {
-      setError('La contraseña debe tener al menos 6 caracteres')
+    if (!isPasswordValid(password)) {
+      setError(getPasswordLengthError())
       return
     }
 
