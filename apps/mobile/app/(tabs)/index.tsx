@@ -110,10 +110,11 @@ export default function FeedScreen() {
         if (myRequestId !== requestId.current) return
         setError(err?.message ?? 'Ocurrió un error inesperado al cargar el feed.')
       } finally {
-        if (myRequestId !== requestId.current) return
-        setLoadingInitial(false)
-        setLoadingMore(false)
-        setRefreshing(false)
+        if (myRequestId === requestId.current) {
+          setLoadingInitial(false)
+          setLoadingMore(false)
+          setRefreshing(false)
+        }
       }
     },
     [sortBy, filter, debouncedSearch, viewerId]

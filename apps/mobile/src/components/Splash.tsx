@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { Image, StyleSheet } from 'react-native'
+import { StyleSheet } from 'react-native'
 import Animated, {
   Easing,
   runOnJS,

@@ -82,8 +82,9 @@ export function CommentsSheet({ workoutId, isChallenge = false, onClose }: Comme
       if (myRequestId !== requestId.current) return
       setHasMore(false)
     } finally {
-      if (myRequestId !== requestId.current) return
-      setLoadingMore(false)
+      if (myRequestId === requestId.current) {
+        setLoadingMore(false)
+      }
     }
   }
 

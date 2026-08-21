@@ -6,19 +6,29 @@ import { Lock, Mail } from 'lucide-react-native'
 
 import { supabase } from '@/lib/supabase'
 import { signInWithGoogle } from '@/lib/googleAuth'
+import { signInWithApple } from '@/lib/appleAuth'
 import { useTheme } from '@/theme'
 import { Button } from '@/components/ui'
-import { AuthBackground, AuthCard, AuthDivider, AuthFormError, AuthHeader, AuthTextField, GoogleButton } from '@/components/auth'
+import {
+  AppleButton,
+  AuthBackground,
+  AuthCard,
+  AuthDivider,
+  AuthFormError,
+  AuthHeader,
+  AuthTextField,
+  GoogleButton,
+} from '@/components/auth'
 
 // Login con email/password (igual que en apps/web, ver
-// src/app/auth/actions.ts) + Google OAuth nativo vía lib/googleAuth.ts.
+// src/app/auth/actions.ts) + Google OAuth nativo vía lib/googleAuth.ts +
+// Apple nativo vía lib/appleAuth.ts. El botón de Apple solo se monta en iOS
+// (Platform.OS === 'ios' más abajo): es el único requerido por Apple —ver
+// App Store Review Guideline 4.8— porque ya ofrecemos login con un tercero
+// (Google), pero no tiene sentido en Android.
 // Diseño: fondo "aurora" siempre oscuro (ver AuthBackground.tsx) en vez del
 // theme.colors.background claro/oscuro que usaba antes — más cercano a la
 // identidad de marca (Splash, SessionBackground) que a un form genérico.
-//
-// Pendiente a propósito: "Sign in with Apple" — Apple exige ofrecerlo en iOS
-// en cuanto hay login con un tercero como Google, así que antes de subir
-// esto a la App Store hay que sumarlo también.
 export default function Login() {
   const theme = useTheme()
   const [email, setEmail] = useState('')
@@ -26,6 +36,7 @@ export default function Login() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
+  const [appleLoading, setAppleLoading] = useState(false)
 
   useEffect(() => {
     // Precalienta el custom tab de Android para que abra sin salto al tocar
@@ -64,6 +75,19 @@ export default function Login() {
     }
   }
 
+  const handleAppleLogin = async () => {
+    if (appleLoading) return
+    setError(null)
+    setAppleLoading(true)
+    try {
+      await signInWithApple()
+    } catch (err: any) {
+      setError(err?.message ?? 'No se pudo iniciar sesión con Apple')
+    } finally {
+      setAppleLoading(false)
+    }
+  }
+
   return (
     <View style={styles.fill}>
       <AuthBackground />
@@ -73,7 +97,14 @@ export default function Login() {
 
           <AuthCard style={styles.card}>
             <View style={styles.form}>
-              <GoogleButton onPress={handleGoogleLogin} loading={googleLoading} disabled={loading} />
+              {Platform.OS === 'ios' && (
+                <AppleButton onPress={handleAppleLogin} disabled={loading || googleLoading} />
+              )}
+              <GoogleButton
+                onPress={handleGoogleLogin}
+                loading={googleLoading}
+                disabled={loading || appleLoading}
+              />
 
               <AuthDivider label="O continuá con email" />
 
@@ -84,7 +115,7 @@ export default function Login() {
                 keyboardType="email-address"
                 value={email}
                 onChangeText={setEmail}
-                editable={!googleLoading}
+                editable={!googleLoading && !appleLoading}
               />
               <AuthTextField
                 icon={Lock}
@@ -92,7 +123,7 @@ export default function Login() {
                 secureTextEntry
                 value={password}
                 onChangeText={setPassword}
-                editable={!googleLoading}
+                editable={!googleLoading && !appleLoading}
               />
 
               <AuthFormError message={error} />
@@ -101,7 +132,7 @@ export default function Login() {
                 title={loading ? 'Ingresando...' : 'Ingresar'}
                 onPress={handleLogin}
                 loading={loading}
-                disabled={googleLoading}
+                disabled={googleLoading || appleLoading}
               />
 
               <Link href="/forgot-password" asChild>

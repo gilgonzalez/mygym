@@ -4,7 +4,11 @@ import reactHooks from 'eslint-plugin-react-hooks'
 import tseslint from 'typescript-eslint'
 
 export default tseslint.config(
-  { ignores: ['dist', '.next', 'next-env.d.ts'] },
+  // apps/mobile es un proyecto Expo/React Native aparte, con su propio script
+  // "lint" (expo lint) y sus propias convenciones (p. ej. require() para
+  // assets ttf/png es el patrón estándar de Expo, no un error) — este config
+  // está pensado para la web (Next.js) y no debería aplicarse ahí.
+  { ignores: ['dist', '.next', 'next-env.d.ts', 'apps/mobile'] },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ['**/*.{ts,tsx}'],
