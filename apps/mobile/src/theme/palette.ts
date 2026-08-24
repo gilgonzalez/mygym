@@ -75,6 +75,20 @@ export const rose = {
   500: '#e11d48',
 } as const
 
+// Acentos del editor de workout — mismos colores que usa el vault de la web
+// para distinguir de un vistazo grupos musculares de materiales (ver
+// ExercisesVault.tsx: Target naranja para músculos, Wrench celeste para
+// material/equipment).
+export const orange = {
+  500: '#f97316',
+  600: '#ea580c',
+} as const
+
+export const sky = {
+  500: '#0ea5e9',
+  600: '#0284c7',
+} as const
+
 export const red = {
   500: '#ef4444',
   900: '#7f1d1d',

@@ -22,8 +22,9 @@ interface WorkoutsTabProps {
 
 // Tab "Workouts" del perfil: los workouts que generó el usuario, filtrados
 // por visibilidad — puerto de la sección "Tus workouts" de
-// src/app/(app)/profile/page.tsx (apps/web), sin el buscador ni "crear
-// nuevo" (el editor todavía no está portado a mobile).
+// src/app/(app)/profile/page.tsx (apps/web). Crear workout nuevo vive en el
+// botón central del tab bar (ver app/(tabs)/_layout.tsx), no acá — esta
+// pantalla solo lista/edita/borra los que ya existen.
 export function WorkoutsTab({ userId }: WorkoutsTabProps) {
   const theme = useTheme()
   const [filter, setFilter] = useState<MyWorkoutsFilter>('all')
@@ -44,7 +45,7 @@ export function WorkoutsTab({ userId }: WorkoutsTabProps) {
           <FluidTabs options={VISIBILITY_OPTIONS} value={filter} onChange={setFilter} scrollable />
         </View>
       }
-      renderItem={({ item }) => <MyWorkoutCard workout={item} />}
+      renderItem={({ item }) => <MyWorkoutCard workout={item} onDeleted={load} />}
       ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
       ListEmptyComponent={
         loading ? (

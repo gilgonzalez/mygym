@@ -1,12 +1,13 @@
 import { useState } from 'react'
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native'
+import { router } from 'expo-router'
+import { ActivityIndicator, Alert, Image, Pressable, StyleSheet, Text, View } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
-import { Clock, MessageSquare, Play } from 'lucide-react-native'
+import { Clock, MessageSquare, Play, SquarePen, Trash2 } from 'lucide-react-native'
 import { formatCount, formatDuration, timeAgo } from '@mygym/shared'
 
 import { useTheme } from '@/theme'
 import { Avatar, Button, Card } from '@/components/ui'
-import type { FeedWorkout } from '@/lib/workouts'
+import { deleteWorkout, type FeedWorkout } from '@/lib/workouts'
 import { DifficultyBadge } from './DifficultyBadge'
 import { LikeButton } from './LikeButton'
 import { LikesPreview } from './LikesPreview'
@@ -32,6 +33,13 @@ interface WorkoutCardProps {
   onOpenComments: (workout: FeedWorkout) => void
   likePending: boolean
   spotlight?: boolean
+  // Id del usuario viendo el feed — si coincide con workout.user_id, se
+  // muestran los botones de editar/eliminar (ver punto 4 del pedido: "si
+  // eres el creador del workout"). onDeleted es opcional porque solo hace
+  // falta pasarlo desde donde de verdad hay algo que sacar de una lista
+  // (ver app/(tabs)/index.tsx) — sin el, el botón de borrar no aparece.
+  viewerId?: string
+  onDeleted?: (workoutId: string) => void
 }
 
 export default function WorkoutCard({
@@ -41,12 +49,36 @@ export default function WorkoutCard({
   onOpenComments,
   likePending,
   spotlight = false,
+  viewerId,
+  onDeleted,
 }: WorkoutCardProps) {
   const theme = useTheme()
   const [imageFailed, setImageFailed] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const hasCover = Boolean(workout.cover) && !imageFailed
   const durationLabel = formatDuration(workout.estimated_time || 45 * 60)
   const authorName = workout.user?.name || workout.user?.username || 'Usuario'
+  const isOwner = Boolean(viewerId) && workout.user_id === viewerId
+
+  const handleDelete = () => {
+    Alert.alert('Eliminar workout', `¿Seguro que querés eliminar "${workout.title}"? Esta acción no se puede deshacer.`, [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Eliminar',
+        style: 'destructive',
+        onPress: async () => {
+          setDeleting(true)
+          try {
+            await deleteWorkout(workout.id, viewerId!)
+            onDeleted?.(workout.id)
+          } catch (err: any) {
+            setDeleting(false)
+            Alert.alert('No se pudo eliminar', err?.message ?? 'Ocurrió un error inesperado')
+          }
+        },
+      },
+    ])
+  }
 
   return (
     <View style={styles.wrapper}>
@@ -67,6 +99,25 @@ export default function WorkoutCard({
               </Text>
             ) : null}
           </View>
+
+          {isOwner ? (
+            <View style={styles.ownerActions}>
+              <Pressable
+                onPress={() => router.push({ pathname: '/workout-editor/[id]', params: { id: workout.id } })}
+                hitSlop={8}
+                style={styles.ownerActionButton}
+              >
+                <SquarePen size={16} color={theme.colors.mutedForeground} />
+              </Pressable>
+              <Pressable onPress={handleDelete} disabled={deleting} hitSlop={8} style={styles.ownerActionButton}>
+                {deleting ? (
+                  <ActivityIndicator size="small" color={theme.colors.destructive} />
+                ) : (
+                  <Trash2 size={16} color={theme.colors.destructive} />
+                )}
+              </Pressable>
+            </View>
+          ) : null}
         </View>
 
         {/* Padding horizontal para que quede a la misma altura que el resto
@@ -235,6 +286,13 @@ const styles = StyleSheet.create({
   },
   timeAgo: {
     fontSize: 12,
+  },
+  ownerActions: {
+    flexDirection: 'row',
+    gap: 4,
+  },
+  ownerActionButton: {
+    padding: 6,
   },
   coverWrapper: {
     width: '100%',

@@ -113,6 +113,7 @@ function RootNavigator() {
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="session/[id]" />
         <Stack.Screen name="workout/[id]" />
+        <Stack.Screen name="workout-editor/[id]" />
         <Stack.Screen name="edit-profile" />
       </Stack.Protected>
 

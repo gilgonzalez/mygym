@@ -178,6 +178,13 @@ export default function FeedScreen() {
     router.push({ pathname: '/workout/[id]', params: { id: workout.id } })
   }
 
+  // Solo puede llamarse desde una card propia (WorkoutCard ya chequeó
+  // isOwner antes de mostrar el botón) — sacar del feed sin esperar un
+  // reload completo de la página actual.
+  const handleWorkoutDeleted = (workoutId: string) => {
+    setWorkouts((prev) => prev.filter((w) => w.id !== workoutId))
+  }
+
   return (
     <View style={[styles.feedContainer, { backgroundColor: theme.colors.background, paddingTop: insets.top + 8 }]}>
       <View style={styles.feedHeader}>
@@ -225,6 +232,8 @@ export default function FeedScreen() {
                 onOpenComments={(w) => setCommentsWorkoutId(w.id)}
                 likePending={likePendingIds.has(item.id)}
                 spotlight={item.id === spotlightId}
+                viewerId={viewerId}
+                onDeleted={handleWorkoutDeleted}
               />
             </Animated.View>
           )}

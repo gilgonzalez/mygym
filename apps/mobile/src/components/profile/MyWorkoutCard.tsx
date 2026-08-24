@@ -1,25 +1,58 @@
-import { Image, StyleSheet, Text, View } from 'react-native'
+import { useState } from 'react'
+import { ActivityIndicator, Alert, Image, Pressable, StyleSheet, Text, View } from 'react-native'
 import { router } from 'expo-router'
 import { LinearGradient } from 'expo-linear-gradient'
-import { Clock, Heart, MessageSquare } from 'lucide-react-native'
+import { Clock, Heart, MessageSquare, SquarePen, Trash2 } from 'lucide-react-native'
 
 import { formatCount, formatDuration, timeAgo, visibilityLabelMap } from '@mygym/shared'
 import { useTheme } from '@/theme'
+import { useSession } from '@/lib/session'
 import { Badge, Card } from '@/components/ui'
 import { DifficultyBadge, TagList } from '@/components/workout'
-import type { MyWorkout } from '@/lib/workouts'
+import { deleteWorkout, type MyWorkout } from '@/lib/workouts'
 import { VISIBILITY_COLORS } from '@/lib/visibility'
+
+interface MyWorkoutCardProps {
+  workout: MyWorkout
+  // Recarga la lista del padre después de un borrado confirmado (ver
+  // WorkoutsTab.tsx) — la card no mantiene su propia copia de la lista.
+  onDeleted: () => void
+}
 
 // Card de "mis workouts" (tab Workouts del perfil) — rediseñada con banner
 // de portada (antes un thumbnail cuadrado chico) y el mismo <Card glow>
 // (borde/sombra verde de marca) que usan las cards del feed, para que se
 // sienta al mismo nivel visual en vez de una fila de lista genérica. Sin
 // like/comentarios interactivos ni botón de "Comenzar" (son los workouts
-// propios del usuario, no ajenos a consumir) — solo lo necesario para
-// identificarlo y entrar al detalle.
-export function MyWorkoutCard({ workout }: { workout: MyWorkout }) {
+// propios del usuario, no ajenos a consumir) — solo identificarlo, entrar
+// al detalle, editarlo o borrarlo (lápiz/tacho sobre la portada; son
+// siempre workouts propios acá, no hace falta chequear ownership para
+// mostrar los botones).
+export function MyWorkoutCard({ workout, onDeleted }: MyWorkoutCardProps) {
   const theme = useTheme()
+  const { session } = useSession()
   const visibilityColor = VISIBILITY_COLORS[workout.visibility]
+  const [deleting, setDeleting] = useState(false)
+
+  const handleDelete = () => {
+    Alert.alert('Eliminar workout', `¿Seguro que querés eliminar "${workout.title}"? Esta acción no se puede deshacer.`, [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Eliminar',
+        style: 'destructive',
+        onPress: async () => {
+          setDeleting(true)
+          try {
+            await deleteWorkout(workout.id, session!.user.id)
+            onDeleted()
+          } catch (err: any) {
+            setDeleting(false)
+            Alert.alert('No se pudo eliminar', err?.message ?? 'Ocurrió un error inesperado')
+          }
+        },
+      },
+    ])
+  }
 
   return (
     <Card onPress={() => router.push({ pathname: '/workout/[id]', params: { id: workout.id } })} style={styles.card}>
@@ -42,6 +75,19 @@ export function MyWorkoutCard({ workout }: { workout: MyWorkout }) {
             sobre una foto clara como sobre el degradé de fallback. */}
         <View style={styles.visibilityBadgeWrapper}>
           <Badge label={visibilityLabelMap[workout.visibility]} variant="solid" color={visibilityColor} />
+        </View>
+
+        <View style={styles.actionsRow}>
+          <Pressable
+            onPress={() => router.push({ pathname: '/workout-editor/[id]', params: { id: workout.id } })}
+            hitSlop={8}
+            style={styles.actionButton}
+          >
+            <SquarePen size={15} color="#fff" />
+          </Pressable>
+          <Pressable onPress={handleDelete} disabled={deleting} hitSlop={8} style={styles.actionButton}>
+            {deleting ? <ActivityIndicator size="small" color="#fff" /> : <Trash2 size={15} color="#fff" />}
+          </Pressable>
         </View>
       </View>
 
@@ -130,6 +176,21 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 10,
     right: 10,
+  },
+  actionsRow: {
+    position: 'absolute',
+    top: 10,
+    left: 10,
+    flexDirection: 'row',
+    gap: 8,
+  },
+  actionButton: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.45)',
   },
   body: {
     padding: 12,

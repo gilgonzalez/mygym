@@ -208,6 +208,7 @@ export interface WorkoutDetailExercise {
   sets: number
   duration: number
   rest: number
+  weight_kg: number | null
   thumbnail_url?: string
   description: string | null
   muscle_groups: string[]
@@ -246,7 +247,7 @@ const WORKOUT_DETAIL_SELECT = `
     sections(
       id, name, type,
       section_exercises(
-        id, order_index, type, reps, sets, duration, rest,
+        id, order_index, type, reps, sets, duration, rest, weight_kg,
         exercises(
           id, name, description, muscle_group, equipment,
           thumbnail:media!exercises_thumbnail_media_id_fkey(url)
@@ -290,11 +291,12 @@ export async function fetchWorkoutById(id: string): Promise<WorkoutDetail> {
           .map((se) => ({
             id: se.exercises.id as string,
             name: se.exercises.name as string,
-            type: ((se.type || se.exercises.type || 'reps') as WorkoutDetailExerciseType),
+            type: ((se.type || 'reps') as WorkoutDetailExerciseType),
             reps: se.reps ?? 0,
             sets: se.sets ?? 0,
             duration: se.duration ?? 0,
             rest: se.rest ?? 0,
+            weight_kg: se.weight_kg ?? null,
             thumbnail_url: se.exercises.thumbnail?.url ?? undefined,
             description: se.exercises.description ?? null,
             muscle_groups: se.exercises.muscle_group ?? [],
@@ -350,6 +352,38 @@ export async function fetchMyWorkouts(userId: string, filter: MyWorkoutsFilter):
     likes_count: likesCounts[row.id] ?? 0,
     comments_count: commentsCounts[row.id] ?? 0,
   }))
+}
+
+// Borrado del workout — puerto de deleteWorkoutAction (apps/web,
+// src/app/actions/workout/delete.ts). `sections`/`section_exercises` NO
+// cascadean al borrar `workouts` (workout_sections sí, vía ON DELETE CASCADE
+// en workout_id, pero `sections` es una entidad aparte sin FK hacia
+// workouts — ver 20260702_0001_clean_schema.sql), así que hay que limpiarlas
+// a mano después de borrar el workout, igual que hace la Server Action.
+export async function deleteWorkout(workoutId: string, userId: string): Promise<void> {
+  const { data: workout, error: fetchError } = await supabase
+    .from('workouts')
+    .select('user_id')
+    .eq('id', workoutId)
+    .single()
+
+  if (fetchError || !workout) throw new Error('Workout no encontrado')
+  if (workout.user_id !== userId) throw new Error('No autorizado')
+
+  const { data: workoutSections } = await supabase
+    .from('workout_sections')
+    .select('section_id')
+    .eq('workout_id', workoutId)
+
+  const sectionIds = (workoutSections ?? []).map((ws) => ws.section_id)
+
+  const { error: deleteError } = await supabase.from('workouts').delete().eq('id', workoutId)
+  if (deleteError) throw deleteError
+
+  if (sectionIds.length > 0) {
+    await supabase.from('section_exercises').delete().in('section_id', sectionIds)
+    await supabase.from('sections').delete().in('id', sectionIds)
+  }
 }
 
 export async function setWorkoutLiked(workoutId: string, viewerId: string, liked: boolean): Promise<void> {

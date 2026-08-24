@@ -1,4 +1,5 @@
-import { StyleSheet, Text, View } from 'react-native'
+import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { X } from 'lucide-react-native'
 import type { LucideIcon } from 'lucide-react-native'
 
 import { useTheme } from '@/theme'
@@ -7,14 +8,19 @@ import { useTheme } from '@/theme'
 // que se repiten en el feed y en WorkoutCard. "solid"/"soft" llevan un
 // glow de neón en el texto (estética HUD); "outline" se queda solo con el
 // borde más marcado para no saturar cuando hay varios juntos (TagList).
+// `onRemove` es lo que usa ChipInput.tsx para los chips removibles (mismo
+// patrón que el botón "x" que la web mete dentro del Badge en TagInput.tsx,
+// solo que acá el Badge no acepta children, así que es un prop en vez de
+// anidar un botón adentro).
 interface BadgeProps {
   label: string
   icon?: LucideIcon
   color?: string
   variant?: 'soft' | 'outline' | 'solid'
+  onRemove?: () => void
 }
 
-export function Badge({ label, icon: Icon, color, variant = 'soft' }: BadgeProps) {
+export function Badge({ label, icon: Icon, color, variant = 'soft', onRemove }: BadgeProps) {
   const theme = useTheme()
   const tint = color ?? theme.colors.primary
 
@@ -57,6 +63,11 @@ export function Badge({ label, icon: Icon, color, variant = 'soft' }: BadgeProps
       >
         {label}
       </Text>
+      {onRemove ? (
+        <Pressable onPress={onRemove} hitSlop={8} style={styles.removeButton}>
+          <X size={11} color={variant === 'solid' ? '#fff' : tint} />
+        </Pressable>
+      ) : null}
     </View>
   )
 }
@@ -73,5 +84,8 @@ const styles = StyleSheet.create({
     fontSize: 11,
     textTransform: 'uppercase',
     letterSpacing: 0.4,
+  },
+  removeButton: {
+    marginLeft: 2,
   },
 })
