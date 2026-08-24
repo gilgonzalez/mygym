@@ -5,6 +5,7 @@ import { useTheme, orange, sky } from '@/theme'
 import { ChipInput, NumberStepper, SegmentedControl, Switch, TextArea, TextField, type SegmentedOption } from '@/components/ui'
 import { DifficultyBadge, DifficultyPicker, TagList } from '@/components/workout'
 import type { ExerciseEditorInput } from '@/lib/workoutEditor'
+import { ThumbnailField } from './ThumbnailField'
 
 // Card de un ejercicio dentro de una sección — equivalente mobile de la
 // card de ExercisesFieldArray.tsx (apps/web), sin useFieldArray/RHF: el
@@ -103,6 +104,9 @@ export function ExerciseInstanceRow({
           </View>
           <TagList tags={exercise.muscleGroups} color={MUSCLE_COLOR} max={4} />
           <TagList tags={exercise.equipment} color={EQUIPMENT_COLOR} max={4} />
+          {exercise.thumbnailUrl ? (
+            <ThumbnailField uri={exercise.thumbnailUrl} mimeType={exercise.thumbnailMimeType} readOnly onChange={() => {}} />
+          ) : null}
         </View>
       ) : (
         <View style={styles.newExerciseDetails}>
@@ -127,6 +131,11 @@ export function ExerciseInstanceRow({
             placeholder="Agregar material..."
             color={EQUIPMENT_COLOR}
             icon={Wrench}
+          />
+          <ThumbnailField
+            uri={exercise.thumbnailUrl}
+            mimeType={exercise.thumbnailMimeType}
+            onChange={(thumbnailUrl, thumbnailMimeType) => onChange({ thumbnailUrl, thumbnailMediaId: null, thumbnailMimeType })}
           />
         </View>
       )}

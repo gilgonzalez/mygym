@@ -18,6 +18,7 @@ interface TagInputProps {
   icon?: React.ReactNode
   variant?: 'default' | 'orange' | 'blue'
   compact?: boolean
+  disabled?: boolean
 }
 
 export function TagInput({
@@ -27,6 +28,7 @@ export function TagInput({
   icon,
   variant = 'default',
   compact = false,
+  disabled = false,
 }: TagInputProps) {
   const [input, setInput] = useState('')
 
@@ -60,6 +62,7 @@ export function TagInput({
           onChange={e => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
+          disabled={disabled}
           className={cn(
             'border-transparent focus:bg-background focus-visible:ring-2 focus-visible:ring-primary/20 transition-all',
             compact ? 'h-8 text-xs' : 'h-9 text-sm',
@@ -71,6 +74,7 @@ export function TagInput({
           type="button"
           size="icon"
           variant="ghost"
+          disabled={disabled}
           className={cn(
             'absolute right-1 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary',
             compact ? 'h-6 w-6' : 'h-7 w-7'
@@ -93,13 +97,15 @@ export function TagInput({
               )}
             >
               {tag}
-              <button
-                type="button"
-                onClick={() => onChange(value.filter((_, idx) => idx !== i))}
-                className="hover:bg-black/10 rounded-full p-0.5 transition-colors"
-              >
-                <X className="h-3 w-3" />
-              </button>
+              {!disabled && (
+                <button
+                  type="button"
+                  onClick={() => onChange(value.filter((_, idx) => idx !== i))}
+                  className="hover:bg-black/10 rounded-full p-0.5 transition-colors"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              )}
             </Badge>
           ))}
         </div>

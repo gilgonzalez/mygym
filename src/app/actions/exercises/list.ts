@@ -47,7 +47,7 @@ const EXERCISES_BATCH_SIZE = 1000
 
 type SearchableExerciseRow = Pick<
   Database['public']['Tables']['exercises']['Row'],
-  'id' | 'name' | 'description' | 'muscle_group' | 'equipment' | 'type' | 'created_at'
+  'id' | 'name' | 'description' | 'muscle_group' | 'equipment' | 'created_at'
 >
 
 function normalizeSearchValue(value: string) {
@@ -172,7 +172,7 @@ async function fetchAllExerciseSearchRows(
   while (hasMore) {
     let query = supabase
       .from('exercises')
-      .select('id, name, description, muscle_group, equipment, type, created_at')
+      .select('id, name, description, muscle_group, equipment, created_at')
       .range(from, from + EXERCISES_BATCH_SIZE - 1)
 
     if (muscleGroups.length > 0) {

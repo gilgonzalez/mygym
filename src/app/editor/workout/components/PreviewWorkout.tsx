@@ -28,6 +28,7 @@ export function PreviewWorkout({ data, onClose }: PreviewWorkoutProps) {
         reps: e.reps,
         sets: e.sets,
         rest: e.rest || 60,
+        weight_kg: e.weight_kg,
         description: e.description,
         thumbnail_url: e.thumbnail_url,
         tutorial: e.tutorial?.media_url ? {
@@ -70,7 +71,6 @@ export function PreviewWorkout({ data, onClose }: PreviewWorkoutProps) {
       cover: data.cover || 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=1470&auto=format&fit=crop',
       tags: data.tags,
       difficulty: data.difficulty,
-      audio: Array.isArray(data.audio) ? data.audio : (data.audio ? [data.audio] : []),
       challenge,
       sections,
     }

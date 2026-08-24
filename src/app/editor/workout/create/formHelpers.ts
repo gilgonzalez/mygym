@@ -166,6 +166,7 @@ export function createEmptyExercise() {
     duration: 0,
     type: 'reps' as const,
     rest: 60,
+    weight_kg: undefined,
     description: '',
     difficulty: 'beginner' as const,
     thumbnail_url: '',

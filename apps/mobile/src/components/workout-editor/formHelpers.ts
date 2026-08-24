@@ -25,6 +25,7 @@ export function createEmptyExercise(): ExerciseEditorInput {
     equipment: [],
     thumbnailUrl: null,
     thumbnailMediaId: null,
+    thumbnailMimeType: null,
     type: 'reps',
     sets: 3,
     reps: 10,
@@ -45,6 +46,10 @@ export function createExerciseFromVault(exercise: VaultExercise): ExerciseEditor
     equipment: exercise.equipment,
     thumbnailUrl: exercise.thumbnailUrl,
     thumbnailMediaId: null,
+    // Los ejercicios del vault hoy solo guardan imágenes fijas (no hay
+    // captura de GIF ahí todavía), así que esto siempre arranca en null —
+    // isVideoThumbnail cae al chequeo por extensión igual si hiciera falta.
+    thumbnailMimeType: null,
     type: 'reps',
     sets: 3,
     reps: 10,

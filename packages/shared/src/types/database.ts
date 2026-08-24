@@ -17,57 +17,42 @@ export type Database = {
           created_at: string | null
           description: string | null
           difficulty: string | null
-          duration: number | null
           equipment: string[] | null
           id: string
           is_public: boolean | null
           muscle_group: string[] | null
           name: string
-          reps: number | null
-          rest: number | null
-          sets: number | null
           source_id: string | null
           source_provider: string | null
           thumbnail_media_id: string | null
-          type: string | null
           user_id: string | null
         }
         Insert: {
           created_at?: string | null
           description?: string | null
           difficulty?: string | null
-          duration?: number | null
           equipment?: string[] | null
           id?: string
           is_public?: boolean | null
           muscle_group?: string[] | null
           name: string
-          reps?: number | null
-          rest?: number | null
-          sets?: number | null
           source_id?: string | null
           source_provider?: string | null
           thumbnail_media_id?: string | null
-          type?: string | null
           user_id?: string | null
         }
         Update: {
           created_at?: string | null
           description?: string | null
           difficulty?: string | null
-          duration?: number | null
           equipment?: string[] | null
           id?: string
           is_public?: boolean | null
           muscle_group?: string[] | null
           name?: string
-          reps?: number | null
-          rest?: number | null
-          sets?: number | null
           source_id?: string | null
           source_provider?: string | null
           thumbnail_media_id?: string | null
-          type?: string | null
           user_id?: string | null
         }
         Relationships: [
@@ -701,7 +686,6 @@ export type Database = {
       }
       workouts: {
         Row: {
-          audio: string[] | null
           cover: string | null
           created_at: string | null
           description: string | null
@@ -718,7 +702,6 @@ export type Database = {
           visibility: string | null
         }
         Insert: {
-          audio?: string[] | null
           cover?: string | null
           created_at?: string | null
           description?: string | null
@@ -735,7 +718,6 @@ export type Database = {
           visibility?: string | null
         }
         Update: {
-          audio?: string[] | null
           cover?: string | null
           created_at?: string | null
           description?: string | null

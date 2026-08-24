@@ -212,7 +212,7 @@ function clampPositiveNumber(value: number | undefined, fallback: number) {
 
 function normalizeExerciseType(
   value: GeneratedWorkoutExercise['type'],
-  fallback: Exercise['type']
+  fallback: 'reps' | 'time' | undefined
 ): 'reps' | 'time' {
   if (value === 'time' || value === 'reps') {
     return value
@@ -411,7 +411,6 @@ function buildCandidateCatalog(candidates: Exercise[]) {
     description: exercise.description || '',
     muscle_groups: exercise.muscle_group || [],
     equipment: exercise.equipment || [],
-    type: exercise.type || 'reps',
     difficulty: exercise.difficulty || 'intermediate',
   }))
 }
@@ -494,13 +493,12 @@ function findAlternativeExercise(
       return false
     }
 
-    const sameType = (candidate.type || 'reps') === (currentExercise.type || 'reps')
     const sharesMuscle = (candidate.muscle_group || []).some((muscle) => currentMuscles.includes(muscle))
     const sharesEquipment =
       currentEquipment.length === 0 ||
       (candidate.equipment || []).some((equipment) => currentEquipment.includes(equipment))
 
-    return sameType && sharesMuscle && sharesEquipment
+    return sharesMuscle && sharesEquipment
   })
 }
 
@@ -628,18 +626,18 @@ function enrichGeneratedWorkout(workout: GeneratedWorkout, candidates: Exercise[
 
         usedExerciseIds.add(finalMatched.id)
 
-        const normalizedType = normalizeExerciseType(generatedExercise.type, finalMatched.type)
+        const normalizedType = normalizeExerciseType(generatedExercise.type, 'reps')
 
         return {
           id: finalMatched.id,
           name: finalMatched.name,
           sets: clampPositiveNumber(generatedExercise.sets, 3),
-          reps: normalizedType === 'reps' ? clampPositiveNumber(generatedExercise.reps, finalMatched.reps || 10) : 0,
-          rest: clampPositiveNumber(generatedExercise.rest, finalMatched.rest || 60),
+          reps: normalizedType === 'reps' ? clampPositiveNumber(generatedExercise.reps, 10) : 0,
+          rest: clampPositiveNumber(generatedExercise.rest, 60),
           type: normalizedType,
           duration:
             normalizedType === 'time'
-              ? clampPositiveNumber(generatedExercise.duration, finalMatched.duration || 30)
+              ? clampPositiveNumber(generatedExercise.duration, 30)
               : 0,
           muscle_groups: finalMatched.muscle_group || [],
           equipment: finalMatched.equipment || [],

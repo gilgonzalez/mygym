@@ -10,6 +10,7 @@ import { formatDuration } from '@mygym/shared'
 import { amber, useTheme } from '@/theme'
 import { Badge, Sheet } from '@/components/ui'
 import type { WorkoutDetail } from '@/lib/workouts'
+import { announceExercise, playCountdownBeep, playFinishBeep, useSessionCues } from '@/lib/sessionCues'
 import { SessionBackground } from './SessionBackground'
 import { SessionMediaRing } from './SessionMediaRing'
 import { ControlButton, PREPARE_SECONDS, ProgressBar, StatCard } from './executionShared'
@@ -37,6 +38,7 @@ const DEFAULT_TIME_CAP_SECONDS = 720 // 12 min — mismo default que la web cuan
 export function ChallengeExecutionView({ workout, onExit, onComplete }: ChallengeExecutionViewProps) {
   const theme = useTheme()
   const insets = useSafeAreaInsets()
+  useSessionCues()
 
   const challengeSection = useMemo(
     () => workout.sections.find((s) => s.id === workout.challenge?.challengeSectionId) ?? workout.sections[0],
@@ -52,6 +54,7 @@ export function ChallengeExecutionView({ workout, onExit, onComplete }: Challeng
   const [exerciseIndex, setExerciseIndex] = useState(0)
   const [roundsCompleted, setRoundsCompleted] = useState(0)
   const hasFinishedRef = useRef(false)
+  const lastCountdownBeepRef = useRef<number | null>(null)
 
   const currentExercise = exercises[exerciseIndex]
 
@@ -77,6 +80,7 @@ export function ChallengeExecutionView({ workout, onExit, onComplete }: Challeng
     }
 
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {})
+    playFinishBeep()
     setIsPaused(true)
     finalize(timeCapSeconds, roundsCompleted)
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -87,6 +91,24 @@ export function ChallengeExecutionView({ workout, onExit, onComplete }: Challeng
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {})
     }
   }, [phase, timeLeft])
+
+  useEffect(() => {
+    if (phase !== 'active' || !currentExercise) return
+    announceExercise(currentExercise)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, exerciseIndex, roundsCompleted])
+
+  useEffect(() => {
+    if (phase !== 'active') {
+      lastCountdownBeepRef.current = null
+      return
+    }
+    if (isPaused || isInfoOpen) return
+    if (timeLeft <= 0 || timeLeft > 5) return
+    if (lastCountdownBeepRef.current === timeLeft) return
+    lastCountdownBeepRef.current = timeLeft
+    playCountdownBeep()
+  }, [isInfoOpen, isPaused, phase, timeLeft])
 
   if (!challengeSection || !currentExercise) {
     return (
@@ -113,6 +135,7 @@ export function ChallengeExecutionView({ workout, onExit, onComplete }: Challeng
 
   const handleFinishNow = () => {
     if (phase !== 'active') return
+    playFinishBeep()
     setIsPaused(true)
     finalize(timeCapSeconds - Math.max(timeLeft, 0), roundsCompleted)
   }

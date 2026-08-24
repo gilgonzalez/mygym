@@ -14,11 +14,11 @@ import { supabase } from './supabase'
 // Alcance v1 de este editor en mobile (decisión deliberada, no un olvido):
 // - Sin reto AMRAP/challenge (secciones siempre "linear"/"single" normales).
 //   La web sí lo soporta; portar eso es un scope aparte.
-// - Sin subida de imagen (portada/miniatura): mobile no tiene hoy ninguna
-//   capacidad de subir archivos (no hay expo-image-picker, y el endpoint de
-//   subida de la web se autentica por cookie de sesión, no por bearer token).
-//   Los ejercicios del vault ya traen su thumbnail; los ejercicios nuevos
-//   creados desde mobile quedan sin miniatura hasta que se editen desde la web.
+// - Miniaturas de ejercicios nuevos: foto o GIF (nunca video). El clip de
+//   cámara se convierte a GIF en el dispositivo y se sube a R2 por
+//   /api/upload con el bearer token de supabase (la API de Next acepta
+//   cookie O bearer). Los ejercicios del vault siguen con su thumbnail
+//   de solo lectura.
 // - Sin editor de tutorial (pasos + media) por ejercicio.
 
 export interface ExerciseEditorInput {
@@ -40,6 +40,11 @@ export interface ExerciseEditorInput {
   equipment: string[]
   thumbnailUrl?: string | null
   thumbnailMediaId?: string | null
+  // Solo para decidir CÓMO previsualizar/subir thumbnailUrl (imagen vs. el
+  // clip mudo que hace de "GIF", ver lib/thumbnailCapture.ts) — no es un
+  // campo de `exercises`, no se manda al RPC (buildExercisePayload no lo
+  // incluye).
+  thumbnailMimeType?: string | null
   type: 'reps' | 'time' | 'emom'
   sets: number
   reps: number
@@ -220,7 +225,7 @@ const EDIT_SELECT = `
         id, order_index, type, reps, sets, duration, rest, weight_kg,
         exercises(
           id, name, description, difficulty, muscle_group, equipment,
-          thumbnail:media!exercises_thumbnail_media_id_fkey(url)
+          thumbnail:media!exercises_thumbnail_media_id_fkey(id, url)
         )
       )
     )
@@ -261,7 +266,7 @@ export async function fetchWorkoutForEdit(workoutId: string): Promise<WorkoutEdi
             muscleGroups: se.exercises.muscle_group ?? [],
             equipment: se.exercises.equipment ?? [],
             thumbnailUrl: se.exercises.thumbnail?.url ?? null,
-            thumbnailMediaId: null,
+            thumbnailMediaId: se.exercises.thumbnail?.id ?? null,
             type: ((se.type as 'reps' | 'time' | 'emom') || 'reps'),
             sets: se.sets ?? 3,
             reps: se.reps ?? 10,

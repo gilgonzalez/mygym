@@ -22,7 +22,8 @@ type ExerciseTutorialInput = {
 
 type ExerciseInput = Omit<DbExercise, 'id' | 'created_at' | 'thumbnail_media_id' | 'is_public'> & {
     id?: string
-    thumbnail_url?: string | null 
+    type: 'reps' | 'time' | 'emom'
+    thumbnail_url?: string | null
     thumbnail_media_id?: string | null
     filename?: string | null
     bucket_path?: string | null
@@ -38,11 +39,10 @@ type ExerciseInput = Omit<DbExercise, 'id' | 'created_at' | 'thumbnail_media_id'
 
 type SectionInput = Omit<DbSection, 'id' | 'created_at'> & {
     id?: string
-    orderType: DbSection['type'] 
+    orderType: DbSection['type']
     exercises: ExerciseInput[]
 }
-export type WorkoutInput = Omit<DbWorkout, 'id' | 'created_at' | 'updated_at' | 'user_id' | 'audio' | 'is_public'> & {
-    audio?: string[]
+export type WorkoutInput = Omit<DbWorkout, 'id' | 'created_at' | 'updated_at' | 'user_id' | 'is_public'> & {
     exp_earned?: number
     stats?: Record<string, number>
     sections: SectionInput[]

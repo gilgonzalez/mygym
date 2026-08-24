@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import { toast } from 'sonner'
-import { Camera, Circle, Image as ImageIcon, Library, Mic, Music, Play, Square, Trash2, Upload, X } from 'lucide-react'
+import { Camera, Circle, Image as ImageIcon, Library, Play, Square, Trash2, Upload, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
@@ -10,37 +10,34 @@ import { MediaSelectionDialog } from './MediaSelectionDialog'
 
 // Extraído de create/page.tsx (ver ese archivo para el porqué de la
 // separación). Input de media "todo en uno": URL a mano, subir archivo,
-// elegir de la biblioteca (MediaSelectionDialog), o grabar audio/vídeo desde
-// el navegador — según el `variant`/`type` se muestra como thumbnail grande
-// (portada, tutorial) o como fila compacta con ícono (audio de fondo).
+// elegir de la biblioteca (MediaSelectionDialog), o grabar vídeo desde el
+// navegador — según el `variant`/`type` se muestra como thumbnail grande
+// (portada, tutorial) o como fila compacta con ícono.
 interface MediaInputProps {
   value?: string | null
   onChange: (val: string) => void
   placeholder?: string
-  type?: 'media' | 'audio' | 'thumbnail' | 'tutorial'
+  type?: 'media' | 'thumbnail' | 'tutorial'
   variant?: 'default' | 'thumbnail'
   compact?: boolean
+  disabled?: boolean
 }
 
-export function MediaInput({ value, onChange, placeholder, type = 'media', variant = 'default', compact = false }: MediaInputProps) {
+export function MediaInput({ value, onChange, placeholder, type = 'media', variant = 'default', compact = false, disabled = false }: MediaInputProps) {
     const fileInputRef = React.useRef<HTMLInputElement>(null)
     const [isLibraryOpen, setIsLibraryOpen] = useState(false)
-
-    // Audio State
-    const [isRecordingAudio, setIsRecordingAudio] = useState(false)
-    const [recordingTime, setRecordingTime] = useState(0)
 
     // Video State
     const [isRecordingVideo, setIsRecordingVideo] = useState(false)
     const [videoStream, setVideoStream] = useState<MediaStream | null>(null)
     const [countdown, setCountdown] = useState<number | null>(null)
+    const [recordingTime, setRecordingTime] = useState(0)
 
     // Preview Modal State
     const [isPlaying, setIsPlaying] = useState(false)
 
     const videoRef = React.useRef<HTMLVideoElement>(null)
     const playbackVideoRef = React.useRef<HTMLVideoElement>(null)
-    const playbackAudioRef = React.useRef<HTMLAudioElement>(null)
 
     const mediaRecorderRef = React.useRef<MediaRecorder | null>(null)
     const chunksRef = React.useRef<Blob[]>([])
@@ -51,51 +48,8 @@ export function MediaInput({ value, onChange, placeholder, type = 'media', varia
         if (file) {
             const url = URL.createObjectURL(file)
             // Append type hint to URL hash so we can distinguish blob types
-            const type = file.type.split('/')[0] // 'image', 'video', 'audio'
+            const type = file.type.split('/')[0] // 'image', 'video'
             onChange(`${url}#${type}`)
-        }
-    }
-
-    // --- AUDIO RECORDING ---
-    const startAudioRecording = async () => {
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-            const recorder = new MediaRecorder(stream)
-            mediaRecorderRef.current = recorder
-            chunksRef.current = []
-
-            recorder.ondataavailable = (e) => {
-                if (e.data.size > 0) chunksRef.current.push(e.data)
-            }
-
-            recorder.onstop = () => {
-                const blob = new Blob(chunksRef.current, { type: 'audio/webm' })
-                const url = URL.createObjectURL(blob)
-                onChange(`${url}#audio`)
-                stream.getTracks().forEach(track => track.stop())
-                if (timerRef.current) clearInterval(timerRef.current)
-                setRecordingTime(0)
-            }
-
-            recorder.start()
-            setIsRecordingAudio(true)
-            setRecordingTime(0)
-            timerRef.current = setInterval(() => {
-                setRecordingTime(prev => prev + 1)
-            }, 1000)
-        } catch (err) {
-            console.error("Error accessing microphone:", err)
-            toast.error('No pudimos acceder al micrófono', {
-              description: 'Revisa los permisos del navegador y vuelve a intentarlo.',
-            })
-        }
-    }
-
-    const stopAudioRecording = () => {
-        if (mediaRecorderRef.current && isRecordingAudio) {
-            mediaRecorderRef.current.stop()
-            setIsRecordingAudio(false)
-            if (timerRef.current) clearInterval(timerRef.current)
         }
     }
 
@@ -193,27 +147,23 @@ export function MediaInput({ value, onChange, placeholder, type = 'media', varia
                 // El navegador puede rechazar el autoplay (política de gesto del
                 // usuario) — no es un error real, se ignora en silencio.
                 if (playbackVideoRef.current) playbackVideoRef.current.play().catch(() => {})
-                if (playbackAudioRef.current) playbackAudioRef.current.play().catch(() => {})
             }, 100)
             return () => clearTimeout(timeout)
         }
     }, [isPlaying])
 
-    const Icon = type === 'audio' ? Music : ImageIcon
+    const Icon = ImageIcon
     const isThumbnailInput = type === 'thumbnail'
-    const fileAccept = type === 'audio'
-      ? 'audio/*'
-      : isThumbnailInput || type === 'media'
+    const fileAccept = isThumbnailInput || type === 'media'
         ? 'image/*'
-        : 'image/*,video/*,audio/*'
-    const libraryMediaType = type === 'audio' ? 'audio' : type === 'tutorial' ? 'all' : 'image'
+        : 'image/*,video/*'
+    const libraryMediaType = type === 'tutorial' ? 'all' : 'image'
 
     if (variant === 'thumbnail') {
-        const isVideo = !isThumbnailInput && (value?.match(/\.(mp4|webm|mov)$/i) || value?.includes('#video') || (value?.startsWith('blob:') && !value?.includes('#image') && !value?.includes('#audio')))
-        const isAudio = !isThumbnailInput && (type === 'audio' || value?.match(/\.(mp3|wav|ogg)$/i) || value?.includes('#audio'))
+        const isVideo = !isThumbnailInput && (value?.match(/\.(mp4|webm|mov)$/i) || value?.includes('#video') || (value?.startsWith('blob:') && !value?.includes('#image')))
 
         return (
-            <div className="w-full h-full relative group bg-muted/20">
+            <div className={cn("w-full h-full relative group bg-muted/20", disabled && "pointer-events-none opacity-60")}>
                 <input
                     type="file" ref={fileInputRef} className="hidden"
                     accept={fileAccept}
@@ -279,34 +229,11 @@ export function MediaInput({ value, onChange, placeholder, type = 'media', varia
                     </div>
                 )}
 
-                {/* --- AUDIO RECORDING OVERLAY --- */}
-                {isRecordingAudio && (
-                    <div className="absolute inset-0 z-50 bg-red-500/90 flex flex-col items-center justify-center text-white animate-in fade-in duration-200">
-                        <div className="w-3 h-3 rounded-full bg-white animate-pulse mb-2" />
-                        <span className="text-xs font-mono font-bold mb-3">{new Date(recordingTime * 1000).toISOString().slice(14, 19)}</span>
-                        <Button
-                            type="button"
-                            variant="secondary"
-                            size="icon"
-                            className="h-16 w-16 rounded-full hover:scale-110 transition-transform shadow-xl border-4 border-white/10"
-                            onClick={(e) => { e.stopPropagation(); stopAudioRecording() }}
-                        >
-                            <Square className="w-6 h-6 text-red-500 fill-current" />
-                        </Button>
-                    </div>
-                )}
                 {value ? (
                     isPlaying ? (
                         <div className="w-full h-full relative bg-black flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
                             {isVideo ? (
                                 <video ref={playbackVideoRef} src={value} className="w-full h-full object-contain" controls autoPlay onEnded={() => setIsPlaying(false)} />
-                            ) : isAudio ? (
-                                <div className="w-full h-full flex flex-col items-center justify-center bg-zinc-900 gap-2 p-4">
-                                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg animate-pulse">
-                                        <Music className="h-6 w-6 text-white" />
-                                    </div>
-                                    <audio ref={playbackAudioRef} src={value} controls autoPlay className="w-full h-8" onEnded={() => setIsPlaying(false)} />
-                                </div>
                             ) : (
                                 <div className="w-full h-full relative">
                                     <img src={value} alt="Vista previa" className="w-full h-full object-contain" />
@@ -326,10 +253,6 @@ export function MediaInput({ value, onChange, placeholder, type = 'media', varia
                             {/* Preview (Thumbnail) */}
                             {isVideo ? (
                                  <video src={value} className="w-full h-full object-cover" muted loop playsInline />
-                            ) : isAudio ? (
-                                 <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-indigo-500/20 to-purple-600/20">
-                                     <Music className="h-8 w-8 text-indigo-500" />
-                                 </div>
                             ) : (
                                  <img src={value} alt="Vista previa" className="w-full h-full object-cover" />
                             )}
@@ -343,7 +266,7 @@ export function MediaInput({ value, onChange, placeholder, type = 'media', varia
                                  </Button>
                             </div>
                             <div className="absolute bottom-1 right-1 px-1.5 py-0.5 bg-black/50 backdrop-blur rounded text-[8px] font-bold text-white uppercase pointer-events-none">
-                                {isVideo ? 'Vídeo' : isAudio ? 'Audio' : 'Imagen'}
+                                {isVideo ? 'Vídeo' : 'Imagen'}
                             </div>
                         </div>
                     )
@@ -396,18 +319,6 @@ export function MediaInput({ value, onChange, placeholder, type = 'media', varia
                                  <Upload className="h-4 w-4 opacity-80" />
                                  <span className="text-[9px] font-bold uppercase">Up</span>
                             </button>
-
-                            {!isThumbnailInput && (
-                              <button
-                                  type="button"
-                                  className="flex min-h-[38px] items-center justify-center gap-2 rounded-xl border border-border/40 bg-background/60 text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground transition-colors hover:text-red-500"
-                                  onClick={() => startAudioRecording()}
-                                  title="Grabar audio"
-                              >
-                                   <Mic className="h-4 w-4 opacity-80" />
-                                   <span className="text-[9px] font-bold uppercase">Mic</span>
-                              </button>
-                            )}
                           </div>
                         ) : (
                           <>
@@ -442,18 +353,6 @@ export function MediaInput({ value, onChange, placeholder, type = 'media', varia
                                  <Upload className="h-5 w-5 opacity-70" />
                                  <span className="text-[8px] font-bold uppercase">Up</span>
                             </button>
-
-                            {!isThumbnailInput && (
-                              <button
-                                  type="button"
-                                  className="flex-1 flex flex-col items-center justify-center gap-1 hover:bg-black/5 transition-colors text-muted-foreground hover:text-red-500"
-                                  onClick={() => startAudioRecording()}
-                                  title="Grabar audio"
-                              >
-                                   <Mic className="h-5 w-5 opacity-70" />
-                                   <span className="text-[8px] font-bold uppercase">Mic</span>
-                              </button>
-                            )}
                           </>
                         )}
                     </div>
@@ -471,7 +370,7 @@ export function MediaInput({ value, onChange, placeholder, type = 'media', varia
 
     // Default List View (unchanged)
     return (
-        <div className="flex gap-2 items-center group/media">
+        <div className={cn("flex gap-2 items-center group/media", disabled && "pointer-events-none opacity-60")}>
             <input
                 type="file"
                 ref={fileInputRef}

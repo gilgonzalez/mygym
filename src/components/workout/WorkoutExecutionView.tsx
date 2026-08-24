@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { PremiumFeatureDialog } from '@/components/premium/PremiumFeatureDialog'
 import { ExerciseTutorialDialog } from './ExerciseTutorialDialog'
-import { MusicPlayer } from './MusicPlayer'
 import { LocalWorkout, ExerciseTutorial } from '@/types/workout/viewTypes'
 import { CheckCircle2, ChevronDown, ChevronLeft, Clock, Info, Pause, Play, Plus, SkipForward } from 'lucide-react'
 import { getNextWorkoutCursor, getStepInfo } from '@/lib/workout/sessionNavigation'
@@ -751,12 +750,6 @@ export function WorkoutExecutionView({
                 <p className="mt-4 text-center text-xs font-semibold uppercase tracking-[0.18em] text-white/38">
                   {nextButtonLabel}
                 </p>
-
-                {workout.audio?.length ? (
-                  <div className="mt-5 flex justify-center">
-                    <MusicPlayer playlist={workout.audio || []} className="!fixed-none !top-auto !left-auto !translate-x-0" />
-                  </div>
-                ) : null}
               </div>
             </div>
 
@@ -861,12 +854,6 @@ export function WorkoutExecutionView({
             </div>
 
             <div className="mt-4 hidden shrink-0 flex-wrap items-center justify-center gap-2.5 sm:flex">
-              {workout.audio?.length ? (
-                <div className="w-full sm:hidden">
-                  <MusicPlayer playlist={workout.audio || []} className="!fixed-none !top-auto !left-auto !translate-x-0" />
-                </div>
-              ) : null}
-
               {onPrev && (
                 <Button
                   variant="ghost"
@@ -924,12 +911,6 @@ export function WorkoutExecutionView({
             </div>
 
             <div className="mt-4 w-full shrink-0 text-center">
-              {workout.audio?.length ? (
-                <div className="mb-3 flex justify-center sm:hidden">
-                  <MusicPlayer playlist={workout.audio || []} className="!fixed-none !top-auto !left-auto !translate-x-0" />
-                </div>
-              ) : null}
-
               <div className="grid w-full max-w-sm grid-cols-4 gap-2.5 sm:hidden">
                 {onPrev ? (
                   <Button

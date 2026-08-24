@@ -35,12 +35,41 @@
         }
       ],
       "expo-image",
+      "expo-video",
       "expo-web-browser",
       "@react-native-community/datetimepicker",
-      "expo-apple-authentication"
+      "expo-apple-authentication",
+      [
+        "expo-audio",
+        {
+          "enableBackgroundPlayback": false,
+          "recordAudioAndroid": false
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "MyGym usa la cámara para crear miniaturas de los ejercicios (foto o GIF).",
+          "microphonePermission": false,
+          "recordAudioAndroid": false
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "MyGym usa tu galería para elegir una foto de miniatura."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "35ffd5d6-6371-4b17-bf93-e835ce0b29c2"
+      }
+    },
+    "owner": "fragilgon"
   }
 }

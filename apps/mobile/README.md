@@ -10,10 +10,10 @@ App de Android/iOS en Expo + Expo Router, viviendo en el mismo monorepo que
   igual que la web, apoyándose en las RLS policies de Postgres — no pasa por
   las Server Actions de `apps/web`.
 - **Lo que sí necesita el backend de Next.js**: cualquier operación con
-  secretos de servidor. Por ahora eso es la subida a R2 (`/api/upload`, ya es
-  una API route con URL prefirmada — reutilizable tal cual) y, cuando se
-  audite, la generación de rutinas con IA (`generate-by-ai`, usa la key de
-  OpenAI).
+  secretos de servidor. La subida a R2 (`/api/upload`) ahora acepta cookie
+  de sesión **o** `Authorization: Bearer` (el access token de supabase de
+  la app). Las miniaturas de ejercicios nuevos se firman por esa ruta. La
+  generación de rutinas con IA (`generate-by-ai`) sigue pendiente.
 - **Pendiente de auditoría**: acciones con lógica de negocio no trivial
   (`likes`, `challenge`, `log`) — hay que decidir, acción por acción, si pasan
   a una función RPC de Postgres o quedan detrás de un endpoint dedicado. Ver
@@ -23,7 +23,8 @@ App de Android/iOS en Expo + Expo Router, viviendo en el mismo monorepo que
 
 ```bash
 cp apps/mobile/.env.example apps/mobile/.env
-# completar EXPO_PUBLIC_SUPABASE_URL y EXPO_PUBLIC_SUPABASE_ANON_KEY
+# completar EXPO_PUBLIC_SUPABASE_URL, EXPO_PUBLIC_SUPABASE_ANON_KEY
+# y EXPO_PUBLIC_API_URL (la URL de apps/web, p.ej. https://mygymgigo.vercel.app)
 # (los mismos valores que NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY de la web)
 
 bun install          # desde la raíz del repo, instala todo el workspace

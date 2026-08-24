@@ -1,16 +1,18 @@
 'use client'
 
-import { Controller, useFieldArray } from 'react-hook-form'
+import { Controller } from 'react-hook-form'
 import { Draggable, Droppable } from '@hello-pangea/dnd'
 import {
   Activity,
   BedDouble,
   Dna,
+  Dumbbell,
   GripVertical,
   Image as ImageIcon,
   Info,
   Infinity as InfinityIcon,
   List,
+  Lock,
   Package,
   Plus,
   Repeat,
@@ -22,10 +24,11 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/form/TextArea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Switch } from '@/components/ui/switch'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import type { Exercise } from '@/app/actions/exercises/list'
-import { createEmptyExercise, inferMediaType, sanitizeTutorial } from '../create/formHelpers'
+import { createEmptyExercise, inferMediaType, isPersistedExerciseId, sanitizeTutorial } from '../create/formHelpers'
 import { ActivityTutorialEditor } from './ActivityTutorialEditor'
 import { ExercisesVault } from './ExercisesVault'
 import { MediaInput } from './MediaInput'
@@ -36,6 +39,19 @@ import { TagInput } from './TagInput'
 // es una card arrastrable (drag handle + drop de @hello-pangea/dnd) con su
 // propio bloque de contenido/miniatura/formato/contexto, más los dos
 // botones para agregar un ejercicio nuevo o desde el vault del catálogo.
+//
+// El array de ejercicios NO se gestiona acá con su propio useFieldArray —
+// se recibe como prop (`exercises`, del watch() único que ya tiene el padre)
+// y se muta a través de onAppendExercise/onRemoveExercise, que en page.tsx
+// escriben todo el árbol `sections` de una vez. Antes cada sección tenía su
+// propio useFieldArray para sus ejercicios, y el onDragEnd del padre lo
+// mutaba por fuera con getValues/setValue — dos fuentes de verdad para el
+// mismo array que no siempre reconciliaban bien (de ahí que hasta el drag
+// dentro de una misma sección fuera inestable). Con una sola fuente de
+// verdad (el `sections` del form) el drag entre secciones también deja de
+// necesitar un caso especial: ver moveExerciseAcrossSections en page.tsx.
+// Cada ejercicio ya trae su propio `id` de dominio (garantizado por el
+// schema) — se usa ese como key/draggableId, no el id interno de RHF.
 //
 // control/register/setValue/watch quedan como `any` (mismo criterio que ya
 // tenía este componente en page.tsx) porque tipar bien un path anidado tipo
@@ -53,13 +69,23 @@ interface ExercisesFieldArrayProps {
   errors: any
   isCompactMobile?: boolean
   isAmrapSection?: boolean
+  exercises: any[]
+  onAppendExercise: (exercise: any) => void
+  onRemoveExercise: (exerciseIndex: number) => void
 }
 
-export function ExercisesFieldArray({ nestIndex, control, register, setValue, watch, isCompactMobile = false, isAmrapSection = false }: ExercisesFieldArrayProps) {
-  const { fields, append, remove } = useFieldArray({
-    control,
-    name: `sections.${nestIndex}.exercises`
-  })
+export function ExercisesFieldArray({
+  nestIndex,
+  control,
+  register,
+  setValue,
+  watch,
+  isCompactMobile = false,
+  isAmrapSection = false,
+  exercises,
+  onAppendExercise,
+  onRemoveExercise,
+}: ExercisesFieldArrayProps) {
 
   const renderHint = (text: string, className?: string) => {
     if (isCompactMobile) return null
@@ -87,15 +113,19 @@ export function ExercisesFieldArray({ nestIndex, control, register, setValue, wa
   const handleAddFromVault = (exercise: Exercise) => {
     const tutorialData = Array.isArray(exercise.tutorial) ? exercise.tutorial[0] : exercise.tutorial
 
-    append({
+    // El vault ya no guarda type/sets/reps/duration/rest (eso vive en
+    // section_exercises, por-instancia) — usamos los mismos valores por
+    // defecto que createEmptyExercise() en vez de leerlos del ejercicio.
+    onAppendExercise({
         id: `ex-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
         db_id: exercise.id,
         name: exercise.name,
-        type: (exercise.type === 'time' ? 'time' : 'reps'),
-        reps: exercise.reps || 0,
-        sets: exercise.sets || 3,
-        rest: exercise.rest || 60,
-        duration: exercise.duration || 0,
+        type: 'reps',
+        reps: 10,
+        sets: 3,
+        rest: 60,
+        duration: 0,
+        weight_kg: undefined,
         description: exercise.description || '',
         difficulty: (exercise.difficulty as any) || 'beginner',
         muscle_groups: exercise.muscle_group || [],
@@ -122,12 +152,19 @@ export function ExercisesFieldArray({ nestIndex, control, register, setValue, wa
       <Droppable droppableId={`exercises-${nestIndex}`} type="EXERCISE">
         {(provided) => (
           <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-3 sm:space-y-4">
-            {fields.map((item, k) => {
+            {exercises.map((item, k) => {
               const exercisePath = `sections.${nestIndex}.exercises.${k}` as const
               const watchedType = watch(`${exercisePath}.type`)
               const selectedType = watchedType === 'time' ? 'time' : watchedType === 'emom' ? 'emom' : 'reps'
               const hasTutorial = Boolean(watch(`${exercisePath}.tutorial`))
               const exerciseSets = watch(`${exercisePath}.sets`) ?? 1
+              // Si viene del vault (tiene db_id persistido), lo propio del ejercicio
+              // (nombre/descripción/thumbnail/dificultad/materiales) es de solo lectura
+              // acá — se edita en el vault, no por-instancia. Lo de esta sección
+              // (type/reps/sets/rest/duration/weight) siempre es editable.
+              const isFromVault = Boolean(isPersistedExerciseId(watch(`${exercisePath}.db_id`)))
+              const exerciseWeightKg = watch(`${exercisePath}.weight_kg`)
+              const hasWeight = exerciseWeightKg !== undefined && exerciseWeightKg !== null && exerciseWeightKg !== ('' as unknown)
 
               return (
                 <Draggable key={item.id} draggableId={item.id} index={k}>
@@ -164,7 +201,7 @@ export function ExercisesFieldArray({ nestIndex, control, register, setValue, wa
                             <div className="absolute right-2.5 top-2.5 z-10 sm:right-4 sm:top-4">
                                 <Button
                                     type="button" variant="ghost" size="icon"
-                                    onClick={() => remove(k)}
+                                    onClick={() => onRemoveExercise(k)}
                                     className="h-7 w-7 rounded-full text-muted-foreground/30 hover:bg-destructive/10 hover:text-destructive sm:h-8 sm:w-8"
                                 >
                                     <Trash2 className="h-4 w-4" />
@@ -209,6 +246,12 @@ export function ExercisesFieldArray({ nestIndex, control, register, setValue, wa
                                       Tutorial listo
                                     </span>
                                   )}
+                                  {isFromVault && (
+                                    <span className="inline-flex items-center gap-1 rounded-full border border-border/70 bg-background/80 px-2 py-1 text-[8px] font-bold uppercase tracking-[0.18em] text-muted-foreground sm:px-3 sm:text-[10px]">
+                                      <Lock className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                                      Del vault
+                                    </span>
+                                  )}
                                 </div>
                               </div>
 
@@ -225,6 +268,7 @@ export function ExercisesFieldArray({ nestIndex, control, register, setValue, wa
                                     <Input
                                       {...register(`sections.${nestIndex}.exercises.${k}.name`)}
                                       placeholder="Nombre del ejercicio"
+                                      disabled={isFromVault}
                                       className="h-auto border-none bg-transparent px-0 text-[1.1rem] font-black tracking-tight shadow-none focus-visible:ring-0 placeholder:text-muted-foreground/30 sm:text-2xl"
                                     />
                                     <input type="hidden" {...register(`sections.${nestIndex}.exercises.${k}.id`)} />
@@ -234,6 +278,7 @@ export function ExercisesFieldArray({ nestIndex, control, register, setValue, wa
                                     <Textarea
                                       {...register(`sections.${nestIndex}.exercises.${k}.description`)}
                                       placeholder={isCompactMobile ? "Notas breves..." : "Ej. Mantén el core activo, baja controlado y evita encoger los hombros."}
+                                      disabled={isFromVault}
                                       className="mt-3 min-h-[72px] resize-none rounded-[20px] border-border/60 bg-muted/20 text-sm shadow-none sm:mt-4 sm:min-h-[108px]"
                                     />
                                   </div>
@@ -267,6 +312,7 @@ export function ExercisesFieldArray({ nestIndex, control, register, setValue, wa
                                             type="thumbnail"
                                             variant="thumbnail"
                                             compact={isCompactMobile}
+                                            disabled={isFromVault}
                                           />
                                         </div>
                                       )}
@@ -562,6 +608,46 @@ export function ExercisesFieldArray({ nestIndex, control, register, setValue, wa
                                   </div>
                                   )}
 
+                                  <div className="rounded-[20px] border border-border/60 bg-background/75 p-3 shadow-sm sm:rounded-[28px] sm:p-4">
+                                    <div className="flex items-center justify-between gap-3">
+                                      <div className="flex items-center gap-2">
+                                        <div className="rounded-2xl bg-primary/10 p-2 text-primary">
+                                          <Dumbbell className="h-4 w-4" />
+                                        </div>
+                                        <div>
+                                          <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                                            Peso / carga
+                                          </label>
+                                          <p className="text-[11px] leading-snug text-muted-foreground/70">
+                                            Activa esto si el ejercicio usa una carga externa (mancuerna, barra, kettlebell...).
+                                          </p>
+                                        </div>
+                                      </div>
+                                      <Switch
+                                        checked={hasWeight}
+                                        onCheckedChange={(checked) => {
+                                          setValue(`${exercisePath}.weight_kg`, checked ? 0 : undefined, { shouldDirty: true })
+                                        }}
+                                      />
+                                    </div>
+                                    {hasWeight && (
+                                      <div className="relative mt-3 w-32">
+                                        <Input
+                                          {...register(`${exercisePath}.weight_kg`)}
+                                          type="number"
+                                          inputMode="decimal"
+                                          min={0}
+                                          step="0.5"
+                                          placeholder="0"
+                                          className="h-9 rounded-xl border-border/60 bg-muted/20 pr-9 pl-2 text-sm font-bold shadow-none"
+                                        />
+                                        <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[9px] font-semibold text-muted-foreground">
+                                          kg
+                                        </span>
+                                      </div>
+                                    )}
+                                  </div>
+
                                   <div className="rounded-[20px] border border-border/60 bg-background/75 p-3 shadow-sm sm:rounded-[28px] sm:p-4 md:p-5">
                                     <div className="mb-3 flex items-start justify-between gap-3 sm:mb-4">
                                       <div>
@@ -584,7 +670,7 @@ export function ExercisesFieldArray({ nestIndex, control, register, setValue, wa
                                           control={control}
                                           name={`sections.${nestIndex}.exercises.${k}.difficulty`}
                                           render={({ field }) => (
-                                            <Select onValueChange={field.onChange} value={field.value || 'beginner'}>
+                                            <Select onValueChange={field.onChange} value={field.value || 'beginner'} disabled={isFromVault}>
                                               <SelectTrigger className="h-9 rounded-2xl border-border/60 bg-muted/20 text-sm font-medium shadow-none sm:h-11">
                                                 <SelectValue placeholder={isCompactMobile ? 'Nivel' : 'Seleccionar dificultad'} />
                                               </SelectTrigger>
@@ -612,6 +698,7 @@ export function ExercisesFieldArray({ nestIndex, control, register, setValue, wa
                                               placeholder={isCompactMobile ? "Músculos..." : "Añadir músculos..."}
                                               variant="orange"
                                               compact={isCompactMobile}
+                                              disabled={isFromVault}
                                             />
                                           )}
                                         />
@@ -631,6 +718,7 @@ export function ExercisesFieldArray({ nestIndex, control, register, setValue, wa
                                               placeholder={isCompactMobile ? "Equip..." : "Add equipment..."}
                                               variant="blue"
                                               compact={isCompactMobile}
+                                              disabled={isFromVault}
                                             />
                                           )}
                                         />
@@ -659,7 +747,7 @@ export function ExercisesFieldArray({ nestIndex, control, register, setValue, wa
         <Button
             type="button" variant="ghost" size="sm"
             className="group h-10 w-full rounded-xl border border-dashed border-border/40 text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60 transition-all hover:border-primary/40 hover:bg-primary/5 hover:text-primary sm:h-12 sm:text-xs"
-            onClick={() => append(createEmptyExercise())}
+            onClick={() => onAppendExercise(createEmptyExercise())}
         >
             <span className="flex items-center gap-2 group-hover:gap-3 transition-all">
                 <Plus className="h-3.5 w-3.5" />

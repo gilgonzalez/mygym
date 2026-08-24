@@ -102,7 +102,7 @@ export function PreviewActivity({
 
             <div className="grid grid-cols-2 gap-3 sm:gap-4 w-full max-w-[320px] sm:max-w-xs">
               <div className="bg-white/5 rounded-2xl p-3 sm:p-4 flex flex-col items-center">
-                <span className="text-2xl sm:text-3xl font-bold">{exercise.weight || '-'}</span>
+                <span className="text-2xl sm:text-3xl font-bold">{exercise.weight_kg || '-'}</span>
                 <span className="text-xs text-gray-400 uppercase">Kg</span>
               </div>
               <div className="bg-white/5 rounded-2xl p-3 sm:p-4 flex flex-col items-center">

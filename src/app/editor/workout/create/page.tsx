@@ -6,7 +6,7 @@ import { toast } from 'sonner'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd'
-import { Plus, Trash2, GripVertical, Save,  ArrowLeft, Eye, Smartphone, Monitor, Music, Mic, Dna, Activity, Repeat, RotateCw, Globe, Lock, FileText, Sparkles, Loader2, Timer, Zap, Users, Trophy, Infinity as InfinityIcon } from 'lucide-react'
+import { Plus, Trash2, GripVertical, Save,  ArrowLeft, Eye, Smartphone, Monitor, Mic, Dna, Activity, Repeat, RotateCw, Globe, Lock, FileText, Sparkles, Loader2, Timer, Zap, Users, Trophy, Infinity as InfinityIcon } from 'lucide-react'
 import { 
   Select,
   SelectContent,
@@ -39,7 +39,6 @@ import { calcWorkoutXP, computeWorkoutStats } from '@mygym/shared'
 import { WorkoutTagSelector } from '@/components/ui/workout-tag-selector'
 import { generateWorkoutAction } from '@/app/actions/workout/generate-by-ai'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
-import { TagInput } from '../components/TagInput'
 import { MediaInput } from '../components/MediaInput'
 import { ExercisesFieldArray } from '../components/ExercisesFieldArray'
 import { PremiumFeatureDialog } from '@/components/premium/PremiumFeatureDialog'
@@ -202,7 +201,6 @@ function CreateWorkoutContent() {
             tags: w.tags || [],
             difficulty: (w.difficulty as any) || 'beginner',
             visibility: w.visibility || 'private',
-            audio: w.audio || [],
             challenge: {
                 enabled: Boolean(w.challenge),
                 challengeSectionId: w.challenge?.challenge_section_id || w.sections[0]?.id,
@@ -227,6 +225,7 @@ function CreateWorkoutContent() {
                     sets: e.sets || 0,
                     duration: e.duration || 0,
                     rest: e.rest || 0,
+                    weight_kg: e.weight_kg ?? undefined,
                     thumbnail_url: e.thumbnail_url,
                     thumbnail_media_id: e.thumbnail_media_id,
                     filename: e.filename,
@@ -284,7 +283,6 @@ function CreateWorkoutContent() {
       description: '',
       cover: '',
       visibility: 'private',
-      audio: [],
       challenge: {
         enabled: false,
         challengeSectionId: undefined,
@@ -367,7 +365,6 @@ function CreateWorkoutContent() {
             // Count total operations
             let totalOps = 1; // Server action
             if (data.cover?.startsWith('blob:')) totalOps++;
-            (data.audio || []).forEach((url: string) => { if (url.startsWith('blob:')) totalOps++; });
             data.sections.forEach((s: WorkoutFormSection) => s.exercises.forEach((e: WorkoutFormExercise) => {
                 if (e.thumbnail_url?.startsWith('blob:')) totalOps++;
                 if (e.tutorial?.media_url?.startsWith('blob:')) totalOps++;
@@ -395,22 +392,6 @@ function CreateWorkoutContent() {
                 updateProgress('Cover uploaded')
             }
             coverUrl = ensureUploadedUrl(coverUrl, 'La portada del workout')
-            
-            // Upload Audio
-            const audioUrls = await Promise.all(
-                (data.audio || []).map(async (url: string) => {
-                    if (url.startsWith('blob:')) {
-                        const res = await uploadFile(url)
-                        if (!res?.url) {
-                            throw new Error('Uno de los audios del workout no se pudo subir correctamente. Vuelve a intentarlo.')
-                        }
-                        updateProgress('Pista de audio subida')
-                        return res.url
-                    }
-                    return ensureUploadedUrl(url, 'Uno de los audios del workout')
-                })
-            )
-            const validAudioUrls = audioUrls.filter((url: string | undefined): url is string => !!url)
 
             // Upload Exercise Media
             const sectionsWithMedia = await Promise.all(data.sections.map(async (section: WorkoutFormSection) => {
@@ -514,7 +495,6 @@ function CreateWorkoutContent() {
                 stats: finalStats,
                 tags: data.tags,
                 cover: coverUrl,
-                audio: validAudioUrls,
                 challenge: (() => {
                     const amrapSectionIndex = sectionsWithMedia.findIndex(
                       (section: WorkoutFormSection) => section.amrap?.enabled
@@ -544,6 +524,7 @@ function CreateWorkoutContent() {
                             sets: e.sets,
                             duration: e.duration,
                             rest: e.rest,
+                            weight_kg: e.weight_kg ?? null,
                             description: e.description,
                             muscle_groups: e.muscle_groups,
                             equipment: e.equipment,
@@ -671,17 +652,58 @@ function CreateWorkoutContent() {
       return null // Will redirect
   }
 
+  // Único punto de reorder para ejercicios: lee tanto origen como destino
+  // (antes solo se leía el origen, así que soltar en otra sección reinsertaba
+  // en la sección de origen en el índice equivocado) y escribe todo el árbol
+  // `sections` de una vez. Reordenar dentro de la misma sección es el caso
+  // degenerado de mover entre secciones (misma sección de origen y destino),
+  // no necesita rama aparte.
+  const moveExerciseAcrossSections = (
+    sourceSectionIndex: number,
+    sourceIndex: number,
+    destSectionIndex: number,
+    destIndex: number
+  ) => {
+    const sections = getValues('sections').map((section) => ({
+      ...section,
+      exercises: [...section.exercises],
+    }))
+    const sourceExercises = sections[sourceSectionIndex]?.exercises
+    if (!sourceExercises) return
+
+    const [movedExercise] = sourceExercises.splice(sourceIndex, 1)
+    if (!movedExercise) return
+
+    const destExercises = sections[destSectionIndex]?.exercises
+    if (!destExercises) return
+
+    destExercises.splice(destIndex, 0, movedExercise)
+    setValue('sections', sections, { shouldDirty: true })
+  }
+
+  const appendExerciseToSection = (sectionIndex: number, exercise: WorkoutFormExercise) => {
+    const sections = getValues('sections').map((section, i) =>
+      i === sectionIndex ? { ...section, exercises: [...section.exercises, exercise] } : section
+    )
+    setValue('sections', sections, { shouldDirty: true })
+  }
+
+  const removeExerciseFromSection = (sectionIndex: number, exerciseIndex: number) => {
+    const sections = getValues('sections').map((section, i) =>
+      i === sectionIndex ? { ...section, exercises: section.exercises.filter((_, ei) => ei !== exerciseIndex) } : section
+    )
+    setValue('sections', sections, { shouldDirty: true })
+  }
+
   const onDragEnd = (result: DropResult) => {
     if (!result.destination) return
 
     if (result.type === 'SECTION') {
       moveSection(result.source.index, result.destination.index)
     } else if (result.type === 'EXERCISE') {
-        const sectionIndex = parseInt(result.source.droppableId.split('-')[1])
-        const exercises = getValues(`sections.${sectionIndex}.exercises`)
-        const [reorderedItem] = exercises.splice(result.source.index, 1)
-        exercises.splice(result.destination.index, 0, reorderedItem)
-        setValue(`sections.${sectionIndex}.exercises`, exercises)
+        const sourceSectionIndex = parseInt(result.source.droppableId.split('-')[1])
+        const destSectionIndex = parseInt(result.destination.droppableId.split('-')[1])
+        moveExerciseAcrossSections(sourceSectionIndex, result.source.index, destSectionIndex, result.destination.index)
     }
   }
 
@@ -1440,15 +1462,18 @@ function CreateWorkoutContent() {
                               "relative p-3 sm:p-5 md:p-8",
                               sectionAmrapEnabled && "before:absolute before:inset-x-0 before:top-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-emerald-400/30 before:to-transparent"
                             )}>
-                              <ExercisesFieldArray 
-                                nestIndex={index} 
-                                control={control} 
-                                register={register} 
+                              <ExercisesFieldArray
+                                nestIndex={index}
+                                control={control}
+                                register={register}
                                 setValue={setValue}
                                 watch={watch}
                                 errors={errors}
                                 isCompactMobile={isCompactMobileViewport}
                                 isAmrapSection={sectionAmrapEnabled}
+                                exercises={formValues.sections?.[index]?.exercises || []}
+                                onAppendExercise={(exercise) => appendExerciseToSection(index, exercise)}
+                                onRemoveExercise={(exerciseIndex) => removeExerciseFromSection(index, exerciseIndex)}
                               />
                             </div>
                           </div>
@@ -1587,26 +1612,6 @@ function CreateWorkoutContent() {
                       onChange={field.onChange}
                       placeholder="Añadir portada..."
                       type="media"
-                      compact={isCompactMobileViewport}
-                    />
-                  )}
-                />
-              </div>
-
-              <div className="space-y-2 rounded-[24px] border border-border/60 bg-muted/20 p-3.5 sm:p-5">
-                <div>
-                  <label className="pl-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Playlist</label>
-                </div>
-                <Controller
-                  control={control}
-                  name="audio"
-                  render={({ field }) => (
-                    <TagInput 
-                      value={field.value || []} 
-                      onChange={field.onChange}
-                      placeholder="Pega links de YouTube o Spotify..."
-                      icon={<Music className="h-4 w-4" />}
-                      variant="blue"
                       compact={isCompactMobileViewport}
                     />
                   )}

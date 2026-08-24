@@ -145,7 +145,6 @@ export default function WorkoutSessionPage({ params }: { params: { id: string } 
       description: raw.description || '',
       tags: raw.tags || [],
       difficulty: (raw.difficulty as Difficulty) || undefined,
-      audio: raw.audio || [],
       challenge: raw.challenge
         ? {
             mode: 'amrap_section',
@@ -166,6 +165,7 @@ export default function WorkoutSessionPage({ params }: { params: { id: string } 
           sets: e.sets || 0,
           duration: e.duration || 0,
           rest: e.rest || 0,
+          weight_kg: e.weight_kg ?? null,
           thumbnail_url: e.thumbnail_url || undefined,
           tutorial: e.tutorial?.media_url ? {
             media: {

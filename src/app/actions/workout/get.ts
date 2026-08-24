@@ -29,6 +29,7 @@ export async function getWorkoutById(id: string): Promise<{ success: boolean, da
               sets,
               duration,
               rest,
+              weight_kg,
               exercises(
                 *,
                 thumbnail:media!exercises_thumbnail_media_id_fkey(
@@ -167,11 +168,12 @@ export async function getWorkoutById(id: string): Promise<{ success: boolean, da
               return {
                 ...se.exercises,
                 link_id: se.id,
-                type: se.type || se.exercises.type || 'reps',
+                type: se.type || 'reps',
                 reps: se.reps ?? 0,
                 sets: se.sets ?? 0,
                 duration: se.duration ?? 0,
                 rest: se.rest ?? 0,
+                weight_kg: se.weight_kg ?? null,
                 thumbnail_url: se.exercises.thumbnail?.url || undefined,
                 thumbnail_media_id: se.exercises.thumbnail?.id || se.exercises.thumbnail_media_id || undefined,
                 filename: se.exercises.thumbnail?.filename || undefined,

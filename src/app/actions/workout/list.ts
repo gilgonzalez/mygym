@@ -229,7 +229,7 @@ async function fetchWorkoutWindow(
   const { from, to, filter, sortBy } = opts
   const SELECT_FIELDS = `
     id, user_id, title, description, visibility, created_at, updated_at,
-    rating, difficulty, estimated_time, exp_earned, cover, audio, stats, tags,
+    rating, difficulty, estimated_time, exp_earned, cover, stats, tags,
     challenge:workout_challenges(*),
     user:users!user_id(id, username, name, avatar_url),
     workout_sections(

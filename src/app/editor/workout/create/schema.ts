@@ -29,6 +29,7 @@ const exerciseSchema = z.object({
   sets: z.coerce.number().optional(),
   duration: z.coerce.number().optional(),
   rest: z.coerce.number().optional(),
+  weight_kg: z.coerce.number().optional().nullable(),
   thumbnail_url: z.string().optional().nullable(),
   thumbnail_media_id: z.string().optional().nullable(),
   filename: z.string().optional().nullable(),
@@ -63,7 +64,6 @@ export const workoutSchema = z.object({
   tags: z.array(z.string()).optional(),
   difficulty: z.enum(DIFFICULTY_VALUES).optional(),
   visibility: z.enum(['draft', 'public', 'private', 'followers']).default('private'),
-  audio: z.array(z.string()).optional(),
   challenge: z.object({
     enabled: z.boolean().default(false),
     challengeSectionId: z.string().optional(),

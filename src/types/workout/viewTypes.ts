@@ -24,6 +24,7 @@ export interface LocalExercise {
   sets?: number
   duration?: number // seconds
   rest: number // seconds
+  weight_kg?: number | null
   thumbnail_url?: string
   tutorial?: ExerciseTutorial
   description?: string
@@ -60,7 +61,6 @@ export interface LocalWorkout {
   description: string
   tags?: string[]
   difficulty?: Difficulty
-  audio?: string[] // YouTube URLs
   sections: LocalSection[]
   challenge?: LocalWorkoutChallenge | null
 }

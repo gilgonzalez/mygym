@@ -1,9 +1,33 @@
 import { r2 } from '@/lib/r2'
 import { createClient } from '@/lib/supabase/server'
+import { createClient as createJwtClient } from '@supabase/supabase-js'
 import { PutObjectCommand } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import { NextResponse } from 'next/server'
 import { randomUUID } from 'crypto'
+
+async function getRequestUser(request: Request) {
+  const cookieClient = await createClient()
+  const {
+    data: { user: cookieUser },
+  } = await cookieClient.auth.getUser()
+  if (cookieUser) return cookieUser
+
+  // La app mobile no manda cookies: autentica con el access token de
+  // supabase en Authorization: Bearer (ver apps/mobile/src/lib/mediaUpload.ts).
+  const header = request.headers.get('authorization')
+  if (!header?.toLowerCase().startsWith('bearer ')) return null
+
+  const jwtClient = createJwtClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
+  const {
+    data: { user },
+  } = await jwtClient.auth.getUser(header.slice(7).trim())
+
+  return user ?? null
+}
 
 export async function POST(request: Request) {
   try {
@@ -13,13 +37,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'filename and contentType are required' }, { status: 400 })
     }
 
-    const supabase = await createClient()
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser()
+    const user = await getRequestUser(request)
 
-    if (authError || !user) {
+    if (!user) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     }
 

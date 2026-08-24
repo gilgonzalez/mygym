@@ -16,6 +16,7 @@ import {
 import { useTheme } from '@/theme'
 import { Badge, Sheet } from '@/components/ui'
 import type { WorkoutDetail } from '@/lib/workouts'
+import { announceExercise, playCountdownBeep, playFinishBeep, useSessionCues } from '@/lib/sessionCues'
 import { SessionBackground } from './SessionBackground'
 import { SessionMediaRing } from './SessionMediaRing'
 import { ControlButton, PREPARE_SECONDS, ProgressBar, StatCard } from './executionShared'
@@ -66,6 +67,7 @@ const STAGE_LABEL: Record<Stage, string> = {
 export function ExecutionView({ workout, onExit, onComplete }: ExecutionViewProps) {
   const theme = useTheme()
   const insets = useSafeAreaInsets()
+  useSessionCues()
   const [cursor, setCursor] = useState<Cursor>({ sectionIndex: 0, exerciseIndex: 0, set: 1 })
   const [stage, setStage] = useState<Stage>('prepare')
   const [timeLeft, setTimeLeft] = useState(PREPARE_SECONDS)
@@ -73,6 +75,7 @@ export function ExecutionView({ workout, onExit, onComplete }: ExecutionViewProp
   const [isInfoOpen, setIsInfoOpen] = useState(false)
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
   const prevTimeLeftRef = useRef(timeLeft)
+  const lastCountdownBeepRef = useRef<number | null>(null)
   const hasCompletedRef = useRef(false)
 
   const section = workout.sections[cursor.sectionIndex]
@@ -106,6 +109,7 @@ export function ExecutionView({ workout, onExit, onComplete }: ExecutionViewProp
     }
 
     if (stage === 'exercise') {
+      playFinishBeep()
       if ((exercise.rest || 0) > 0) {
         setStage('rest')
       } else {
@@ -164,6 +168,30 @@ export function ExecutionView({ workout, onExit, onComplete }: ExecutionViewProp
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {})
     }
   }, [hasTimer, timeLeft])
+
+  // TTS al entrar a un ejercicio (nombre + duración/reps), equivalente al
+  // anuncio de ActiveSession.tsx en web — acá al comenzar, no en el descanso.
+  useEffect(() => {
+    if (stage !== 'exercise' || !exercise) return
+    announceExercise(exercise, { set: cursor.set, totalSets: Math.max(exercise.sets, 1) })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stageKey])
+
+  useEffect(() => {
+    lastCountdownBeepRef.current = null
+  }, [stageKey])
+
+  // Beeps de countdown en los últimos 5s de un ejercicio con timer (time/EMOM),
+  // igual que WorkoutExecutionView.tsx. El beep de cierre lo dispara
+  // advanceStage al salir del ejercicio, para cubrir también "Hecho"/Saltar.
+  useEffect(() => {
+    if (stage !== 'exercise' || !hasTimer) return
+    if (isPaused || isInfoOpen) return
+    if (timeLeft <= 0 || timeLeft > 5) return
+    if (lastCountdownBeepRef.current === timeLeft) return
+    lastCountdownBeepRef.current = timeLeft
+    playCountdownBeep()
+  }, [hasTimer, isInfoOpen, isPaused, stage, timeLeft])
 
   // Reloj global de la sesión — se pausa/reanuda con el mismo control que
   // el cronómetro de la etapa actual.

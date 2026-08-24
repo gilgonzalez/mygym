@@ -44,10 +44,14 @@ export interface Workout extends DbWorkout {
   sections: Array<DbSection & {
     total_exercises?: number
     exercises: Array<DbExercise & {
+      // type/sets/reps/rest/duration/weight_kg viven en section_exercises (por
+      // instancia), no en exercises (el vault, que ya no tiene estas columnas).
+      type?: 'reps' | 'time' | 'emom' | string | null
       sets?: number | null
       reps?: number | null
-      rest?: number | null 
-      duration?: number | null 
+      rest?: number | null
+      duration?: number | null
+      weight_kg?: number | null
       thumbnail_url?: string | null
       thumbnail_media_id?: string | null
       filename?: string | null

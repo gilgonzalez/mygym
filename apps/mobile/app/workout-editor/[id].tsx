@@ -19,16 +19,16 @@ import {
   createExerciseFromVault,
 } from '@/components/workout-editor'
 import { createWorkout, fetchWorkoutForEdit, updateWorkout, type SectionEditorInput, type VaultExercise } from '@/lib/workoutEditor'
+import { persistExerciseThumbnails } from '@/lib/mediaUpload'
 
 // Pantalla de creación/edición de workout — construida desde cero (no existía
 // nada en mobile antes de esto, ver el comentario "sin ... crear nuevo" que
 // tenía WorkoutsTab.tsx). Misma ruta para las dos cosas: `id === 'new'` es
 // creación, cualquier otro valor es edición de un workout propio existente.
 //
-// Alcance v1 (ver también lib/workoutEditor.ts): sin reto AMRAP, sin subida
-// de portada/thumbnail, sin editor de tutorial por ejercicio — deliberado,
-// no un olvido, para no meter un cambio de auth/upload transversal en este
-// mismo cambio.
+// Alcance v1 (ver también lib/workoutEditor.ts): sin reto AMRAP, sin editor
+// de tutorial por ejercicio. Las miniaturas de ejercicios NUEVOS sí se
+// pueden tomar con la cámara (foto o GIF de ≤3s — nunca video).
 export default function WorkoutEditorScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
   const isCreating = id === 'new'
@@ -144,11 +144,15 @@ export default function WorkoutEditorScreen() {
     const input = { title: title.trim(), description: description.trim(), difficulty, tags, cover, visibility, sections }
 
     try {
+      const sectionsWithThumbnails = await persistExerciseThumbnails(sections, userId)
+      setSections(sectionsWithThumbnails)
+      const payload = { ...input, sections: sectionsWithThumbnails }
+
       if (isCreating) {
-        const newId = await createWorkout(userId, input)
+        const newId = await createWorkout(userId, payload)
         router.replace({ pathname: '/workout/[id]', params: { id: newId } })
       } else {
-        await updateWorkout(id, userId, input)
+        await updateWorkout(id, userId, payload)
         router.back()
       }
     } catch (err: any) {
