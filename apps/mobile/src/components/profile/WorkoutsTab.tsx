@@ -1,11 +1,19 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-native'
-import { useFocusEffect } from 'expo-router'
+import { router, useFocusEffect } from 'expo-router'
 import { RefreshCcw } from 'lucide-react-native'
 
 import { useTheme } from '@/theme'
 import { FluidTabs, StatusScreen, type FluidTabOption } from '@/components/ui'
-import { fetchMyWorkouts, type MyWorkout, type MyWorkoutsFilter } from '@/lib/workouts'
+import { CommentsSheet, WorkoutCard } from '@/components/workout'
+import {
+  fetchFavoriteWorkouts,
+  fetchMyWorkouts,
+  setWorkoutLiked,
+  type FeedWorkout,
+  type MyWorkout,
+  type MyWorkoutsFilter,
+} from '@/lib/workouts'
 import { useAsyncData } from '@/hooks/useAsyncData'
 import { MyWorkoutCard } from './MyWorkoutCard'
 
@@ -15,46 +23,61 @@ const VISIBILITY_OPTIONS: FluidTabOption<MyWorkoutsFilter>[] = [
   { value: 'followers', label: 'Seguidores' },
   { value: 'draft', label: 'Borradores' },
   { value: 'private', label: 'Privados' },
+  { value: 'favorites', label: 'Favoritos' },
 ]
 
 interface WorkoutsTabProps {
   userId: string
 }
 
-// Tab "Workouts" del perfil: los workouts que generó el usuario, filtrados
-// por visibilidad — puerto de la sección "Tus workouts" de
+// Tab "Workouts" del perfil: los workouts del usuario, filtrados por
+// visibilidad — puerto de la sección "Tus workouts" de
 // src/app/(app)/profile/page.tsx (apps/web). Crear workout nuevo vive en el
-// botón central del tab bar (ver app/(tabs)/_layout.tsx), no acá — esta
-// pantalla solo lista/edita/borra los que ya existen.
+// botón central del tab bar (ver app/(tabs)/_layout.tsx), no acá.
+//
+// "Favoritos" es un filtro más de la misma fila, pero una fuente de datos
+// distinta: no son los workouts que CREÓ el usuario (fetchMyWorkouts,
+// siempre .eq('user_id', userId)) sino los que LIKEÓ (fetchFavoriteWorkouts,
+// de cualquier autor) — por eso usa <WorkoutCard>, la genérica del feed que
+// sabe mostrar o no los botones de editar/borrar según ownership, en vez de
+// <MyWorkoutCard> (que asume que todo lo que lista es propio).
 export function WorkoutsTab({ userId }: WorkoutsTabProps) {
   const theme = useTheme()
   const [filter, setFilter] = useState<MyWorkoutsFilter>('all')
+  const isFavorites = filter === 'favorites'
+
   const {
     data: workouts,
-    loading,
-    error,
-    reload: load,
-  } = useAsyncData<MyWorkout[]>(() => fetchMyWorkouts(userId, filter), [userId, filter], 'No se pudieron cargar tus workouts')
+    loading: workoutsLoading,
+    error: workoutsError,
+    reload: loadWorkouts,
+  } = useAsyncData<MyWorkout[]>(
+    () => (isFavorites ? null : fetchMyWorkouts(userId, filter)),
+    [userId, filter],
+    'No se pudieron cargar tus workouts'
+  )
 
-  // useFocusEffect (no solo el fetch inicial de useAsyncData) para que la
-  // lista se refresque sola al volver de editar un workout — el editor es un
-  // push encima de este stack (mismo criterio que profile.tsx con
-  // "Editar información"), así que este tab nunca se desmonta y un
-  // useEffect común no se entera del cambio. El borrado ya se manejaba
-  // (MyWorkoutCard llama a onDeleted={load} directo), pero editar no
-  // disparaba ningún reload — la card seguía mostrando título/portada/etc.
-  // viejos hasta salir y volver a entrar al tab a mano.
-  //
-  // `load` en un ref, no como dependencia directa del callback: `load`
-  // cambia de identidad cada vez que cambia `filter` (useAsyncData lo
-  // recrea por sus deps [userId, filter]), y si el callback de
-  // useFocusEffect dependiera de eso, React Navigation lo vuelve a correr
-  // de inmediato por el cambio de referencia, no por un foco real — pedía
-  // la lista dos veces cada vez que tocabas un tab de visibilidad.
-  const loadRef = useRef(load)
+  const {
+    data: favorites,
+    loading: favoritesLoading,
+    error: favoritesError,
+    reload: loadFavorites,
+  } = useAsyncData<FeedWorkout[]>(
+    () => (isFavorites ? fetchFavoriteWorkouts(userId) : null),
+    [userId, filter],
+    'No se pudieron cargar tus favoritos'
+  )
+
+  const [commentsWorkoutId, setCommentsWorkoutId] = useState<string | null>(null)
+  const [likePendingIds, setLikePendingIds] = useState<Set<string>>(new Set())
+
+  // Same pattern as WorkoutsTab.tsx's original useFocusEffect: refresca
+  // (silencioso) al volver de editar/borrar en otra pantalla — sea cual sea
+  // el loader activo en este momento.
+  const loadRef = useRef(isFavorites ? loadFavorites : loadWorkouts)
   useEffect(() => {
-    loadRef.current = load
-  }, [load])
+    loadRef.current = isFavorites ? loadFavorites : loadWorkouts
+  }, [isFavorites, loadFavorites, loadWorkouts])
 
   useFocusEffect(
     useCallback(() => {
@@ -62,29 +85,100 @@ export function WorkoutsTab({ userId }: WorkoutsTabProps) {
     }, [])
   )
 
+  const handleToggleLike = async (workout: FeedWorkout) => {
+    if (likePendingIds.has(workout.id)) return
+    const nextLiked = !workout.is_liked
+    setLikePendingIds((prev) => new Set(prev).add(workout.id))
+
+    try {
+      await setWorkoutLiked(workout.id, userId, nextLiked)
+      // A diferencia del feed (donde "unlike" solo apaga el corazón),
+      // sacarle el like a un workout ACÁ significa que deja de ser
+      // favorito — recargar en vez de mutar en memoria para que la lista
+      // quede consistente con lo que hay en workout_likes.
+      loadFavorites({ silent: true })
+    } finally {
+      setLikePendingIds((prev) => {
+        const next = new Set(prev)
+        next.delete(workout.id)
+        return next
+      })
+    }
+  }
+
+  const handleStartWorkout = (workout: FeedWorkout) => {
+    router.push({ pathname: '/workout/[id]', params: { id: workout.id } })
+  }
+
+  const header = (
+    <View style={styles.listHeader}>
+      <FluidTabs options={VISIBILITY_OPTIONS} value={filter} onChange={setFilter} scrollable />
+    </View>
+  )
+
+  if (isFavorites) {
+    return (
+      <>
+        <FlatList
+          data={favorites ?? []}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.content}
+          ListHeaderComponent={header}
+          renderItem={({ item }) => (
+            <WorkoutCard
+              workout={item}
+              onToggleLike={handleToggleLike}
+              onStart={handleStartWorkout}
+              onOpenComments={(w) => setCommentsWorkoutId(w.id)}
+              likePending={likePendingIds.has(item.id)}
+              viewerId={userId}
+              onDeleted={() => loadFavorites({ silent: true })}
+            />
+          )}
+          ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
+          ListEmptyComponent={
+            favoritesLoading ? (
+              <ActivityIndicator color={theme.colors.primary} style={styles.centered} />
+            ) : favoritesError ? (
+              <StatusScreen
+                fill={false}
+                icon={RefreshCcw}
+                tone="error"
+                title="No pudimos cargar tus favoritos"
+                description={favoritesError}
+                primaryAction={{ label: 'Reintentar', onPress: () => loadFavorites() }}
+              />
+            ) : (
+              <Text style={[styles.emptyText, { color: theme.colors.mutedForeground, fontFamily: theme.fontFamily.regular }]}>
+                Todavía no marcaste ningún workout como favorito.
+              </Text>
+            )
+          }
+        />
+        <CommentsSheet workoutId={commentsWorkoutId} onClose={() => setCommentsWorkoutId(null)} />
+      </>
+    )
+  }
+
   return (
     <FlatList
       data={workouts ?? []}
       keyExtractor={(item) => item.id}
       contentContainerStyle={styles.content}
-      ListHeaderComponent={
-        <View style={styles.listHeader}>
-          <FluidTabs options={VISIBILITY_OPTIONS} value={filter} onChange={setFilter} scrollable />
-        </View>
-      }
-      renderItem={({ item }) => <MyWorkoutCard workout={item} onDeleted={load} />}
+      ListHeaderComponent={header}
+      renderItem={({ item }) => <MyWorkoutCard workout={item} onDeleted={loadWorkouts} />}
       ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
       ListEmptyComponent={
-        loading ? (
+        workoutsLoading ? (
           <ActivityIndicator color={theme.colors.primary} style={styles.centered} />
-        ) : error ? (
+        ) : workoutsError ? (
           <StatusScreen
             fill={false}
             icon={RefreshCcw}
             tone="error"
             title="No pudimos cargar tus workouts"
-            description={error}
-            primaryAction={{ label: 'Reintentar', onPress: load }}
+            description={workoutsError}
+            primaryAction={{ label: 'Reintentar', onPress: loadWorkouts }}
           />
         ) : (
           <Text style={[styles.emptyText, { color: theme.colors.mutedForeground, fontFamily: theme.fontFamily.regular }]}>

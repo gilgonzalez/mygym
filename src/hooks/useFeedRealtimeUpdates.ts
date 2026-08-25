@@ -50,6 +50,11 @@ export function useFeedRealtimeUpdates({
           const row = payload.new as (DbWorkoutRow & { cover?: string | null; estimated_time?: number | null }) | null | undefined
           if (!row) return
 
+          // Un workout recién insertado nunca puede estar ya en tus favoritos
+          // (todavía no tuviste tiempo de likearlo) — el aviso de "N nuevos"
+          // no aplica a este filtro.
+          if (filter === 'favorites') return
+
           if (row.visibility !== 'public' && row.visibility !== 'followers') return
           if (!row.created_at) return
           if (newestCreatedAt && new Date(row.created_at).getTime() <= new Date(newestCreatedAt).getTime()) return

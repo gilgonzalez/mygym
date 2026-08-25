@@ -4,11 +4,11 @@ import Link from 'next/link'
 import { useAuthStore } from '@/store/authStore'
 import { useLogout } from '@/hooks/useLogout'
 import { Button } from '@/components/ui/button'
-import { User, LogIn, UserPlus, LogOut, Settings, Flame, Trophy, Timer, Dumbbell, Medal, FileEdit, Crown, Sparkles, Users, ShieldCheck, Inbox } from 'lucide-react'
+import { User, LogIn, UserPlus, LogOut, Settings, Flame, Trophy, Timer, Dumbbell, Medal, FileEdit, Crown, Sparkles, Users, ShieldCheck, Inbox, Heart } from 'lucide-react'
 import { Progress } from '@/components/ui/progress'
 import { ActivityHeatmap } from '@/components/profile/ActivityHeatmap'
 import { useState } from 'react'
-import { getUserWorkoutsAction } from '@/app/actions/workout/list'
+import { getUserWorkoutsAction, getFavoriteWorkoutsAction } from '@/app/actions/workout/list'
 import { getFollowOverviewAction } from '@/app/actions/user/follows'
 import { getUserStatsAction } from '@/app/actions/user/getStats'
 import { ProfileSocialSheet } from '@/components/profile/ProfileSocialSheet'
@@ -42,6 +42,7 @@ const workoutFilters = [
   { value: 'private', label: 'Privados' },
   { value: 'followers', label: 'Seguidores' },
   { value: 'draft', label: 'Borradores' },
+  { value: 'favorites', label: 'Favoritos' },
 ] as const
 
 export default function ProfilePage() {
@@ -59,6 +60,18 @@ export default function ProfilePage() {
       return res.success && res.data ? res.data : []
     },
     enabled: !!user?.id
+  })
+
+  // "Favoritos" no es un subconjunto de `workouts` (que son solo los que el
+  // usuario creó) — son workouts de cualquier autor que likeó, así que es
+  // una lista aparte. Lazy: solo se pide la primera vez que se abre el tab.
+  const { data: favoriteWorkouts = [], isLoading: favoritesLoading } = useQuery({
+    queryKey: ['favoriteWorkouts', user?.id],
+    queryFn: async () => {
+      const res = await getFavoriteWorkoutsAction()
+      return res.success && res.data ? res.data : []
+    },
+    enabled: !!user?.id && filter === 'favorites'
   })
 
   const { data: stats, isLoading: statsLoading } = useQuery({
@@ -234,10 +247,12 @@ export default function ProfilePage() {
     </div>
   )
 
-  const filteredWorkouts = workouts.filter(w => {
-    if (filter === 'all') return true
-    return w.visibility === filter
-  })
+  const filteredWorkouts = filter === 'favorites'
+    ? favoriteWorkouts
+    : workouts.filter(w => {
+        if (filter === 'all') return true
+        return w.visibility === filter
+      })
 
   const isProfileLoading = statsLoading || (workoutsLoading && workouts.length === 0) || socialLoading
 
@@ -486,7 +501,7 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {workoutsLoading ? (
+        {(filter === 'favorites' ? favoritesLoading : workoutsLoading) ? (
              <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                 {[1, 2, 3].map((i) => (
                     <SimplifiedWorkoutCardSkeleton key={i} />
@@ -499,6 +514,15 @@ export default function ProfilePage() {
                   <WorkoutCard workout={workout} variant="simplified" />
                 </div>
               ))}
+            </div>
+        ) : filter === 'favorites' ? (
+            <div className="rounded-[28px] border border-dashed border-white/10 bg-white/[0.03] py-14 text-center">
+                <Heart className="mx-auto mb-4 h-12 w-12 text-muted-foreground/50" />
+                <h3 className="text-lg font-semibold">Aun no tienes favoritos</h3>
+                <p className="mb-4 text-sm text-muted-foreground">Toca el corazon de un workout en el feed para guardarlo aqui.</p>
+                <Link href="/feed">
+                    <Button variant="outline" size="sm" className="rounded-xl">Explorar el feed</Button>
+                </Link>
             </div>
         ) : (
             <div className="rounded-[28px] border border-dashed border-white/10 bg-white/[0.03] py-14 text-center">

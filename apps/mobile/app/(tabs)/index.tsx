@@ -3,7 +3,7 @@ import { router, useFocusEffect } from 'expo-router'
 import { ActivityIndicator, FlatList, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Animated, { FadeInDown } from 'react-native-reanimated'
-import { RefreshCcw, Search, TrendingUp, Users } from 'lucide-react-native'
+import { Heart, RefreshCcw, Search, TrendingUp, Users } from 'lucide-react-native'
 
 import { useSession } from '@/lib/session'
 import { useTheme } from '@/theme'
@@ -22,10 +22,11 @@ import {
 // garantizada por <Stack.Protected guard={!!session}> en el layout raíz, así
 // que a diferencia del viejo app/index.tsx esta pantalla no necesita
 // resolver "¿hay sesión o no?" ella misma, solo leerla con useSession().
-const SORT_OPTIONS: SegmentedOption<'newest' | 'popular' | 'following'>[] = [
+const SORT_OPTIONS: SegmentedOption<'newest' | 'popular' | 'following' | 'favorites'>[] = [
   { value: 'newest', label: 'Nuevo' },
   { value: 'popular', label: 'Popular', icon: TrendingUp },
   { value: 'following', label: 'Mi círculo', icon: Users },
+  { value: 'favorites', label: 'Favoritos', icon: Heart },
 ]
 
 export default function FeedScreen() {
@@ -67,10 +68,11 @@ export default function FeedScreen() {
 
   // El SegmentedControl trabaja con un solo valor activo; lo derivamos de
   // (sortBy, filter) y lo traducimos de vuelta al cambiar.
-  const activeSegment = filter === 'following' ? 'following' : sortBy === 'popular' ? 'popular' : 'newest'
-  const handleSegmentChange = (next: 'newest' | 'popular' | 'following') => {
-    if (next === 'following') {
-      setFilter('following')
+  const activeSegment =
+    filter === 'following' ? 'following' : filter === 'favorites' ? 'favorites' : sortBy === 'popular' ? 'popular' : 'newest'
+  const handleSegmentChange = (next: 'newest' | 'popular' | 'following' | 'favorites') => {
+    if (next === 'following' || next === 'favorites') {
+      setFilter(next)
       setSortBy('newest')
     } else {
       setFilter('all')
@@ -243,7 +245,7 @@ export default function FeedScreen() {
         />
 
         <View style={styles.tabs}>
-          <SegmentedControl options={SORT_OPTIONS} value={activeSegment} onChange={handleSegmentChange} />
+          <SegmentedControl options={SORT_OPTIONS} value={activeSegment} onChange={handleSegmentChange} scrollable />
         </View>
       </View>
 
@@ -304,6 +306,8 @@ export default function FeedScreen() {
                   ? 'No encontramos resultados para tu búsqueda'
                   : filter === 'following'
                   ? 'Todavía no hay workouts de tu círculo'
+                  : filter === 'favorites'
+                  ? 'Todavía no tenés favoritos'
                   : 'Todavía no hay workouts públicos'}
               </Text>
             </View>

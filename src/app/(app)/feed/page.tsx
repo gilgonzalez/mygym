@@ -5,6 +5,7 @@ import WorkoutCard from '@/components/WorkoutCard'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
+  Heart,
   Loader2,
   RefreshCcw,
   Search,
@@ -168,7 +169,7 @@ export default function Page() {
             <div className="space-y-2">
               <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-600 dark:text-emerald-400">
                 <Sparkles className="h-3.5 w-3.5" />
-                {filter === 'following' ? 'Mi circulo' : 'Feed publico'}
+                {filter === 'following' ? 'Mi circulo' : filter === 'favorites' ? 'Favoritos' : 'Feed publico'}
               </div>
               <div>
                 <h1 className="bg-gradient-to-r from-green-500 via-green-600 to-slate-900 bg-clip-text text-2xl font-bold tracking-tight text-transparent dark:from-emerald-400 dark:to-slate-300 sm:text-3xl">
@@ -225,6 +226,18 @@ export default function Page() {
                 >
                   <Users className="mr-1 h-3.5 w-3.5" />
                   Mi circulo
+                </Button>
+                <Button
+                  variant={filter === 'favorites' ? 'default' : 'ghost'}
+                  size="sm"
+                  className="h-8 rounded-full px-3 text-xs sm:text-sm"
+                  onClick={() => {
+                    setFilter('favorites')
+                    setSortBy('newest')
+                  }}
+                >
+                  <Heart className="mr-1 h-3.5 w-3.5" />
+                  Favoritos
                 </Button>
               </div>
             </div>
@@ -318,6 +331,8 @@ export default function Page() {
                     ? 'No encontramos resultados para tu busqueda'
                     : filter === 'following'
                     ? 'Aun no hay workouts de tu circulo'
+                    : filter === 'favorites'
+                    ? 'Aun no tienes favoritos'
                     : 'Todavia no hay workouts publicos'}
                 </h2>
                 <p className="mt-1 text-sm text-muted-foreground">
@@ -325,9 +340,11 @@ export default function Page() {
                     ? 'Prueba con otro titulo, creador o tag para seguir explorando.'
                     : filter === 'following'
                     ? 'Empieza a seguir a gente o crea tu propio workout para verlo aqui.'
+                    : filter === 'favorites'
+                    ? 'Toca el corazon de un workout para guardarlo aqui.'
                     : 'Cuando haya workouts visibles aqui, apareceran en este feed.'}
                 </p>
-                {(debouncedSearch || filter === 'following') && (
+                {(debouncedSearch || filter === 'following' || filter === 'favorites') && (
                   <Button
                     variant="ghost"
                     className="mt-4"

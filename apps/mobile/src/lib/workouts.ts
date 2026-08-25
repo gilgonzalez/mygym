@@ -17,7 +17,7 @@ import { API_BASE, getFreshAccessToken } from './apiClient'
 type DbUser = Database['public']['Tables']['users']['Row']
 
 export type FeedSort = 'newest' | 'popular'
-export type FeedFilter = 'all' | 'following'
+export type FeedFilter = 'all' | 'following' | 'favorites'
 
 export type LikePreviewUser = Pick<DbUser, 'id' | 'username' | 'name' | 'avatar_url'>
 
@@ -68,6 +68,20 @@ async function getFollowedUserIds(viewerId: string): Promise<string[]> {
 
   if (error) throw error
   return (data ?? []).map((row) => row.followed_id)
+}
+
+// IDs de los workouts que el usuario marcó como favorito (workout_likes),
+// más recientes primero. RLS en workout_likes ya restringe esto a "auth.uid()
+// = user_id", igual que getLikedWorkoutIds en list.ts (apps/web).
+async function getLikedWorkoutIds(viewerId: string): Promise<string[]> {
+  const { data, error } = await supabase
+    .from('workout_likes')
+    .select('workout_id')
+    .eq('user_id', viewerId)
+    .order('created_at', { ascending: false })
+
+  if (error) throw error
+  return (data ?? []).map((row) => row.workout_id)
 }
 
 async function fetchLikesData(workoutIds: string[], viewerId: string | null) {
@@ -136,11 +150,20 @@ export async function fetchFeedPage({
 
   let query = supabase.from('workouts').select(FEED_SELECT)
 
-  query = query.in('visibility', viewerId ? ['public', 'followers'] : ['public'])
+  if (filter === 'favorites') {
+    // Sin filtro de visibilidad extra: son los workouts que el propio
+    // usuario likeó — si dejaron de ser accesibles, RLS ya los saca solo.
+    if (!viewerId) return { workouts: [], hasMore: false }
+    const likedIds = await getLikedWorkoutIds(viewerId)
+    if (likedIds.length === 0) return { workouts: [], hasMore: false }
+    query = query.in('id', likedIds)
+  } else {
+    query = query.in('visibility', viewerId ? ['public', 'followers'] : ['public'])
 
-  if (filter === 'following' && viewerId) {
-    const followedIds = await getFollowedUserIds(viewerId)
-    query = query.in('user_id', [...followedIds, viewerId])
+    if (filter === 'following' && viewerId) {
+      const followedIds = await getFollowedUserIds(viewerId)
+      query = query.in('user_id', [...followedIds, viewerId])
+    }
   }
 
   const term = search.trim()
@@ -314,7 +337,7 @@ export async function fetchWorkoutById(id: string): Promise<WorkoutDetail> {
 // visibilidad en la query en vez de traer todo y filtrar en memoria: son
 // los workouts del propio usuario, pero no hay motivo para bajar los que no
 // se van a mostrar.
-export type MyWorkoutsFilter = 'all' | WorkoutVisibility
+export type MyWorkoutsFilter = 'all' | WorkoutVisibility | 'favorites'
 
 export interface MyWorkout {
   id: string
@@ -333,7 +356,7 @@ const MY_WORKOUTS_SELECT = `
   id, title, cover, difficulty, estimated_time, visibility, tags, created_at
 `
 
-export async function fetchMyWorkouts(userId: string, filter: MyWorkoutsFilter): Promise<MyWorkout[]> {
+export async function fetchMyWorkouts(userId: string, filter: 'all' | WorkoutVisibility): Promise<MyWorkout[]> {
   let query = supabase.from('workouts').select(MY_WORKOUTS_SELECT).eq('user_id', userId)
   if (filter !== 'all') query = query.eq('visibility', filter)
 
@@ -351,6 +374,40 @@ export async function fetchMyWorkouts(userId: string, filter: MyWorkoutsFilter):
   return rows.map((row) => ({
     ...row,
     likes_count: likesCounts[row.id] ?? 0,
+    comments_count: commentsCounts[row.id] ?? 0,
+  }))
+}
+
+// Workouts que el usuario logueado marcó como favorito — puerto de
+// getFavoriteWorkoutsAction (apps/web). A diferencia de fetchMyWorkouts, acá
+// no filtra por user_id: son workouts de CUALQUIER autor que estén en
+// workout_likes con user_id = viewerId, así que la card los renderiza con
+// <WorkoutCard> (la genérica del feed, que sabe mostrar o no editar/borrar
+// según ownership) en vez de <MyWorkoutCard> (que asume que todo es propio).
+export async function fetchFavoriteWorkouts(viewerId: string): Promise<FeedWorkout[]> {
+  const likedIds = await getLikedWorkoutIds(viewerId)
+  if (likedIds.length === 0) return []
+
+  const { data, error } = await supabase.from('workouts').select(FEED_SELECT).in('id', likedIds)
+  if (error) throw error
+
+  const rows = (data ?? []) as unknown as Omit<FeedWorkout, 'likes_count' | 'is_liked' | 'comments_count' | 'likes_preview'>[]
+  const byId = new Map(rows.map((row) => [row.id, row]))
+  // El orden de la query no respeta el de likedIds (más recientes primero) —
+  // se reordena acá para listar por fecha de like, no de creación.
+  const orderedRows = likedIds.map((id) => byId.get(id)).filter((row): row is (typeof rows)[number] => Boolean(row))
+
+  const workoutIds = orderedRows.map((row) => row.id)
+  const [{ likesCounts, likedByViewer, likesPreviews }, commentsCounts] = await Promise.all([
+    fetchLikesData(workoutIds, viewerId),
+    fetchCommentsCounts(workoutIds),
+  ])
+
+  return orderedRows.map((row) => ({
+    ...row,
+    likes_count: likesCounts[row.id] ?? 0,
+    is_liked: likedByViewer.has(row.id),
+    likes_preview: likesPreviews[row.id] ?? [],
     comments_count: commentsCounts[row.id] ?? 0,
   }))
 }

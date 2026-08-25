@@ -5,7 +5,7 @@ import type { FollowStatus } from '@/types/social'
 import { Workout, WorkoutLikerPreview } from '@/types/workout/composite'
 
 export type FeedSort = 'newest' | 'popular'
-export type FeedFilter = 'all' | 'following'
+export type FeedFilter = 'all' | 'following' | 'favorites'
 
 export interface GetWorkoutsParams {
   page?: number
@@ -68,6 +68,24 @@ async function getFollowedUserIds(
   if (error) throw error
 
   return (data ?? []).map((row) => row.followed_id)
+}
+
+// IDs de los workouts que el usuario marcó como favorito (workout_likes),
+// más recientes primero. RLS en workout_likes ya restringe esto a "auth.uid()
+// = user_id", así que no hace falta validar nada más acá.
+async function getLikedWorkoutIds(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  viewerId: string
+): Promise<string[]> {
+  const { data, error } = await supabase
+    .from('workout_likes')
+    .select('workout_id')
+    .eq('user_id', viewerId)
+    .order('created_at', { ascending: false })
+
+  if (error) throw error
+
+  return (data ?? []).map((row) => row.workout_id)
 }
 
 async function buildWorkoutLikesData(
@@ -224,9 +242,13 @@ async function fetchWorkoutWindow(
     to: number
     filter: FeedFilter
     sortBy: FeedSort
+    // Ya resueltos una sola vez en getWorkoutsAction (evita repetir la
+    // consulta a workout_likes en cada ventana del loop de paginación de
+    // abajo).
+    likedWorkoutIds?: string[]
   }
 ) {
-  const { from, to, filter, sortBy } = opts
+  const { from, to, filter, sortBy, likedWorkoutIds } = opts
   const SELECT_FIELDS = `
     id, user_id, title, description, visibility, created_at, updated_at,
     rating, difficulty, estimated_time, exp_earned, cover, stats, tags,
@@ -245,18 +267,27 @@ async function fetchWorkoutWindow(
     .from('workouts')
     .select(SELECT_FIELDS)
 
-  const visibilities: string[] = []
-  if (user) {
-    visibilities.push('public', 'followers')
+  if (filter === 'favorites') {
+    // Sin filtro extra de visibilidad: son los workouts que el propio
+    // usuario likeó, así que si dejaron de ser accesibles (el dueño lo puso
+    // privado, se dejó de seguir) RLS ya los saca solo. Incluye los propios
+    // workouts del usuario si se likeó a sí mismo.
+    if (!likedWorkoutIds || likedWorkoutIds.length === 0) return []
+    query = query.in('id', likedWorkoutIds)
   } else {
-    visibilities.push('public')
-  }
-  query = query.in('visibility', visibilities)
+    const visibilities: string[] = []
+    if (user) {
+      visibilities.push('public', 'followers')
+    } else {
+      visibilities.push('public')
+    }
+    query = query.in('visibility', visibilities)
 
-  if (filter === 'following' && user) {
-    const followedIds = await getFollowedUserIds(supabase, user.id)
-    const allowedUserIds = [...followedIds, user.id]
-    query = query.in('user_id', allowedUserIds)
+    if (filter === 'following' && user) {
+      const followedIds = await getFollowedUserIds(supabase, user.id)
+      const allowedUserIds = [...followedIds, user.id]
+      query = query.in('user_id', allowedUserIds)
+    }
   }
 
   if (sortBy === 'popular') {
@@ -294,6 +325,10 @@ export async function getWorkoutsAction(
     const windowSize = pageSize * WINDOW_MULTIPLIER
     const currentWindowStart = (page - 1) * pageSize
 
+    // Resuelto una sola vez acá afuera del loop de ventanas: fetchWorkoutWindow
+    // lo necesita en cada iteración, pero es la misma lista de IDs siempre.
+    const likedWorkoutIds = filter === 'favorites' && user ? await getLikedWorkoutIds(supabase, user.id) : undefined
+
     const filtered: any[] = []
     let windowIndex = 0
     let totalFetchedWindows = 0
@@ -307,6 +342,7 @@ export async function getWorkoutsAction(
         to,
         filter,
         sortBy,
+        likedWorkoutIds,
       })
 
       const matchingInWindow = raw.filter((w) => matchesSearch(w, normalizedSearch))
@@ -477,6 +513,61 @@ export async function getUserWorkoutsAction(userId: string): Promise<{ success: 
     return { success: true, data: workouts }
   } catch (error: any) {
     console.error('Error fetching user workouts:', error)
+    return { success: false, error: error.message }
+  }
+}
+
+// Workouts que el usuario logueado marcó como favorito — usado por el tab
+// "Favoritos" de perfil (getUserWorkoutsAction de arriba trae los workouts
+// CREADOS por userId; acá es al revés, workouts de CUALQUIER autor que estén
+// en workout_likes con user_id = viewer). Sin parámetro: siempre son los
+// favoritos de quien hace el pedido, nunca los de otro usuario — RLS en
+// workout_likes ya lo garantiza, pero no tiene sentido pedirlo "para" otro id.
+export async function getFavoriteWorkoutsAction(): Promise<{ success: boolean, data?: Workout[], error?: string }> {
+  try {
+    const supabase = await createClient()
+    const {
+      data: { user: viewer },
+    } = await supabase.auth.getUser()
+
+    if (!viewer) {
+      return { success: true, data: [] }
+    }
+
+    const likedWorkoutIds = await getLikedWorkoutIds(supabase, viewer.id)
+    if (likedWorkoutIds.length === 0) {
+      return { success: true, data: [] }
+    }
+
+    const { data, error } = await supabase
+      .from('workouts')
+      .select(`
+        *,
+        challenge:workout_challenges(*),
+        user:users!user_id(id, username, name, avatar_url),
+        workout_sections(
+          order_index,
+          sections(
+            *,
+            section_exercises(count)
+          )
+        )
+      `)
+      .in('id', likedWorkoutIds)
+
+    if (error) throw error
+
+    // El orden de la query no respeta el de likedWorkoutIds (más recientes
+    // primero) — se reordena acá para que "Favoritos" liste por fecha de
+    // like, no por fecha de creación del workout.
+    const byId = new Map(((data as any[]) ?? []).map((w) => [w.id, w]))
+    const orderedRaw = likedWorkoutIds.map((id) => byId.get(id)).filter(Boolean)
+
+    const workouts = await buildWorkoutsWithMetadata(supabase, viewer, orderedRaw)
+
+    return { success: true, data: workouts }
+  } catch (error: any) {
+    console.error('Error fetching favorite workouts:', error)
     return { success: false, error: error.message }
   }
 }
