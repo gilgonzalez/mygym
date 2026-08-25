@@ -14,11 +14,13 @@ import { supabase } from './supabase'
 // Alcance v1 de este editor en mobile (decisión deliberada, no un olvido):
 // - Sin reto AMRAP/challenge (secciones siempre "linear"/"single" normales).
 //   La web sí lo soporta; portar eso es un scope aparte.
-// - Miniaturas de ejercicios nuevos: foto o GIF (nunca video). El clip de
-//   cámara se convierte a GIF en el dispositivo y se sube a R2 por
-//   /api/upload con el bearer token de supabase (la API de Next acepta
-//   cookie O bearer). Los ejercicios del vault siguen con su thumbnail
-//   de solo lectura.
+// - Miniaturas de ejercicios nuevos: foto o "GIF" (ver thumbnailCapture.ts:
+//   en realidad un clip de video mudo en loop, sin conversión — mejor
+//   calidad que un .gif real). Se sube a R2 por /api/upload con el bearer
+//   token de supabase (la API de Next acepta cookie O bearer), forzando
+//   folder: 'images' aunque el archivo sea video/mp4 por dentro (ver
+//   mediaUpload.ts). Los ejercicios del vault siguen con su thumbnail de
+//   solo lectura.
 // - Sin editor de tutorial (pasos + media) por ejercicio.
 
 export interface ExerciseEditorInput {
@@ -33,6 +35,12 @@ export interface ExerciseEditorInput {
   // workout existente; ausente al crear o al agregar una instancia nueva
   // dentro de una edición (el RPC hace INSERT en vez de UPDATE).
   linkId?: string
+  // Dueño real de la fila en `exercises` (user_id) — junto con `id` decide
+  // si el ejercicio se puede editar acá o queda de solo lectura (ver
+  // isLocked en ExerciseInstanceRow.tsx). No se manda al RPC, es solo para
+  // esta decisión de UI — mismo campo que owner_id en la web
+  // (ExercisesFieldArray.tsx).
+  ownerId?: string | null
   name: string
   description: string
   difficulty: Difficulty
@@ -167,17 +175,19 @@ export async function updateWorkout(workoutId: string, userId: string, input: Wo
 // corta dentro de un sheet).
 export interface VaultExercise {
   id: string
+  userId: string | null
   name: string
   description: string | null
   difficulty: Difficulty | null
   muscleGroups: string[]
   equipment: string[]
   thumbnailUrl: string | null
+  thumbnailMediaId: string | null
 }
 
 const VAULT_SELECT = `
-  id, name, description, difficulty, muscle_group, equipment,
-  thumbnail:media!exercises_thumbnail_media_id_fkey(url)
+  id, user_id, name, description, difficulty, muscle_group, equipment,
+  thumbnail:media!exercises_thumbnail_media_id_fkey(id, url)
 `
 const VAULT_PAGE_SIZE = 30
 
@@ -200,12 +210,14 @@ export async function fetchExerciseVault(userId: string, search: string): Promis
 
   return (data ?? []).map((row) => ({
     id: row.id,
+    userId: row.user_id,
     name: row.name,
     description: row.description,
     difficulty: row.difficulty as Difficulty | null,
     muscleGroups: row.muscle_group ?? [],
     equipment: row.equipment ?? [],
-    thumbnailUrl: (row.thumbnail as { url: string } | null)?.url ?? null,
+    thumbnailUrl: (row.thumbnail as { id: string; url: string } | null)?.url ?? null,
+    thumbnailMediaId: (row.thumbnail as { id: string; url: string } | null)?.id ?? null,
   }))
 }
 
@@ -224,7 +236,7 @@ const EDIT_SELECT = `
       section_exercises(
         id, order_index, type, reps, sets, duration, rest, weight_kg,
         exercises(
-          id, name, description, difficulty, muscle_group, equipment,
+          id, user_id, name, description, difficulty, muscle_group, equipment,
           thumbnail:media!exercises_thumbnail_media_id_fkey(id, url)
         )
       )
@@ -260,6 +272,7 @@ export async function fetchWorkoutForEdit(workoutId: string): Promise<WorkoutEdi
             key: `exercise-${se.id}`,
             id: se.exercises.id as string,
             linkId: se.id as string,
+            ownerId: se.exercises.user_id ?? null,
             name: se.exercises.name as string,
             description: se.exercises.description ?? '',
             difficulty: (se.exercises.difficulty as Difficulty) || 'beginner',

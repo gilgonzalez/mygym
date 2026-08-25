@@ -1,8 +1,9 @@
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native'
+import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { Clock, Dumbbell } from 'lucide-react-native'
 
 import { formatDuration } from '@mygym/shared'
 import { useTheme } from '@/theme'
+import { ThumbnailMedia } from './ThumbnailMedia'
 
 // Fila de ejercicio dentro de una sección — puerto del patrón que se repite
 // en WorkoutOverview.tsx (resumen antes de arrancar) y en ExercisesVault.tsx
@@ -47,7 +48,7 @@ export function ExerciseListItem({
   return (
     <Wrapper onPress={onPress} style={[styles.row, { borderColor: theme.colors.border }]}>
       {thumbnailUrl ? (
-        <Image source={{ uri: thumbnailUrl }} style={[styles.thumb, { borderRadius: theme.radius.md }]} />
+        <ThumbnailMedia uri={thumbnailUrl} style={[styles.thumb, { borderRadius: theme.radius.md }]} />
       ) : (
         <View style={[styles.thumb, styles.thumbFallback, { borderRadius: theme.radius.md, backgroundColor: theme.colors.secondary }]}>
           <Dumbbell size={18} color={theme.colors.mutedForeground} />

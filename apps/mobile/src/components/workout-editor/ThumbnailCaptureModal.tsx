@@ -15,6 +15,9 @@ export type ThumbnailCaptureResult = {
 
 interface ThumbnailCaptureModalProps {
   visible: boolean
+  // false para la portada del workout: se oculta el chip "GIF" y la cámara
+  // queda fija en modo foto (ver ThumbnailField).
+  allowVideo?: boolean
   onClose: () => void
   onCaptured: (result: ThumbnailCaptureResult) => void
 }
@@ -24,12 +27,15 @@ type Phase = 'idle' | 'countdown' | 'recording' | 'processing'
 
 // Modo "gif" = grabar un clip corto y usarlo directo, sin tratamiento —
 // igual que "Enviar como GIF" en WhatsApp (ver thumbnailCapture.ts para el
-// porqué). `mute: true` en CameraView graba sin audio (no hace falta:
-// el clip se va a reproducir siempre muteado), así que tampoco hace falta
-// permiso de micrófono. El único límite que agregamos es tamaño/duración
-// (maxFileSize/maxDuration), que corta la cámara sola — no hay paso de
-// "procesando" para este modo, la captura es el resultado final.
-export function ThumbnailCaptureModal({ visible, onClose, onCaptured }: ThumbnailCaptureModalProps) {
+// porqué: se probó generar un .gif real con extracción de frames + paleta y
+// la calidad quedaba muy por debajo de esto — el formato GIF tiene un techo
+// bajo, 256 colores sin compresión de movimiento). `mute: true` en
+// CameraView graba sin audio (no hace falta: el clip se va a reproducir
+// siempre muteado), así que tampoco hace falta permiso de micrófono. El
+// único límite que agregamos es tamaño/duración (maxFileSize/maxDuration),
+// que corta la cámara sola — no hay paso de "procesando" para este modo, la
+// captura es el resultado final.
+export function ThumbnailCaptureModal({ visible, allowVideo = true, onClose, onCaptured }: ThumbnailCaptureModalProps) {
   const theme = useTheme()
   const insets = useSafeAreaInsets()
   const cameraRef = useRef<CameraView>(null)
@@ -55,10 +61,11 @@ export function ThumbnailCaptureModal({ visible, onClose, onCaptured }: Thumbnai
       recordingLock.current = false
       return
     }
+    if (!allowVideo) setMode('photo')
     if (!cameraPermission?.granted) {
       void requestCameraPermission()
     }
-  }, [visible, cameraPermission?.granted, requestCameraPermission])
+  }, [visible, allowVideo, cameraPermission?.granted, requestCameraPermission])
 
   useEffect(() => {
     if (phase !== 'countdown' || countdown === null) return
@@ -175,7 +182,7 @@ export function ThumbnailCaptureModal({ visible, onClose, onCaptured }: Thumbnai
                 <X size={20} color="#fff" />
               </Pressable>
               <Text style={[styles.topHint, { fontFamily: theme.fontFamily.semibold }]}>
-                {mode === 'gif' ? `GIF · máx. ${THUMBNAIL_VIDEO_MAX_SECONDS}s` : 'Foto'}
+                {allowVideo && mode === 'gif' ? `GIF · máx. ${THUMBNAIL_VIDEO_MAX_SECONDS}s` : 'Foto'}
               </Text>
               <Pressable
                 onPress={() => setFacing((value) => (value === 'back' ? 'front' : 'back'))}
@@ -214,20 +221,22 @@ export function ThumbnailCaptureModal({ visible, onClose, onCaptured }: Thumbnai
             ) : null}
 
             <View style={[styles.bottom, { paddingBottom: insets.bottom + 18 }]}>
-              <View style={styles.modeRow}>
-                {(['photo', 'gif'] as const).map((value) => (
-                  <Pressable
-                    key={value}
-                    onPress={() => !busy && setMode(value)}
-                    disabled={busy}
-                    style={[styles.modeChip, mode === value && styles.modeChipActive]}
-                  >
-                    <Text style={[styles.modeChipText, mode === value && styles.modeChipTextActive]}>
-                      {value === 'photo' ? 'Foto' : 'GIF'}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
+              {allowVideo ? (
+                <View style={styles.modeRow}>
+                  {(['photo', 'gif'] as const).map((value) => (
+                    <Pressable
+                      key={value}
+                      onPress={() => !busy && setMode(value)}
+                      disabled={busy}
+                      style={[styles.modeChip, mode === value && styles.modeChipActive]}
+                    >
+                      <Text style={[styles.modeChipText, mode === value && styles.modeChipTextActive]}>
+                        {value === 'photo' ? 'Foto' : 'GIF'}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+              ) : null}
 
               {phase === 'recording' ? (
                 <Pressable onPress={handleStop} style={styles.stopButton}>

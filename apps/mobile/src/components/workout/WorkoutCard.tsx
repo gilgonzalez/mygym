@@ -69,7 +69,7 @@ export default function WorkoutCard({
         onPress: async () => {
           setDeleting(true)
           try {
-            await deleteWorkout(workout.id, viewerId!)
+            await deleteWorkout(workout.id)
             onDeleted?.(workout.id)
           } catch (err: any) {
             setDeleting(false)

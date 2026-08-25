@@ -6,7 +6,6 @@ import { Clock, Heart, MessageSquare, SquarePen, Trash2 } from 'lucide-react-nat
 
 import { formatCount, formatDuration, timeAgo, visibilityLabelMap } from '@mygym/shared'
 import { useTheme } from '@/theme'
-import { useSession } from '@/lib/session'
 import { Badge, Card } from '@/components/ui'
 import { DifficultyBadge, TagList } from '@/components/workout'
 import { deleteWorkout, type MyWorkout } from '@/lib/workouts'
@@ -30,7 +29,6 @@ interface MyWorkoutCardProps {
 // mostrar los botones).
 export function MyWorkoutCard({ workout, onDeleted }: MyWorkoutCardProps) {
   const theme = useTheme()
-  const { session } = useSession()
   const visibilityColor = VISIBILITY_COLORS[workout.visibility]
   const [deleting, setDeleting] = useState(false)
 
@@ -43,7 +41,7 @@ export function MyWorkoutCard({ workout, onDeleted }: MyWorkoutCardProps) {
         onPress: async () => {
           setDeleting(true)
           try {
-            await deleteWorkout(workout.id, session!.user.id)
+            await deleteWorkout(workout.id)
             onDeleted()
           } catch (err: any) {
             setDeleting(false)

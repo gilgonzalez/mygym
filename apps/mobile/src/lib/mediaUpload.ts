@@ -2,9 +2,8 @@ import { File } from 'expo-file-system'
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator'
 
 import { supabase } from './supabase'
+import { API_BASE, getFreshAccessToken } from './apiClient'
 import type { ExerciseEditorInput, SectionEditorInput } from './workoutEditor'
-
-const API_BASE = (process.env.EXPO_PUBLIC_API_URL ?? 'https://mygymgigo.vercel.app').replace(/\/$/, '')
 
 export function isLocalMediaUri(uri: string | null | undefined): uri is string {
   if (!uri) return false
@@ -25,41 +24,6 @@ export async function prepareStillThumbnail(uri: string): Promise<{ uri: string;
   return { uri: resized.uri, mimeType: 'image/jpeg' }
 }
 
-// Margen antes de que expire el access_token para forzar un refresh
-// proactivo — completar todo el flujo de la cámara (permisos, countdown,
-// grabar, volver al form) tranquilamente toma varios minutos, y si la
-// sesión venía por vencer justo en ese rato, getSession() puede devolver
-// igual el token viejo (el auto-refresh de supabase-js corre en background,
-// no está garantizado que ya haya corrido para este momento puntual). Sin
-// esto, /api/upload devuelve 401 "No autorizado" recién en el POST — muy
-// tarde para el usuario, que ya grabó el clip.
-const SESSION_REFRESH_MARGIN_SECONDS = 120
-
-async function getFreshAccessToken(): Promise<string> {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
-  if (!session?.access_token) {
-    throw new Error('No hay sesión para subir la miniatura')
-  }
-
-  const expiresInSeconds = (session.expires_at ?? 0) - Date.now() / 1000
-  if (expiresInSeconds > SESSION_REFRESH_MARGIN_SECONDS) {
-    return session.access_token
-  }
-
-  const { data: refreshed, error: refreshError } = await supabase.auth.refreshSession()
-  if (refreshError || !refreshed.session?.access_token) {
-    // Si el refresh falla igual probamos con el token que había — puede que
-    // el margen haya sido demasiado conservador y el token viejo siga
-    // sirviendo; si no sirve, el 401 del server ahora sí trae detalle real
-    // (ver el catch de más abajo).
-    return session.access_token
-  }
-
-  return refreshed.session.access_token
-}
-
 async function uploadLocalThumbnail(localUri: string, mimeType: string, userId: string) {
   const isVideo = mimeType.startsWith('video/')
   const accessToken = await getFreshAccessToken()
@@ -73,7 +37,14 @@ async function uploadLocalThumbnail(localUri: string, mimeType: string, userId: 
       'Content-Type': 'application/json',
       Authorization: `Bearer ${accessToken}`,
     },
-    body: JSON.stringify({ filename, contentType: mimeType }),
+    // folder: 'images' explícito — esta función solo sube miniaturas
+    // (de ejercicio o portada), nunca "video real" para la biblioteca de
+    // media. La miniatura "GIF" es video/mp4 por dentro (ver
+    // thumbnailCapture.ts), pero conceptualmente sigue siendo una
+    // miniatura: sin este override /api/upload la mandaría a videos/ por
+    // el content-type, mezclando esta carpeta con archivos que sí son
+    // video de verdad.
+    body: JSON.stringify({ filename, contentType: mimeType, folder: 'images' }),
   })
 
   if (!signRes.ok) {
@@ -100,20 +71,25 @@ async function uploadLocalThumbnail(localUri: string, mimeType: string, userId: 
     key: string
   }
 
-  const fileRes = await fetch(localUri)
-  const blob = await fileRes.blob()
-
-  const putRes = await fetch(url, {
-    method: 'PUT',
+  // Antes: fetch(localUri) + .blob() + fetch(url, { method: 'PUT', body: blob }).
+  // React Native no tiene un Blob nativo real — su Response.blob() copia la
+  // respuesta al blob store nativo y la vuelve a leer codificada en base64
+  // (de ahí el warning de perf, y por qué era lento para el clip de la
+  // "GIF"). file.upload() (expo-file-system, API nueva) sube el archivo
+  // directo desde disco sin pasar por Blob/base64 — más rápido y sin el
+  // warning. uploadType por default es BINARY_CONTENT (body crudo con el
+  // Content-Type indicado), justo lo que espera una PUT presignada de R2.
+  const file = new File(localUri)
+  const uploadResult = await file.upload(url, {
+    httpMethod: 'PUT',
     headers: { 'Content-Type': mimeType },
-    body: blob,
   })
 
-  if (!putRes.ok) {
-    throw new Error('No se pudo subir la miniatura')
+  if (uploadResult.status < 200 || uploadResult.status >= 300) {
+    throw new Error(`No se pudo subir la miniatura (${uploadResult.status})`)
   }
 
-  const size = blob.size || new File(localUri).size || null
+  const size = file.size ?? null
 
   const { data, error } = await supabase
     .from('media')
@@ -141,6 +117,19 @@ async function uploadLocalThumbnail(localUri: string, mimeType: string, userId: 
 // está disponible en vez de adivinar por extensión.
 function guessMimeType(uri: string): 'video/mp4' | 'image/jpeg' {
   return /\.(mp4|mov|m4v)($|\?)/i.test(uri) ? 'video/mp4' : 'image/jpeg'
+}
+
+// Portada del workout — mismo patrón lazy-upload-al-guardar que la web
+// (uploadFile en create/page.tsx: el picker deja una URI/blob local y recién
+// se sube cuando el usuario confirma el guardado). Siempre es una imagen fija
+// (ver WorkoutCoverField.tsx, cabecera del editor — su picker nunca ofrece
+// GIF/video), por eso el mimeType queda fijo en 'image/jpeg' —
+// prepareStillThumbnail ya normaliza cualquier foto elegida a ese formato
+// antes de que llegue acá.
+export async function persistWorkoutCover(cover: string | null, userId: string): Promise<string | null> {
+  if (!isLocalMediaUri(cover)) return cover
+  const uploaded = await uploadLocalThumbnail(cover, 'image/jpeg', userId)
+  return uploaded.url
 }
 
 export async function persistExerciseThumbnails(

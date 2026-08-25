@@ -39,13 +39,21 @@ export function createExerciseFromVault(exercise: VaultExercise): ExerciseEditor
   return {
     key: generateLocalId('exercise'),
     id: exercise.id,
+    ownerId: exercise.userId,
     name: exercise.name,
     description: exercise.description || '',
     difficulty: exercise.difficulty || 'beginner',
     muscleGroups: exercise.muscleGroups,
     equipment: exercise.equipment,
     thumbnailUrl: exercise.thumbnailUrl,
-    thumbnailMediaId: null,
+    // Id real de la fila en `media` del ejercicio del vault — hay que
+    // preservarlo (no mandar null): si viaja null pero thumbnail_url sí
+    // tiene valor, resolve_workout_exercise_id crea una fila de `media`
+    // duplicada apuntando a la misma URL en cada guardado (ver ese RPC en
+    // 20260824_..._drop_exercise_instance_columns_and_audio.sql) — basura
+    // que se acumula sin que el thumbnail se vea distinto. Mismo campo que
+    // manda la web en handleAddFromVault (ExercisesFieldArray.tsx).
+    thumbnailMediaId: exercise.thumbnailMediaId,
     // Los ejercicios del vault hoy solo guardan imágenes fijas (no hay
     // captura de GIF ahí todavía), así que esto siempre arranca en null —
     // isVideoThumbnail cae al chequeo por extensión igual si hiciera falta.

@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react'
-import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from 'react-native'
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native'
 import { BottomSheetFlatList } from '@gorhom/bottom-sheet'
 import { Dumbbell, Search } from 'lucide-react-native'
 
 import { useTheme } from '@/theme'
 import { Sheet, TextField } from '@/components/ui'
-import { DifficultyBadge, TagList } from '@/components/workout'
+import { DifficultyBadge, TagList, ThumbnailMedia } from '@/components/workout'
 import { fetchExerciseVault, type VaultExercise } from '@/lib/workoutEditor'
 
 // Picker "Agregar desde vault" — equivalente mobile de ExercisesVault.tsx
@@ -91,7 +91,7 @@ export function ExerciseVaultSheet({ visible, onClose, userId, onSelect }: Exerc
               style={[styles.row, { borderColor: theme.colors.border }]}
             >
               {item.thumbnailUrl ? (
-                <Image source={{ uri: item.thumbnailUrl }} style={[styles.thumb, { borderRadius: theme.radius.md }]} />
+                <ThumbnailMedia uri={item.thumbnailUrl} style={[styles.thumb, { borderRadius: theme.radius.md }]} />
               ) : (
                 <View
                   style={[

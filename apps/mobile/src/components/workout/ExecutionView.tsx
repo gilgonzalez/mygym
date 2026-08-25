@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
-import { Image as ExpoImage } from 'expo-image'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Animated, { FadeIn } from 'react-native-reanimated'
 import * as Haptics from 'expo-haptics'
@@ -19,6 +18,7 @@ import type { WorkoutDetail } from '@/lib/workouts'
 import { announceExercise, playCountdownBeep, playFinishBeep, useSessionCues } from '@/lib/sessionCues'
 import { SessionBackground } from './SessionBackground'
 import { SessionMediaRing } from './SessionMediaRing'
+import { ThumbnailMedia } from './ThumbnailMedia'
 import { ControlButton, PREPARE_SECONDS, ProgressBar, StatCard } from './executionShared'
 
 // Puerto de WorkoutExecutionView.tsx (apps/web) — componente independiente,
@@ -319,7 +319,7 @@ export function ExecutionView({ workout, onExit, onComplete }: ExecutionViewProp
           <View style={styles.upNextCard}>
             <View style={styles.upNextThumb}>
               {upcomingExercise.thumbnail_url ? (
-                <ExpoImage source={{ uri: upcomingExercise.thumbnail_url }} style={StyleSheet.absoluteFill} contentFit="cover" />
+                <ThumbnailMedia uri={upcomingExercise.thumbnail_url} style={StyleSheet.absoluteFill} contentFit="cover" />
               ) : (
                 <Dumbbell size={16} color="rgba(255,255,255,0.35)" />
               )}

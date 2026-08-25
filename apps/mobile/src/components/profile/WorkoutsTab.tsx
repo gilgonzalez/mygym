@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-native'
+import { useFocusEffect } from 'expo-router'
 import { RefreshCcw } from 'lucide-react-native'
 
 import { useTheme } from '@/theme'
@@ -34,6 +35,32 @@ export function WorkoutsTab({ userId }: WorkoutsTabProps) {
     error,
     reload: load,
   } = useAsyncData<MyWorkout[]>(() => fetchMyWorkouts(userId, filter), [userId, filter], 'No se pudieron cargar tus workouts')
+
+  // useFocusEffect (no solo el fetch inicial de useAsyncData) para que la
+  // lista se refresque sola al volver de editar un workout — el editor es un
+  // push encima de este stack (mismo criterio que profile.tsx con
+  // "Editar información"), así que este tab nunca se desmonta y un
+  // useEffect común no se entera del cambio. El borrado ya se manejaba
+  // (MyWorkoutCard llama a onDeleted={load} directo), pero editar no
+  // disparaba ningún reload — la card seguía mostrando título/portada/etc.
+  // viejos hasta salir y volver a entrar al tab a mano.
+  //
+  // `load` en un ref, no como dependencia directa del callback: `load`
+  // cambia de identidad cada vez que cambia `filter` (useAsyncData lo
+  // recrea por sus deps [userId, filter]), y si el callback de
+  // useFocusEffect dependiera de eso, React Navigation lo vuelve a correr
+  // de inmediato por el cambio de referencia, no por un foco real — pedía
+  // la lista dos veces cada vez que tocabas un tab de visibilidad.
+  const loadRef = useRef(load)
+  useEffect(() => {
+    loadRef.current = load
+  }, [load])
+
+  useFocusEffect(
+    useCallback(() => {
+      loadRef.current({ silent: true })
+    }, [])
+  )
 
   return (
     <FlatList

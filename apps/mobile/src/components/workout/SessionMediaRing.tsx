@@ -1,6 +1,5 @@
 import { useEffect } from 'react'
 import { StyleSheet, Text, View } from 'react-native'
-import { Image } from 'expo-image'
 import Svg, { Circle } from 'react-native-svg'
 import Animated, {
   Easing,
@@ -12,6 +11,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated'
 import { Dumbbell } from 'lucide-react-native'
+import { ThumbnailMedia } from './ThumbnailMedia'
 
 // Pieza visual compartida entre ExecutionView y ChallengeExecutionView: el
 // círculo grande con la imagen del ejercicio adentro y un anillo de progreso
@@ -28,11 +28,10 @@ import { Dumbbell } from 'lucide-react-native'
 // controlada por la vista (para que el mismo botón pause el cronómetro Y el
 // contador global a la vez).
 //
-// <Image> es de expo-image, no el Image nativo de react-native: el
-// thumbnail de un ejercicio puede ser un GIF (demostración del movimiento),
-// y el Image de RN en iOS solo pinta el primer frame — no anima. expo-image
-// sí decodifica y anima GIF/WebP nativamente, sin nada extra de nuestro
-// lado (ver también expo-image ya viene en Expo Go para este SDK).
+// La imagen adentro es <ThumbnailMedia>, no un <Image> plano: el thumbnail
+// de un ejercicio puede ser el clip de video mudo que hace de "GIF" (ver
+// thumbnailCapture.ts) en vez de una imagen fija, y eso necesita un player
+// en loop, no un <Image>/expo-image (no decodifica video).
 //
 // El color del anillo/glow no salta de golpe entre etapas (celeste→verde→
 // naranja): se anima con withTiming sobre un shared value de color —
@@ -141,7 +140,7 @@ export function SessionMediaRing({ imageUrl, alt, progress, color, size = 240, r
           ]}
         >
           {imageUrl ? (
-            <Image source={{ uri: imageUrl }} style={StyleSheet.absoluteFill} contentFit="cover" accessibilityLabel={alt} />
+            <ThumbnailMedia uri={imageUrl} style={StyleSheet.absoluteFill} contentFit="cover" accessibilityLabel={alt} />
           ) : (
             <View style={[StyleSheet.absoluteFill, styles.fallback]}>
               <Dumbbell size={size * 0.22} color="#cbd5e1" />

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { router } from 'expo-router'
+import { router, useFocusEffect } from 'expo-router'
 import { ActivityIndicator, FlatList, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Animated, { FadeInDown } from 'react-native-reanimated'
@@ -130,6 +130,51 @@ export default function FeedScreen() {
     setRefreshing(true)
     loadPage(1, 'replace')
   }
+
+  // Params actuales en un ref, no como dependencia del callback de abajo —
+  // si el callback de useFocusEffect cambiara de identidad cada vez que
+  // cambian sortBy/filter/search (que ya disparan su propio loadPage vía el
+  // useEffect de arriba), React Navigation lo vuelve a correr de inmediato
+  // por el cambio de referencia, no por un foco real: terminaba pidiendo la
+  // página 1 dos veces en simultáneo cada vez que tocabas un filtro. Con el
+  // callback siempre igual (sin deps), useFocusEffect solo dispara en un
+  // foco de verdad (volver de otra pantalla).
+  const feedParamsRef = useRef({ sortBy, filter, search: debouncedSearch, viewerId })
+  useEffect(() => {
+    feedParamsRef.current = { sortBy, filter, search: debouncedSearch, viewerId }
+  }, [sortBy, filter, debouncedSearch, viewerId])
+
+  // Editar un workout propio (pencil de WorkoutCard → /workout-editor/[id])
+  // vuelve acá sin desmontar el feed (push encima del stack de este tab), y
+  // a diferencia de borrar (handleWorkoutDeleted, actualiza el array local
+  // de una) no había forma de que los cambios se vieran sin un
+  // pull-to-refresh manual. Silencioso a propósito (sin loadingInitial, sin
+  // setRefreshing) para no tapar el feed con el skeleton cada vez que se
+  // vuelve a este tab — isFirstFocus evita duplicar el fetch inicial, que ya
+  // hace el useEffect de arriba con su propio loadingInitial real.
+  const isFirstFocus = useRef(true)
+  useFocusEffect(
+    useCallback(() => {
+      if (isFirstFocus.current) {
+        isFirstFocus.current = false
+        return
+      }
+
+      const myRequestId = ++requestId.current
+      fetchFeedPage({ page: 1, ...feedParamsRef.current })
+        .then((result) => {
+          if (myRequestId !== requestId.current) return
+          setWorkouts(result.workouts)
+          setHasMore(result.hasMore)
+          setPage(1)
+        })
+        .catch(() => {
+          // Silencioso: si falla, el usuario se queda con lo que ya tenía
+          // en pantalla en vez de un error tapando el feed por un refresh
+          // de fondo que ni pidió.
+        })
+    }, [])
+  )
 
   const handleLoadMore = () => {
     if (loadingInitial || loadingMore || !hasMore) return

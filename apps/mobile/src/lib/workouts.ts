@@ -2,6 +2,7 @@ import type { WorkoutVisibility } from '@mygym/shared'
 import type { Database } from '@mygym/shared/types/database'
 
 import { supabase } from './supabase'
+import { API_BASE, getFreshAccessToken } from './apiClient'
 
 // Data layer del feed mobile. Versión simplificada de
 // src/app/actions/workout/list.ts (apps/web):
@@ -354,35 +355,25 @@ export async function fetchMyWorkouts(userId: string, filter: MyWorkoutsFilter):
   }))
 }
 
-// Borrado del workout — puerto de deleteWorkoutAction (apps/web,
-// src/app/actions/workout/delete.ts). `sections`/`section_exercises` NO
-// cascadean al borrar `workouts` (workout_sections sí, vía ON DELETE CASCADE
-// en workout_id, pero `sections` es una entidad aparte sin FK hacia
-// workouts — ver 20260702_0001_clean_schema.sql), así que hay que limpiarlas
-// a mano después de borrar el workout, igual que hace la Server Action.
-export async function deleteWorkout(workoutId: string, userId: string): Promise<void> {
-  const { data: workout, error: fetchError } = await supabase
-    .from('workouts')
-    .select('user_id')
-    .eq('id', workoutId)
-    .single()
+// Borrado del workout — pasa por el server (src/app/api/workout/[id]/route.ts,
+// misma implementación que usa deleteWorkoutAction en apps/web) en vez de
+// hacerlo directo contra Supabase como el resto de este archivo: borrar un
+// workout también limpia el archivo de portada en R2 si quedó huérfano (ver
+// deleteWorkoutForUser), y mobile no tiene las credenciales de R2 para eso.
+// Antes esta función porteaba a mano el mismo borrado de sections/
+// section_exercises que la Server Action — duplicado que nunca limpiaba R2
+// en ninguna de las dos plataformas.
+export async function deleteWorkout(workoutId: string): Promise<void> {
+  const accessToken = await getFreshAccessToken()
 
-  if (fetchError || !workout) throw new Error('Workout no encontrado')
-  if (workout.user_id !== userId) throw new Error('No autorizado')
+  const res = await fetch(`${API_BASE}/api/workout/${workoutId}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${accessToken}` },
+  })
 
-  const { data: workoutSections } = await supabase
-    .from('workout_sections')
-    .select('section_id')
-    .eq('workout_id', workoutId)
-
-  const sectionIds = (workoutSections ?? []).map((ws) => ws.section_id)
-
-  const { error: deleteError } = await supabase.from('workouts').delete().eq('id', workoutId)
-  if (deleteError) throw deleteError
-
-  if (sectionIds.length > 0) {
-    await supabase.from('section_exercises').delete().in('section_id', sectionIds)
-    await supabase.from('sections').delete().in('id', sectionIds)
+  if (!res.ok) {
+    const detail = await res.json().catch(() => null)
+    throw new Error(detail?.error || 'No se pudo borrar el workout')
   }
 }
 

@@ -8,8 +8,10 @@ import { DifficultyPicker } from '@/components/workout'
 
 // Metadata del workout (todo lo que no es secciones/ejercicios) — equivalente
 // mobile del bloque de la derecha en create/page.tsx (apps/web): título,
-// descripción, dificultad, tags, visibilidad. Sin portada (ver nota de
-// alcance en lib/workoutEditor.ts: mobile no tiene subida de imagen todavía).
+// descripción, dificultad, tags, visibilidad. La portada NO vive acá — es la
+// cabecera de toda la pantalla (WorkoutCoverField, ver [id].tsx), no "un
+// campo más" del form, así que se renderiza edge-to-edge por fuera de este
+// bloque con padding.
 interface WorkoutMetaFormProps {
   title: string
   onChangeTitle: (value: string) => void

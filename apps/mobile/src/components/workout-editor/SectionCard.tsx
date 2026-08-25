@@ -21,6 +21,7 @@ const ORDER_TYPE_OPTIONS: SegmentedOption<'single' | 'linear'>[] = [
 
 interface SectionCardProps {
   section: SectionEditorInput
+  currentUserId?: string | null
   onChange: (patch: Partial<SectionEditorInput>) => void
   onRemove: () => void
   onAddExercise: () => void
@@ -33,6 +34,7 @@ interface SectionCardProps {
 
 export function SectionCard({
   section,
+  currentUserId,
   onChange,
   onRemove,
   onAddExercise,
@@ -92,6 +94,7 @@ export function SectionCard({
         renderItem={({ item, drag: dragExercise, isActive: exerciseActive }: RenderItemParams<ExerciseEditorInput>) => (
           <ExerciseInstanceRow
             exercise={item}
+            currentUserId={currentUserId}
             onChange={(patch) => updateExercise(item.key, patch)}
             onRemove={() => removeExercise(item.key)}
             onMoveToOtherSection={canMoveExercises ? () => onMoveExerciseToOtherSection(item.key) : undefined}

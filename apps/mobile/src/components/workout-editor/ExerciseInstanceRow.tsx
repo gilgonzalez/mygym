@@ -12,13 +12,17 @@ import { ThumbnailField } from './ThumbnailField'
 // estado vive en el padre (ver SectionCard), acá solo se recibe el valor y
 // un onChange que manda un patch parcial.
 //
-// Si el ejercicio viene del vault (`exercise.id` presente), nombre/
-// descripción/dificultad/materiales/músculos son de solo lectura acá — son
-// propios del ejercicio compartido, se editan en el vault, no por-instancia
-// (misma regla que en la web, ver isFromVault en ExercisesFieldArray.tsx) —
-// igual se muestran (colores y todo) para no perder ese contexto, solo que
-// sin controles para tocarlos. Lo de esta sección (type/reps/sets/rest/
-// duration/weight) siempre se edita, venga o no del vault.
+// Si el ejercicio viene del vault (`exercise.id` presente) Y no es propio,
+// nombre/descripción/dificultad/materiales/músculos son de solo lectura
+// acá — son propios del ejercicio compartido, se editan en el vault, no
+// por-instancia (misma regla que en la web, ver isLocked en
+// ExercisesFieldArray.tsx). Un ejercicio sin id siempre es nuevo (editable)
+// y uno con id que el usuario actual creó (`ownerId === currentUserId`)
+// también sigue siendo editable acá — solo queda bloqueado lo que es de
+// otra persona. Igual se muestran (colores y todo) para no perder ese
+// contexto cuando está bloqueado, solo que sin controles para tocarlos. Lo
+// de esta sección (type/reps/sets/rest/duration/weight) siempre se edita,
+// esté bloqueado o no.
 //
 // Colores: mismos que usa el vault de la web (ExercisesVault.tsx) para que
 // el editor hable el mismo lenguaje visual — naranja músculos, celeste
@@ -34,6 +38,7 @@ const EQUIPMENT_COLOR = sky[500]
 
 interface ExerciseInstanceRowProps {
   exercise: ExerciseEditorInput
+  currentUserId?: string | null
   onChange: (patch: Partial<ExerciseEditorInput>) => void
   onRemove: () => void
   onMoveToOtherSection?: () => void
@@ -43,6 +48,7 @@ interface ExerciseInstanceRowProps {
 
 export function ExerciseInstanceRow({
   exercise,
+  currentUserId,
   onChange,
   onRemove,
   onMoveToOtherSection,
@@ -51,6 +57,8 @@ export function ExerciseInstanceRow({
 }: ExerciseInstanceRowProps) {
   const theme = useTheme()
   const isFromVault = Boolean(exercise.id)
+  const isOwnExercise = isFromVault && Boolean(currentUserId) && exercise.ownerId === currentUserId
+  const isLocked = isFromVault && !isOwnExercise
   const hasWeight = exercise.weightKg !== undefined && exercise.weightKg !== null
 
   return (
@@ -70,7 +78,7 @@ export function ExerciseInstanceRow({
         </Pressable>
 
         <View style={styles.headerRight}>
-          {isFromVault ? (
+          {isLocked ? (
             <View style={[styles.lockBadge, { borderColor: theme.colors.border }]}>
               <Lock size={11} color={theme.colors.mutedForeground} />
               <Text style={[styles.lockText, { color: theme.colors.mutedForeground, fontFamily: theme.fontFamily.semibold }]}>
@@ -89,7 +97,7 @@ export function ExerciseInstanceRow({
         </View>
       </View>
 
-      {isFromVault ? (
+      {isLocked ? (
         <View style={styles.vaultDetails}>
           <Text style={[styles.name, { color: theme.colors.foreground, fontFamily: theme.fontFamily.bold }]}>
             {exercise.name}
