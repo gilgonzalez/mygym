@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Animated, { FadeIn } from 'react-native-reanimated'
 import * as Haptics from 'expo-haptics'
+import { useKeepAwake } from 'expo-keep-awake'
 import { CheckCircle2, ChevronLeft, ChevronRight, Dumbbell, Info, Pause, Play, SkipForward } from 'lucide-react-native'
 
 import {
@@ -68,6 +69,11 @@ export function ExecutionView({ workout, onExit, onComplete }: ExecutionViewProp
   const theme = useTheme()
   const insets = useSafeAreaInsets()
   useSessionCues()
+  // Equivalente a useWakeLock(hasStarted && !isCompleted) de la web — acá no
+  // hace falta la condición: este componente sólo existe montado mientras la
+  // sesión está en curso (ver app/session/[id].tsx), así que "montado" ==
+  // "ejecutando". Se libera solo al desmontar.
+  useKeepAwake()
   const [cursor, setCursor] = useState<Cursor>({ sectionIndex: 0, exerciseIndex: 0, set: 1 })
   const [stage, setStage] = useState<Stage>('prepare')
   const [timeLeft, setTimeLeft] = useState(PREPARE_SECONDS)

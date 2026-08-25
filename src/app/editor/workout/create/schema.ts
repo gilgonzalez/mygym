@@ -23,6 +23,12 @@ const tutorialSchema = z.object({
 const exerciseSchema = z.object({
   id: z.string(),
   db_id: z.string().optional(),
+  // Dueño real de la fila en `exercises` (user_id) — junto con db_id decide
+  // si el ejercicio se puede editar acá o es de solo lectura (ver
+  // isFromVault/isLocked en ExercisesFieldArray.tsx). Ausente cuando no se
+  // conoce (p.ej. match del generador de IA contra el catálogo público) —
+  // se trata igual que "no es mío", queda bloqueado por default.
+  owner_id: z.string().optional().nullable(),
   name: z.string().min(1, "Requerido"),
   type: z.enum(['reps', 'time', 'emom']).default('reps'),
   reps: z.coerce.number().optional(),

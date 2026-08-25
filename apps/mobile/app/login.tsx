@@ -91,8 +91,15 @@ export default function Login() {
   return (
     <View style={styles.fill}>
       <AuthBackground />
-      <KeyboardAvoidingView style={styles.fill} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+      {/* behavior 'height' en Android, no undefined: sin él, KeyboardAvoidingView
+          no hace nada ahí y quedaba a merced del resize nativo de la ventana —
+          con el form centrado verticalmente (justifyContent: 'center' en
+          styles.container) eso no alcanzaba para despejar el input de
+          contraseña, el más cercano al teclado. El ScrollView también necesita
+          su propio style={fill} (no solo contentContainerStyle) para que
+          KeyboardAvoidingView pueda encogerlo de verdad. */}
+      <KeyboardAvoidingView style={styles.fill} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        <ScrollView style={styles.fill} contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
           <AuthHeader title="Bienvenido de nuevo" subtitle="Iniciá sesión para seguir entrenando" />
 
           <AuthCard style={styles.card}>

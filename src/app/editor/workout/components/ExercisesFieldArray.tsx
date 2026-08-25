@@ -70,6 +70,9 @@ interface ExercisesFieldArrayProps {
   isCompactMobile?: boolean
   isAmrapSection?: boolean
   exercises: any[]
+  // Dueño de la sesión — decide, junto con owner_id de cada ejercicio, si un
+  // ejercicio persistido (db_id) se puede editar acá. Ver isLocked más abajo.
+  currentUserId?: string | null
   onAppendExercise: (exercise: any) => void
   onRemoveExercise: (exerciseIndex: number) => void
 }
@@ -83,6 +86,7 @@ export function ExercisesFieldArray({
   isCompactMobile = false,
   isAmrapSection = false,
   exercises,
+  currentUserId,
   onAppendExercise,
   onRemoveExercise,
 }: ExercisesFieldArrayProps) {
@@ -119,6 +123,7 @@ export function ExercisesFieldArray({
     onAppendExercise({
         id: `ex-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
         db_id: exercise.id,
+        owner_id: exercise.user_id,
         name: exercise.name,
         type: 'reps',
         reps: 10,
@@ -158,11 +163,17 @@ export function ExercisesFieldArray({
               const selectedType = watchedType === 'time' ? 'time' : watchedType === 'emom' ? 'emom' : 'reps'
               const hasTutorial = Boolean(watch(`${exercisePath}.tutorial`))
               const exerciseSets = watch(`${exercisePath}.sets`) ?? 1
-              // Si viene del vault (tiene db_id persistido), lo propio del ejercicio
-              // (nombre/descripción/thumbnail/dificultad/materiales) es de solo lectura
-              // acá — se edita en el vault, no por-instancia. Lo de esta sección
-              // (type/reps/sets/rest/duration/weight) siempre es editable.
+              // Si viene del vault (tiene db_id persistido) Y no es propio, lo
+              // propio del ejercicio (nombre/descripción/thumbnail/dificultad/
+              // materiales) es de solo lectura acá — se edita en el vault, no
+              // por-instancia. Un ejercicio sin id siempre es nuevo (se puede
+              // modificar) y uno con id que el usuario actual creó también se
+              // puede seguir editando acá — solo queda bloqueado lo que es de
+              // otra persona (público, compartido o del catálogo). Lo de esta
+              // sección (type/reps/sets/rest/duration/weight) siempre es editable.
               const isFromVault = Boolean(isPersistedExerciseId(watch(`${exercisePath}.db_id`)))
+              const isOwnExercise = isFromVault && Boolean(currentUserId) && watch(`${exercisePath}.owner_id`) === currentUserId
+              const isLocked = isFromVault && !isOwnExercise
               const exerciseWeightKg = watch(`${exercisePath}.weight_kg`)
               const hasWeight = exerciseWeightKg !== undefined && exerciseWeightKg !== null && exerciseWeightKg !== ('' as unknown)
 
@@ -246,7 +257,7 @@ export function ExercisesFieldArray({
                                       Tutorial listo
                                     </span>
                                   )}
-                                  {isFromVault && (
+                                  {isLocked && (
                                     <span className="inline-flex items-center gap-1 rounded-full border border-border/70 bg-background/80 px-2 py-1 text-[8px] font-bold uppercase tracking-[0.18em] text-muted-foreground sm:px-3 sm:text-[10px]">
                                       <Lock className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
                                       Del vault
@@ -268,7 +279,7 @@ export function ExercisesFieldArray({
                                     <Input
                                       {...register(`sections.${nestIndex}.exercises.${k}.name`)}
                                       placeholder="Nombre del ejercicio"
-                                      disabled={isFromVault}
+                                      disabled={isLocked}
                                       className="h-auto border-none bg-transparent px-0 text-[1.1rem] font-black tracking-tight shadow-none focus-visible:ring-0 placeholder:text-muted-foreground/30 sm:text-2xl"
                                     />
                                     <input type="hidden" {...register(`sections.${nestIndex}.exercises.${k}.id`)} />
@@ -278,7 +289,7 @@ export function ExercisesFieldArray({
                                     <Textarea
                                       {...register(`sections.${nestIndex}.exercises.${k}.description`)}
                                       placeholder={isCompactMobile ? "Notas breves..." : "Ej. Mantén el core activo, baja controlado y evita encoger los hombros."}
-                                      disabled={isFromVault}
+                                      disabled={isLocked}
                                       className="mt-3 min-h-[72px] resize-none rounded-[20px] border-border/60 bg-muted/20 text-sm shadow-none sm:mt-4 sm:min-h-[108px]"
                                     />
                                   </div>
@@ -312,7 +323,7 @@ export function ExercisesFieldArray({
                                             type="thumbnail"
                                             variant="thumbnail"
                                             compact={isCompactMobile}
-                                            disabled={isFromVault}
+                                            disabled={isLocked}
                                           />
                                         </div>
                                       )}
@@ -670,7 +681,7 @@ export function ExercisesFieldArray({
                                           control={control}
                                           name={`sections.${nestIndex}.exercises.${k}.difficulty`}
                                           render={({ field }) => (
-                                            <Select onValueChange={field.onChange} value={field.value || 'beginner'} disabled={isFromVault}>
+                                            <Select onValueChange={field.onChange} value={field.value || 'beginner'} disabled={isLocked}>
                                               <SelectTrigger className="h-9 rounded-2xl border-border/60 bg-muted/20 text-sm font-medium shadow-none sm:h-11">
                                                 <SelectValue placeholder={isCompactMobile ? 'Nivel' : 'Seleccionar dificultad'} />
                                               </SelectTrigger>
@@ -698,7 +709,7 @@ export function ExercisesFieldArray({
                                               placeholder={isCompactMobile ? "Músculos..." : "Añadir músculos..."}
                                               variant="orange"
                                               compact={isCompactMobile}
-                                              disabled={isFromVault}
+                                              disabled={isLocked}
                                             />
                                           )}
                                         />
@@ -718,7 +729,7 @@ export function ExercisesFieldArray({
                                               placeholder={isCompactMobile ? "Equip..." : "Add equipment..."}
                                               variant="blue"
                                               compact={isCompactMobile}
-                                              disabled={isFromVault}
+                                              disabled={isLocked}
                                             />
                                           )}
                                         />

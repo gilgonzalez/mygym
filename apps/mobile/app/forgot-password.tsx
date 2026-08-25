@@ -64,8 +64,10 @@ export default function ForgotPassword() {
   return (
     <View style={styles.fill}>
       <AuthBackground />
-      <KeyboardAvoidingView style={styles.fill} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+      {/* behavior 'height' en Android — ver el comentario largo en
+          app/login.tsx (mismo patrón centrado + ScrollView, mismo fix). */}
+      <KeyboardAvoidingView style={styles.fill} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        <ScrollView style={styles.fill} contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
           <AuthHeader
             title="Olvidé mi contraseña"
             subtitle="Te mandamos un link para crear o restablecer tu contraseña, aunque hoy entres solo con Google."

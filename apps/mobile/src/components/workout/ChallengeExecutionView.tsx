@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Animated, { FadeIn, ZoomIn } from 'react-native-reanimated'
 import * as Haptics from 'expo-haptics'
+import { useKeepAwake } from 'expo-keep-awake'
 import { ChevronLeft, ChevronRight, Dumbbell, Info, Pause, Play, Trophy, Zap } from 'lucide-react-native'
 
 import { formatDuration } from '@mygym/shared'
@@ -39,6 +40,10 @@ export function ChallengeExecutionView({ workout, onExit, onComplete }: Challeng
   const theme = useTheme()
   const insets = useSafeAreaInsets()
   useSessionCues()
+  // Ver comentario en ExecutionView.tsx: este componente sólo se monta
+  // mientras la sesión está en curso, así que basta con mantenerlo despierto
+  // durante todo el ciclo de vida del componente.
+  useKeepAwake()
 
   const challengeSection = useMemo(
     () => workout.sections.find((s) => s.id === workout.challenge?.challengeSectionId) ?? workout.sections[0],

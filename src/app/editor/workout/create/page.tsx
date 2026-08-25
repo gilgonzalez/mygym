@@ -3,7 +3,7 @@
 import React, { useState, Suspense } from 'react'
 import { toast } from 'sonner'
 
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd'
 import { Plus, Trash2, GripVertical, Save,  ArrowLeft, Eye, Smartphone, Monitor, Mic, Dna, Activity, Repeat, RotateCw, Globe, Lock, FileText, Sparkles, Loader2, Timer, Zap, Users, Trophy, Infinity as InfinityIcon } from 'lucide-react'
@@ -55,6 +55,7 @@ import {
 
 function CreateWorkoutContent() {
   const router = useRouter()
+  const queryClient = useQueryClient()
   const searchParams = useSearchParams()
   const pathname = usePathname()
   const workoutId = searchParams.get('id')
@@ -219,6 +220,7 @@ function CreateWorkoutContent() {
                 exercises: s.exercises.map((e: any) => ({
                     id: e.id,
                     db_id: e.id,
+                    owner_id: e.user_id,
                     name: e.name,
                     type: (e.type === 'time' || e.type === 'emom') ? e.type : 'reps',
                     reps: e.reps || 0,
@@ -576,7 +578,7 @@ function CreateWorkoutContent() {
 
         return Promise.race([processUpload(), timeout])
     },
-    onSuccess: () => {
+    onSuccess: (result: any) => {
         if (submitToastIdRef.current !== null) {
           toast.dismiss(submitToastIdRef.current)
           submitToastIdRef.current = null
@@ -588,6 +590,21 @@ function CreateWorkoutContent() {
             ? 'Los cambios se guardaron y ya están sincronizados.'
             : 'Tu workout está listo en el feed. Ahora a entrenar 💪',
         })
+
+        // El toast de "actualizado" era una promesa vacía sin esto: nada
+        // invalidaba el cache de React Query, así que el feed/perfil/detalle
+        // seguían mostrando la versión vieja hasta que venciera el staleTime
+        // global (60s, ver QueryProvider.tsx) o el usuario recargara a mano.
+        // savedId cubre tanto editar (workoutId ya conocido) como crear
+        // (recién lo tenemos acá, en la respuesta del Server Action).
+        const savedId = workoutId || result?.workoutId
+        queryClient.invalidateQueries({ queryKey: ['workouts'] })
+        queryClient.invalidateQueries({ queryKey: ['userWorkouts'] })
+        if (savedId) {
+          queryClient.invalidateQueries({ queryKey: ['workout', savedId] })
+          queryClient.invalidateQueries({ queryKey: ['workout-editor', savedId] })
+        }
+
         reset()
         setTimeout(() => router.push('/feed'), 600)
     },
@@ -1472,6 +1489,7 @@ function CreateWorkoutContent() {
                                 isCompactMobile={isCompactMobileViewport}
                                 isAmrapSection={sectionAmrapEnabled}
                                 exercises={formValues.sections?.[index]?.exercises || []}
+                                currentUserId={user?.id}
                                 onAppendExercise={(exercise) => appendExerciseToSection(index, exercise)}
                                 onRemoveExercise={(exerciseIndex) => removeExerciseFromSection(index, exerciseIndex)}
                               />

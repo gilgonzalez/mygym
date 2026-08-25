@@ -1,59 +1,49 @@
 import { r2 } from '@/lib/r2'
-import { createClient } from '@/lib/supabase/server'
-import { createClient as createJwtClient } from '@supabase/supabase-js'
+import { getRequestContext } from '@/lib/supabase/requestUser'
 import { PutObjectCommand } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import { NextResponse } from 'next/server'
 import { randomUUID } from 'crypto'
 
-async function getRequestUser(request: Request) {
-  const cookieClient = await createClient()
-  const {
-    data: { user: cookieUser },
-  } = await cookieClient.auth.getUser()
-  if (cookieUser) return cookieUser
-
-  // La app mobile no manda cookies: autentica con el access token de
-  // supabase en Authorization: Bearer (ver apps/mobile/src/lib/mediaUpload.ts).
-  const header = request.headers.get('authorization')
-  if (!header?.toLowerCase().startsWith('bearer ')) return null
-
-  const jwtClient = createJwtClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
-  const {
-    data: { user },
-  } = await jwtClient.auth.getUser(header.slice(7).trim())
-
-  return user ?? null
-}
+const ALLOWED_FOLDERS = ['images', 'videos', 'audio', 'others'] as const
+type UploadFolder = (typeof ALLOWED_FOLDERS)[number]
 
 export async function POST(request: Request) {
   try {
-    const { filename, contentType } = await request.json()
+    const { filename, contentType, folder: requestedFolder } = await request.json()
 
     if (!filename || !contentType) {
       return NextResponse.json({ error: 'filename and contentType are required' }, { status: 400 })
     }
 
-    const user = await getRequestUser(request)
+    const ctx = await getRequestContext(request)
 
-    if (!user) {
+    if (!ctx) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     }
+    const { userId } = ctx
 
     const safeFilename = String(filename).replace(/[^a-zA-Z0-9._-]/g, '-')
     const normalizedContentType = String(contentType)
 
-    // Determinar la carpeta basada en el tipo de contenido
-    let folder = 'others'
-    if (normalizedContentType.startsWith('image/')) folder = 'images'
+    // La carpeta normalmente sale del content-type, pero el caller puede
+    // pedir una carpeta puntual (`folder`) cuando el archivo no encaja bien
+    // en esa regla — el caso de uso es la miniatura "GIF" de un ejercicio en
+    // mobile (mediaUpload.ts): por dentro es un video/mp4 (para que se vea
+    // bien — un .gif real queda muy por debajo en calidad), pero
+    // conceptualmente es una miniatura como cualquier otra, así que pide
+    // folder: 'images' explícito en vez de terminar en videos/. El
+    // Content-Type real que ve R2 y el mime_type que se guarda en `media`
+    // no cambian — solo el prefijo de la key.
+    let folder: UploadFolder = 'others'
+    if (typeof requestedFolder === 'string' && (ALLOWED_FOLDERS as readonly string[]).includes(requestedFolder)) {
+      folder = requestedFolder as UploadFolder
+    } else if (normalizedContentType.startsWith('image/')) folder = 'images'
     else if (normalizedContentType.startsWith('video/')) folder = 'videos'
     else if (normalizedContentType.startsWith('audio/')) folder = 'audio'
 
     // Generar un nombre único con la carpeta
-    const uniqueFilename = `${folder}/${user.id}/${randomUUID()}-${safeFilename}`
+    const uniqueFilename = `${folder}/${userId}/${randomUUID()}-${safeFilename}`
 
     // Generar la URL firmada
     const signedUrl = await getSignedUrl(

@@ -87,7 +87,18 @@ export function useWorkoutCardActions({
     setIsDeleting(true)
     const res = await deleteWorkoutAction(workoutId)
     if (res.success) {
-      await queryClient.invalidateQueries({ queryKey: ['workouts'] })
+      // ['workouts'] cubre el feed, pero el perfil ("mis workouts") usa una
+      // key aparte (['userWorkouts', userId], ver profile/page.tsx) que
+      // nunca se invalidaba acá — la card ahí seguía mostrando un workout
+      // ya borrado hasta que venciera el staleTime global o se recargara a
+      // mano. router.refresh() tampoco alcanza: solo revalida datos de
+      // Server Components, no el cache de React Query de estas páginas
+      // (son 'use client').
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['workouts'] }),
+        queryClient.invalidateQueries({ queryKey: ['userWorkouts'] }),
+        queryClient.invalidateQueries({ queryKey: ['workout', workoutId] }),
+      ])
       setIsDeleting(false)
       router.refresh()
     } else {

@@ -1,47 +1,18 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { deleteWorkoutForUser } from '@/lib/workout/deleteWorkout'
 
 export async function deleteWorkoutAction(workoutId: string) {
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
-    
+
     if (!user) {
       throw new Error('No autorizado')
     }
 
-    // 1. Verify ownership
-    const { data: workout, error: fetchError } = await supabase
-        .from('workouts')
-        .select('user_id')
-        .eq('id', workoutId)
-        .single()
-    
-    if (fetchError || !workout) throw new Error('Workout no encontrado')
-    if (workout.user_id !== user.id) throw new Error('No autorizado')
-
-    // 2. Get related Section IDs before deleting the workout
-    const { data: workoutSections } = await supabase
-        .from('workout_sections')
-        .select('section_id')
-        .eq('workout_id', workoutId)
-    
-    const sectionIds = workoutSections?.map(ws => ws.section_id) || []
-
-    // 3. Delete Workout (Cascades to workout_sections)
-    const { error: deleteError } = await supabase
-        .from('workouts')
-        .delete()
-        .eq('id', workoutId)
-
-    if (deleteError) throw deleteError
-
-    // 4. Cleanup Sections and Exercises links
-    if (sectionIds.length > 0) {
-        await supabase.from('section_exercises').delete().in('section_id', sectionIds)
-        await supabase.from('sections').delete().in('id', sectionIds)
-    }
+    await deleteWorkoutForUser(supabase, workoutId, user.id)
 
     return { success: true }
   } catch (error: any) {
